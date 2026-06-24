@@ -1,0 +1,576 @@
+<div class="studio dark">
+  <!-- HEADER -->
+  <header class="studio-header">
+    <div class="header-inner">
+      <a routerLink="/dashboard" class="back-link">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Back
+      </a>
+      <div class="brand">
+        <img [src]="logo" alt="" class="logo" />
+        <span class="brand-name">Design Studio</span>
+      </div>
+      <div class="actions">
+        <button class="canvas-btn" (click)="openCanvas()">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect width="7" height="7" x="3" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="14" rx="1" />
+            <rect width="7" height="7" x="3" y="14" rx="1" />
+          </svg>
+          Open Canvas Editor
+        </button>
+        <div class="autosave">
+          <span class="dot animate-pulse"></span>
+          Autosaved · 2s ago
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- BODY GRID -->
+  <div class="body-grid">
+    <!-- LEFT PANEL -->
+    <aside class="left-panel">
+      <div class="tabs-wrap">
+        <div class="tab-row">
+          @for (t of tabOptions; track t) {
+            <button
+              class="tab-btn"
+              [class.active]="tab() === t"
+              (click)="setTab(t)"
+            >
+              {{
+                t === "ai"
+                  ? "AI Prompt"
+                  : t === "products"
+                    ? "Products"
+                    : "Custom"
+              }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="left-scroll">
+        @if (tab() === "products") {
+          <div class="cat-list">
+            <button
+              class="cat-item"
+              [class.selected]="selectedCategory() === 'All'"
+              (click)="setSelectedCategory('All')"
+            >
+              <span>All</span>
+              <span class="cat-count">{{ allProducts().length }}</span>
+            </button>
+            @for (g of categoryCounts(); track g.id) {
+              <button
+                class="cat-item"
+                [class.selected]="selectedCategory() === g.name"
+                (click)="setSelectedCategory(g.name)"
+              >
+                <span>{{ g.name }}</span>
+                <span class="cat-count">{{ g.count }}</span>
+              </button>
+            }
+          </div>
+
+          <div class="thumb-section">
+            <p class="thumb-label">
+              Selected category · {{ selectedCategory() }}
+            </p>
+            <div class="thumb-grid">
+              @for (p of leftPanelProducts(); track p.id) {
+                <button
+                  class="thumb"
+                  [class.selected]="selected().id === p.id"
+                  (click)="selectProduct(p.id)"
+                >
+                  <img [src]="p.image || logo" [alt]="p.name" />
+                </button>
+              }
+            </div>
+            @if (loadError()) {
+              <p class="empty-state">
+                Unable to load live products. Please try again later.
+              </p>
+            }
+            @if (!productLoading() && leftPanelProducts().length === 0) {
+              <p class="empty-state">
+                No products available for this category yet.
+              </p>
+            }
+          </div>
+        }
+
+        @if (tab() === "custom") {
+          <div class="custom-section">
+            <div class="section-block">
+              <p class="section-label">Layers</p>
+              <div class="layer-list">
+                <div class="layer-row">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                    <circle cx="9" cy="9" r="2" />
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                  </svg>
+                  Base · Charcoal
+                </div>
+                <div class="layer-row">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="4 7 4 4 20 4 20 7" />
+                    <line x1="9" y1="20" x2="15" y2="20" />
+                    <line x1="12" y1="4" x2="12" y2="20" />
+                  </svg>
+                  Text · ATELIER
+                </div>
+                <div class="layer-row">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polygon points="12 2 2 8 12 14 22 8 12 2" />
+                    <polyline points="2 16 12 22 22 16" />
+                    <polyline points="2 12 12 18 22 12" />
+                  </svg>
+                  Graphic · W mark
+                </div>
+              </div>
+            </div>
+
+            <div class="section-block">
+              <p class="section-label">Color</p>
+              <div class="color-grid">
+                @for (c of colorPalette; track c) {
+                  <button
+                    class="color-cell"
+                    [style.background]="c"
+                    [class.selected]="color() === c"
+                    (click)="pickColor(c)"
+                  ></button>
+                }
+              </div>
+            </div>
+
+            <div class="section-block">
+              <p class="section-label">Fabric</p>
+              <div class="pill-list">
+                @for (f of fabricOptions; track f) {
+                  <button class="pill">{{ f }}</button>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (tab() === "ai") {
+          <div class="chat-wrap">
+            <div class="chat-header">
+              <div class="chat-avatar">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <p class="chat-title">Atelier · AI Assistant</p>
+                <p class="chat-status">● Online</p>
+              </div>
+            </div>
+
+            <div class="chat-messages">
+              @for (m of messages(); track $index) {
+                <div class="chat-msg-row" [class.user]="m.role === 'user'">
+                  <div
+                    class="chat-bubble"
+                    [class.user-bubble]="m.role === 'user'"
+                    [class.ai-bubble]="m.role === 'ai'"
+                  >
+                    {{ m.text }}
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="chat-input-wrap">
+              <div class="quick-prompts">
+                @for (q of quickPrompts; track q) {
+                  <button class="quick-pill" (click)="useQuickPrompt(q)">
+                    {{ q }}
+                  </button>
+                }
+              </div>
+              <div class="chat-input-row">
+                <input
+                  type="text"
+                  class="chat-input"
+                  placeholder="Ask Atelier anything…"
+                  [ngModel]="chatInput()"
+                  (ngModelChange)="setChatInput($event)"
+                  (keydown.enter)="sendChat()"
+                />
+                <button class="chat-send" (click)="sendChat()">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m22 2-7 20-4-9-9-4Z" />
+                    <path d="M22 2 11 13" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </aside>
+
+    <!-- CENTER PANEL -->
+    <section class="center-panel">
+      <div class="view-toggle">
+        <button
+          [class.active]="activeViewAngle === ViewAngle.Front"
+          (click)="setActiveViewAngle(ViewAngle.Front)"
+        >
+          Front
+        </button>
+        <button
+          [class.active]="activeViewAngle === ViewAngle.Back"
+          (click)="setActiveViewAngle(ViewAngle.Back)"
+        >
+          Back
+        </button>
+      </div>
+
+      <div class="icon-actions">
+        <button class="icon-btn">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <line x1="11" y1="8" x2="11" y2="14" />
+            <line x1="8" y1="11" x2="14" y2="11" />
+          </svg>
+        </button>
+        <button class="icon-btn">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="preview-area">
+        <div class="preview-inner">
+          <app-design-canvas
+            [imageUrl]="currentProductImageUrl"
+            [alt]="selected().name"
+          ></app-design-canvas>
+          <div class="preview-shadow"></div>
+        </div>
+      </div>
+
+      <div class="preview-dots">
+        <span class="dot-small"></span>
+        <span class="dot-long"></span>
+        <span class="dot-small"></span>
+        <span class="dot-small"></span>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL -->
+    <aside class="right-panel">
+      <div class="right-scroll">
+        <div class="product-head">
+          <p class="current-design">Current design</p>
+          <h2 class="product-name">{{ selected().name }}</h2>
+          <p class="product-meta">{{ selected().category }} · SS 2026</p>
+        </div>
+
+        <div class="price-row">
+          <span class="price">${{ selected().price }}</span>
+          <span class="price-original">${{ originalPrice }}</span>
+        </div>
+
+        <div class="section-block">
+          <p class="section-label">Color</p>
+          <div class="color-list">
+            @for (c of selected().colors; track c) {
+              <button
+                class="color-circle"
+                [style.background]="c"
+                [class.selected]="color() === c"
+                (click)="pickColor(c)"
+              ></button>
+            }
+          </div>
+        </div>
+
+        <div class="section-block">
+          <p class="section-label">Size</p>
+          <div class="size-grid">
+            @for (s of sizes; track s) {
+              <button
+                class="size-btn"
+                [class.selected]="size() === s"
+                (click)="pickSize(s)"
+              >
+                {{ s }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="specs-grid">
+          <div class="spec">
+            <p class="spec-label">Fabric</p>
+            <p class="spec-value">Heavyweight 400gsm</p>
+          </div>
+          <div class="spec">
+            <p class="spec-label">Print method</p>
+            <p class="spec-value">DTG · Eco-ink</p>
+          </div>
+          <div class="spec">
+            <p class="spec-label">Origin</p>
+            <p class="spec-value">Porto, Portugal</p>
+          </div>
+          <div class="spec">
+            <p class="spec-label">Shipping</p>
+            <p class="spec-value">3–5 days</p>
+          </div>
+        </div>
+
+        <div class="dispatch-card">
+          <p class="dispatch-label">Estimated dispatch</p>
+          <p class="dispatch-value">Jun 4 — Jun 9, 2026</p>
+        </div>
+      </div>
+
+      <div class="right-actions">
+        <button class="btn btn-accent">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M15 4V2" />
+            <path d="M15 16v-2" />
+            <path d="M8 9h2" />
+            <path d="M20 9h2" />
+            <path d="M17.8 11.8 19 13" />
+            <path d="M15 9h.01" />
+            <path d="M17.8 6.2 19 5" />
+            <path d="m3 21 9-9" />
+            <path d="M12.2 6.2 11 5" />
+          </svg>
+          Finish design — ${{ selected().price }}
+        </button>
+        <button class="btn btn-primary" (click)="openPay()">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect width="20" height="14" x="2" y="5" rx="2" />
+            <line x1="2" y1="10" x2="22" y2="10" />
+          </svg>
+          Checkout & Pay
+        </button>
+        <button class="btn btn-ghost">Save to drafts</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Floating prompt bar -->
+  <div class="floating-prompt">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path
+        d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+      />
+    </svg>
+    <input
+      type="text"
+      placeholder="Ask Atelier — 'change to cream, add small W on chest'"
+    />
+    <button class="send-btn">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m22 2-7 20-4-9-9-4Z" />
+        <path d="M22 2 11 13" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Canvas Editor overlay -->
+  @if (canvasOpen()) {
+    <div class="canvas-overlay">
+      <div class="canvas-header">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect width="7" height="7" x="3" y="3" rx="1" />
+          <rect width="7" height="7" x="14" y="3" rx="1" />
+          <rect width="7" height="7" x="14" y="14" rx="1" />
+          <rect width="7" height="7" x="3" y="14" rx="1" />
+        </svg>
+        <p class="canvas-title">Canvas Editor · {{ selected().name }}</p>
+        <button class="canvas-close" (click)="closeCanvas()">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="canvas-body">
+        <div class="canvas-stage">
+          <img
+            [src]="selected().image"
+            [alt]="selected().name"
+            class="canvas-img"
+          />
+          <div class="canvas-overlay-text">ATELIER</div>
+        </div>
+        <div class="canvas-tools">
+          <p class="tools-label">Canvas tools</p>
+          <button class="tool-btn">Move</button>
+          <button class="tool-btn">Text</button>
+          <button class="tool-btn">Color</button>
+          <button class="tool-btn">Upload</button>
+          <button class="tool-btn">Layers</button>
+          <button class="tool-btn btn-primary" (click)="openPay()">
+            Checkout & Pay
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (payOpen()) {
+    <app-checkout-pay-modal
+      [productName]="selected().name"
+      [productImage]="selected().image"
+      [price]="selected().price"
+      (close)="closePay()"
+    />
+  }
+</div>

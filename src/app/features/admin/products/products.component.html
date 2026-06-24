@@ -1,0 +1,109 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1 class="title">Products</h1>
+      <p class="sub">{{ products().length }} live in the catalog.</p>
+    </div>
+    <button class="primary-btn" (click)="openCreate()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+      New product
+    </button>
+  </header>
+
+  @if (products().length === 0) {
+    <div class="empty-state">
+      <p>No products yet. Click "New product" to create your first one.</p>
+    </div>
+  } @else {
+    <div class="grid">
+      @for (p of products(); track p.id) {
+        <article class="prod-card">
+          <div class="prod-image" [style.background-image]="'url(' + p.imageUrl + ')'">
+            @if (!p.isAvailable) {
+              <span class="unavailable-pill">Unavailable</span>
+            }
+          </div>
+          <div class="prod-body">
+            <p class="prod-cat">{{ p.categoryName }}</p>
+            <h3 class="prod-name">{{ p.name }}</h3>
+            <div class="prod-meta">
+              <span class="prod-price">${{ p.basePrice }}</span>
+              <span class="prod-stock">{{ p.stock }} in stock</span>
+            </div>
+            <div class="prod-actions">
+              <button class="ghost-btn" (click)="openEdit(p)">Edit</button>
+              <button class="danger-btn" (click)="askDelete(p)">Delete</button>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>
+
+<!-- CREATE / EDIT MODAL -->
+@if (showModal()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <h2>{{ editingId() ? 'Edit product' : 'New product' }}</h2>
+        <button class="modal-close" (click)="closeModal()" aria-label="Close">×</button>
+      </header>
+
+      <form (ngSubmit)="submit(); $event.preventDefault()" class="modal-body">
+        <label class="field">
+          <span class="label">Name *</span>
+          <input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" name="name" required />
+        </label>
+
+        <div class="row-2">
+          <label class="field">
+            <span class="label">Base price ($)</span>
+            <input type="number" step="0.01" min="0" [ngModel]="formPrice()" (ngModelChange)="formPrice.set(+$event)" name="price" />
+          </label>
+          <label class="field">
+            <span class="label">Stock</span>
+            <input type="number" min="0" [ngModel]="formStock()" (ngModelChange)="formStock.set(+$event)" name="stock" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="label">Category *</span>
+          <select [ngModel]="formCategory()" (ngModelChange)="formCategory.set($event)" name="cat" required>
+            <option value="" disabled>Select…</option>
+            @for (c of categories(); track c) {
+              <option [value]="c">{{ c }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="label">Image URL</span>
+          <input type="text" [ngModel]="formImage()" (ngModelChange)="formImage.set($event)" name="img" placeholder="assets/..." />
+        </label>
+
+        <label class="check-row">
+          <input type="checkbox" [ngModel]="formAvailable()" (ngModelChange)="formAvailable.set($event)" name="avail" />
+          <span>Available for purchase</span>
+        </label>
+
+        <footer class="modal-foot">
+          <button type="button" class="ghost-btn" (click)="closeModal()">Cancel</button>
+          <button type="submit" class="primary-btn">
+            {{ editingId() ? 'Save changes' : 'Create product' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!deleteTarget()"
+  [title]="deleteTarget() ? 'Delete ' + deleteTarget()!.name + '?' : ''"
+  description="The product will be removed from the catalog."
+  confirmLabel="Delete"
+  [destructive]="true"
+  (cancel)="cancelDelete()"
+  (confirm)="confirmDelete()"
+/>

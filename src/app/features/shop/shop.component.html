@@ -1,0 +1,66 @@
+<div class="page">
+  <app-nav />
+
+  <main class="container">
+    <!-- HERO -->
+    <section class="hero">
+      <img [src]="banner" alt="" class="hero-img" loading="lazy" />
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <p class="hero-eyebrow">SS 2026 · Atelier Drop</p>
+        <h1 class="hero-title">
+          Color blocks,<br /><span class="italic-light">made for movement.</span>
+        </h1>
+        <button class="hero-cta">
+          Shop the drop
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- FILTERS -->
+    <section class="filters">
+      <div class="filter-tabs">
+        @for (c of categories; track c) {
+          <button
+            class="filter-pill"
+            [class.active]="selectedCat() === c"
+            (click)="selectCat(c)"
+          >{{ c }}</button>
+        }
+      </div>
+      <p class="count">{{ filteredProducts().length }} pieces</p>
+    </section>
+
+    <!-- GRID -->
+    <section class="grid">
+      @for (p of filteredProducts(); track p.id) {
+        <app-product-card
+          [product]="p"
+          (cardClick)="openDetail($event)"
+        />
+      }
+    </section>
+
+    <!-- CTA -->
+    <section class="bottom-cta">
+      <div class="bg-mesh mesh-layer"></div>
+      <div class="cta-inner">
+        <div class="cta-text">
+          <p class="eyebrow">Wearly AI</p>
+          <h2 class="cta-title">
+            Design it yourself.<br /><span class="italic-light">Make it yours.</span>
+          </h2>
+        </div>
+        <a routerLink="/studio" class="cta-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>
+          Open Design Studio
+        </a>
+      </div>
+    </section>
+  </main>
+
+  @if (openProduct(); as p) {
+    <app-product-detail-modal [product]="p" (close)="closeDetail()" />
+  }
+</div>

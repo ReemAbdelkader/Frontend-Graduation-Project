@@ -1,0 +1,80 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1 class="title">Categories</h1>
+      <p class="sub">{{ categories().length }} categories in the catalog.</p>
+    </div>
+    <button class="primary-btn" (click)="openCreate()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+      New category
+    </button>
+  </header>
+
+  @if (categories().length === 0) {
+    <div class="empty-state">
+      <p>No categories yet. Click "New category" to create your first one.</p>
+    </div>
+  } @else {
+    <div class="grid">
+      @for (c of categories(); track c.id) {
+        <article class="cat-card">
+          <div class="cat-image" [style.background-image]="'url(' + c.imageUrl + ')'"></div>
+          <div class="cat-body">
+            <h3 class="cat-name">{{ c.name }}</h3>
+            <p class="cat-desc">{{ c.description || 'No description.' }}</p>
+            <div class="cat-actions">
+              <button class="ghost-btn" (click)="openEdit(c)">Edit</button>
+              <button class="danger-btn" (click)="askDelete(c)">Delete</button>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>
+
+<!-- CREATE / EDIT MODAL -->
+@if (showModal()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <h2>{{ editingId() ? 'Edit category' : 'New category' }}</h2>
+        <button class="modal-close" (click)="closeModal()" aria-label="Close">×</button>
+      </header>
+
+      <form (ngSubmit)="submit(); $event.preventDefault()" class="modal-body">
+        <label class="field">
+          <span class="label">Name *</span>
+          <input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" name="name" required />
+        </label>
+
+        <label class="field">
+          <span class="label">Description</span>
+          <textarea rows="3" [ngModel]="formDescription()" (ngModelChange)="formDescription.set($event)" name="desc"></textarea>
+        </label>
+
+        <label class="field">
+          <span class="label">Image URL</span>
+          <input type="text" [ngModel]="formImageUrl()" (ngModelChange)="formImageUrl.set($event)" name="img" placeholder="assets/..." />
+        </label>
+
+        <footer class="modal-foot">
+          <button type="button" class="ghost-btn" (click)="closeModal()">Cancel</button>
+          <button type="submit" class="primary-btn">
+            {{ editingId() ? 'Save changes' : 'Create category' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!deleteTarget()"
+  [title]="deleteTarget() ? 'Delete ' + deleteTarget()!.name + '?' : ''"
+  description="The category will be removed from the catalog. Products in this category will be uncategorized."
+  confirmLabel="Delete"
+  [destructive]="true"
+  (cancel)="cancelDelete()"
+  (confirm)="confirmDelete()"
+/>

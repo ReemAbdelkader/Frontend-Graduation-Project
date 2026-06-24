@@ -1,0 +1,86 @@
+<div class="overlay" (click)="close.emit()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <button class="close-btn" (click)="close.emit()" aria-label="Close">×</button>
+
+    <div class="grid">
+      <div class="image-wrap">
+        <img [src]="product.image" [alt]="product.name" />
+        @if (product.badge) {
+          <span class="badge" [class.badge-bestseller]="product.badge === 'BESTSELLER'" [class.badge-new]="product.badge === 'NEW'" [class.badge-limited]="product.badge === 'LIMITED'">
+            {{ product.badge }}
+          </span>
+        }
+      </div>
+
+      <div class="body">
+        <p class="category">{{ product.category }} · SS 2026</p>
+        <h2 class="title">{{ product.name }}</h2>
+
+        <div class="rating-row">
+          <svg class="star" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          <span class="rating-value">{{ product.rating }}</span>
+          <span class="rating-count">({{ product.reviews }} reviews)</span>
+        </div>
+
+        <div class="price-row">
+          <span class="price">${{ product.price }}</span>
+          <span class="price-original">${{ originalPrice }}</span>
+        </div>
+
+        <div class="section">
+          <p class="label">Color</p>
+          <div class="colors">
+            @for (c of product.colors; track c) {
+              <button
+                class="color-swatch"
+                [style.background]="c"
+                [class.selected]="selectedColor() === c"
+                (click)="pickColor(c)"
+                [attr.aria-label]="'Select color ' + c"
+              ></button>
+            }
+          </div>
+        </div>
+
+        <div class="section">
+          <p class="label">Size</p>
+          <div class="sizes">
+            @for (s of sizes; track s) {
+              <button
+                class="size-btn"
+                [class.selected]="selectedSize() === s"
+                (click)="pickSize(s)"
+              >{{ s }}</button>
+            }
+          </div>
+        </div>
+
+        <div class="specs">
+          <div class="spec">
+            <p class="spec-label">Fabric</p>
+            <p class="spec-value">Heavyweight 400gsm</p>
+          </div>
+          <div class="spec">
+            <p class="spec-label">Print</p>
+            <p class="spec-value">DTG · Eco-ink</p>
+          </div>
+          <div class="spec">
+            <p class="spec-label">Origin</p>
+            <p class="spec-value">Porto, Portugal</p>
+          </div>
+          <div class="spec">
+            <p class="spec-label">Shipping</p>
+            <p class="spec-value">3–5 days</p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary">Add to cart — ${{ product.price }}</button>
+          <button class="btn btn-ghost">Save for later</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

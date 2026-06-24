@@ -1,0 +1,122 @@
+<div class="page">
+  <app-nav />
+
+  <main class="container">
+    <!-- GREETING -->
+    <div class="greeting">
+      <div>
+        <p class="eyebrow">{{ isAdmin() ? 'Wearly AI Control Center' : 'Your Wearly Dashboard' }} · {{ currentDate }}</p>
+        <h1 class="title">
+          Good morning, <span class="italic-light">{{ firstName }}</span> —<br />here's your style world.
+        </h1>
+      </div>
+      <a routerLink="/studio" class="studio-cta">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>
+        Open Design Studio
+      </a>
+    </div>
+
+    <!-- STATS -->
+    <section class="stats-grid">
+      @for (s of stats; track s.label) {
+        <div class="stat-card glass-strong">
+          <div class="tint" [class]="s.tint"></div>
+          <div class="stat-body">
+            <div class="stat-head">
+              <span class="stat-label">{{ s.label }}</span>
+              <span class="stat-icon">
+                @switch (s.icon) {
+                  @case ('bookmark') {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                  }
+                  @case ('package') {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                  }
+                  @case ('heart') {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
+                  }
+                  @case ('trending') {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                  }
+                }
+              </span>
+            </div>
+            <p class="stat-value">{{ s.value }}</p>
+            <p class="stat-delta">{{ s.delta }}</p>
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- QUICK ACCESS -->
+    <section class="quick-grid">
+      @for (q of quickAccess; track q.to) {
+        <a routerLink="{{ q.to }}" class="quick-card hover-lift">
+          <div class="quick-icon">
+            @switch (q.icon) {
+              @case ('wand') {
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>
+              }
+              @case ('template') {
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+              }
+              @case ('users') {
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              }
+              @case ('package') {
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+              }
+            }
+          </div>
+          <p class="quick-title">{{ q.title }}</p>
+          <p class="quick-desc">{{ q.desc }}</p>
+          <svg class="quick-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      }
+    </section>
+
+    <!-- RECOMMENDATIONS + ACTIVITY -->
+    <section class="bottom-grid">
+      <div class="recos">
+        <div class="recos-head">
+          <div>
+            <p class="eyebrow">Curated for you</p>
+            <h2 class="recos-title">Picked from your style DNA</h2>
+          </div>
+          <a routerLink="/shop" class="story-link browse">Browse all</a>
+        </div>
+        <div class="recos-grid">
+          @for (p of recos; track p.id) {
+            <app-product-card [product]="p" />
+          }
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <div class="activity-card glass-strong">
+          <p class="eyebrow">Recent activity</p>
+          <ul class="activity-list">
+            @for (a of activity; track $index) {
+              <li class="activity-item">
+                <div class="time-dot">{{ a.time.split(' ')[0] }}</div>
+                <div>
+                  <p class="action">{{ a.action }}</p>
+                  <p class="target">{{ a.target }}</p>
+                </div>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <div class="tip-card">
+          <p class="tip-eyebrow">Atelier tip</p>
+          <p class="tip-text">"Try a coral accent on your next hoodie — it's trending in your circle."</p>
+          <a routerLink="/studio" class="story-link tip-link">
+            Open studio
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+        </div>
+      </aside>
+    </section>
+  </main>
+</div>

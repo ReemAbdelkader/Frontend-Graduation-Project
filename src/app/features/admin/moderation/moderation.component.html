@@ -1,0 +1,77 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1 class="title">Moderation</h1>
+      <p class="sub">Review user-submitted reports about inappropriate templates.</p>
+    </div>
+  </header>
+
+  <div class="filter-row">
+    @for (s of statuses; track s) {
+      <button
+        class="filter-pill"
+        [class.active]="statusFilter() === s"
+        (click)="setStatusFilter(s)"
+      >
+        {{ s === 'ActionTaken' ? 'Action Taken' : s }}
+        <span class="count">{{ getCount(s) }}</span>
+      </button>
+    }
+  </div>
+
+  @if (filtered().length === 0) {
+    <div class="empty-state">
+      <p>No moderation reports match this filter.</p>
+    </div>
+  } @else {
+    <div class="reports-list">
+      @for (r of filtered(); track r.id) {
+        <article class="report-card">
+          <div class="report-head">
+            <div>
+              <p class="report-template">{{ r.templateName }}</p>
+              <p class="report-meta">
+                <span class="mono">ID: {{ r.templateId }}</span>
+                <span class="sep">·</span>
+                <span>Reported by <strong>{{ r.reporterName }}</strong></span>
+                <span class="sep">·</span>
+                <span>{{ r.submittedAt | date:'MMM d, y, h:mm a' }}</span>
+              </p>
+            </div>
+            <span class="status-pill" [class]="'status-' + r.status.toLowerCase()">
+              {{ statusLabel(r.status) }}
+            </span>
+          </div>
+
+          <div class="report-reason">
+            <p class="reason-label">Reason</p>
+            <p class="reason-text">{{ r.reason }}</p>
+          </div>
+
+          @if (r.actionTaken) {
+            <div class="action-taken">
+              <p class="action-label">Previous action</p>
+              <p class="action-text">{{ r.actionTaken }}</p>
+            </div>
+          }
+
+          @if (r.status !== 'ActionTaken') {
+            <div class="resolve-row">
+              <input
+                type="text"
+                class="action-input"
+                placeholder="What action was taken?"
+                [ngModel]="actionInputs()[r.id] || ''"
+                (ngModelChange)="setAction(r.id, $event)"
+                name="action-{{ r.id }}"
+              />
+              <button class="resolve-btn" (click)="resolve(r)">
+                Mark as resolved
+              </button>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</div>

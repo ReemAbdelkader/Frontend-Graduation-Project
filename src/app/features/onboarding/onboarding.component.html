@@ -1,0 +1,99 @@
+<div class="onboarding">
+  <!-- Left editorial panel -->
+  <aside class="editorial">
+    <div class="mesh bg-mesh"></div>
+    <a routerLink="/" class="brand">
+      <img [src]="logo" alt="Wearly" />
+      <span>Wearly</span>
+    </a>
+    <div class="editorial-text">
+      <p class="eyebrow">Style onboarding</p>
+      <h1 class="title">
+        Let's get to know<br /><span class="italic-light">your taste.</span>
+      </h1>
+      <p class="sub">
+        Tell Atelier what you love. We'll tune your feed, recommendations, and
+        design defaults to fit you — not the crowd.
+      </p>
+      <ul class="bullets">
+        <li>~60 seconds to complete</li>
+        <li>Skippable — revisit anytime from your profile</li>
+        <li>Used to personalize templates & drops</li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Right chat panel -->
+  <section class="chat-side">
+    <header class="chat-head">
+      <div class="chat-id">
+        <div class="ai-avatar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="chat-name">Atelier · Style Onboarding</p>
+          <p class="chat-status">
+            <span class="dot"></span> Online
+          </p>
+        </div>
+      </div>
+      <button class="skip-btn" (click)="finish()" title="Finish onboarding">
+        Skip &amp; continue
+      </button>
+    </header>
+
+    <div #scrollRef class="messages">
+      @for (m of messages(); track m.id) {
+        <div class="msg-row" [class.user]="m.role === 'user'">
+          <div class="bubble" [class.user-bubble]="m.role === 'user'" [class.ai-bubble]="m.role === 'ai'">
+            {{ m.text }}
+          </div>
+        </div>
+      }
+
+      @if (thinking()) {
+        <div class="msg-row">
+          <div class="bubble ai-bubble thinking">
+            <span class="dot-pulse"></span>
+            <span class="dot-pulse"></span>
+            <span class="dot-pulse"></span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Quick replies -->
+    <div class="quick-replies">
+      @for (q of quickReplies(); track q) {
+        <button class="quick-chip" (click)="useQuickReply(q)">{{ q }}</button>
+      }
+    </div>
+
+    <!-- Composer -->
+    <form class="composer" (ngSubmit)="send(); $event.preventDefault()">
+      <input
+        type="text"
+        class="input"
+        placeholder="Tell Atelier about your style…"
+        [ngModel]="input()"
+        (ngModelChange)="setInput($event)"
+        name="text"
+        [disabled]="thinking()"
+        autocomplete="off"
+      />
+      <button type="submit" class="send-btn" [disabled]="thinking() || !input().trim()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m22 2-7 20-4-9-9-4Z"/>
+          <path d="M22 2 11 13"/>
+        </svg>
+      </button>
+    </form>
+
+    <footer class="chat-foot">
+      <button class="finish-btn" (click)="finish()">Finish &amp; continue to dashboard →</button>
+      <button class="signout" (click)="signOut()">Sign out</button>
+    </footer>
+  </section>
+</div>

@@ -1,0 +1,52 @@
+<div class="page">
+  <app-nav />
+
+  <main class="container">
+    <header class="page-head">
+      <p class="eyebrow">Template Hub</p>
+      <h1 class="title">
+        Curated designs <span class="italic-light">ready for your garment,</span> <br />or share your own.
+      </h1>
+      <p class="sub">A living library of editorial-grade prints — published by Atelier and refined by the Wearly community.</p>
+    </header>
+
+    <div class="toolbar">
+      <div class="tab-switcher">
+        <button [class.active]="tab() === 'ai'" (click)="setTab('ai')" class="tab-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+          AI Assistant Creations
+        </button>
+        <button [class.active]="tab() === 'community'" (click)="setTab('community')" class="tab-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          User Community
+        </button>
+      </div>
+
+      <button class="filter-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Style · Season · Category
+      </button>
+    </div>
+
+    <section class="grid">
+      @for (t of filtered(); track t.id; let i = $index) {
+        <article class="card hover-lift">
+          <div class="image-wrap" [class]="bgClass(i)">
+            <img [src]="t.image" [alt]="t.name" loading="lazy" />
+            <div class="image-overlay"></div>
+            <button class="use-btn">Use Template</button>
+          </div>
+          <div class="body">
+            <div class="meta-row">
+              <p class="season">{{ t.season }}</p>
+              <span class="category-pill">{{ t.category }}</span>
+            </div>
+            <h3 class="name">{{ t.name }}</h3>
+            <p class="tags">{{ t.tags.join(' · ') }}</p>
+            <p class="author">by <span class="author-name">{{ t.author }}</span></p>
+          </div>
+        </article>
+      }
+    </section>
+  </main>
+</div>

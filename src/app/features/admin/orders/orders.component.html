@@ -1,0 +1,65 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1 class="title">Orders</h1>
+      <p class="sub">Track and update order fulfilment.</p>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="card-toolbar">
+      <div class="search-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" [ngModel]="query()" (ngModelChange)="setQuery($event)" placeholder="Search orders…" name="q" />
+      </div>
+
+      <div class="filter-row">
+        @for (s of statuses; track s) {
+          <button class="filter-pill" [class.active]="statusFilter() === s" (click)="setStatusFilter(s)">{{ s }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Customer</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (o of filtered(); track o.id) {
+            <tr>
+              <td class="mono">{{ o.orderNumber }}</td>
+              <td>{{ o.customerName }}</td>
+              <td>{{ formatCurrency(o.totalAmount) }}</td>
+              <td>
+                <select
+                  class="status-select"
+                  [ngModel]="o.status"
+                  (ngModelChange)="onStatusChange(o, $event)"
+                  name="status"
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="Processing">Processing</option>
+                  <option value="Shipped">Shipped</option>
+                  <option value="Delivered">Delivered</option>
+                  <option value="Cancelled">Cancelled</option>
+                  <option value="Returned">Returned</option>
+                </select>
+              </td>
+              <td class="muted">{{ o.createdAt | date:'MMM d, y' }}</td>
+            </tr>
+          }
+          @if (filtered().length === 0) {
+            <tr><td colspan="5" class="empty">No orders match your filters.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

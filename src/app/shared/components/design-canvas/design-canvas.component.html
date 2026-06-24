@@ -1,0 +1,10 @@
+<div class="design-canvas-shell">
+  <img
+    #previewImage
+    [src]="imageUrl"
+    [alt]="alt"
+    class="preview-image"
+    (load)="onImageLoaded()"
+  />
+  <canvas #fabricCanvas class="fabric-canvas"></canvas>
+</div>

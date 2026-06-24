@@ -1,0 +1,203 @@
+<div class="landing">
+  <!-- Public Navbar (overlay on hero) -->
+  <header class="pub-nav">
+    <div class="nav-inner">
+      <a routerLink="/" class="brand">
+        <img [src]="logo" alt="Wearly" class="logo" />
+        <span class="brand-name">Wearly</span>
+      </a>
+      <nav class="links">
+        <a href="#features" class="story-link">Features</a>
+        <a href="#pricing" class="story-link">Pricing</a>
+        <a routerLink="/community" class="story-link">Community</a>
+      </nav>
+      <div class="actions">
+        <a routerLink="/auth" class="signin-link">Sign In</a>
+        <a routerLink="/auth" class="cta-btn">Get Started</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <img [src]="heroImg" alt="Editorial fashion" class="hero-bg" />
+    <div class="hero-overlay-dark"></div>
+    <div class="hero-overlay-side"></div>
+
+    <div class="hero-content">
+      <div class="hero-text animate-fade-up">
+        <div class="hero-badge glass">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+          </svg>
+          The atelier, reimagined by AI
+        </div>
+
+        <h1 class="hero-headline">
+          Design.<br />
+          <span class="italic-light">Generate.</span><br />
+          <span class="text-gradient">Wear.</span>
+        </h1>
+
+        <p class="hero-sub">
+          From a single prompt to a finished garment on your doorstep — Wearly turns your imagination into wardrobe.
+        </p>
+
+        <div class="hero-ctas">
+          <a routerLink="/auth" class="btn-primary">
+            Start designing free
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+          <a routerLink="/shop" class="btn-glass">Browse the drop</a>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat">
+            <span class="stat-value">120k+</span>
+            <span class="stat-label">Designers</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat">
+            <span class="stat-value">4.9★</span>
+            <span class="stat-label">Avg. rating</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat">
+            <span class="stat-value">3 days</span>
+            <span class="stat-label">Avg. delivery</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="features">
+    <div class="features-head">
+      <p class="eyebrow">The Wearly System</p>
+      <h2 class="features-title">
+        A studio in your pocket. <span class="italic-muted">A factory at your fingertips.</span>
+      </h2>
+    </div>
+
+    <div class="features-grid">
+      @for (f of features; track f.title) {
+        <div class="feature-card hover-lift">
+          <div class="feature-icon">
+            @switch (f.icon) {
+              @case ('wand') {
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>
+              }
+              @case ('palette') {
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+              }
+              @case ('shopping') {
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              }
+              @case ('users') {
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              }
+              @case ('chart') {
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+              }
+              @case ('sparkles') {
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+              }
+            }
+          </div>
+          <h3 class="feature-title">{{ f.title }}</h3>
+          <p class="feature-body">{{ f.body }}</p>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- SS 2026 SHOWCASE -->
+  <section class="showcase">
+    <div class="showcase-grid">
+      <div class="showcase-text">
+        <p class="eyebrow accent-eyebrow">SS 2026 — Featured</p>
+        <h2 class="showcase-title">
+          Prompt to product, <br /><span class="italic-fade">in a single afternoon.</span>
+        </h2>
+        <p class="showcase-desc">
+          The Prism Block hoodie started as nine words. Forty-eight hours later it shipped to 211 wardrobes.
+        </p>
+        <div class="showcase-stats">
+          <div class="showcase-stat">
+            <p class="num">211</p>
+            <p class="lbl">orders in 48h</p>
+          </div>
+          <div class="showcase-stat">
+            <p class="num">$28k</p>
+            <p class="lbl">creator payout</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="showcase-images">
+        <img [src]="templateGeometric" alt="" class="img-1 animate-float" />
+        <img [src]="hoodieCream" alt="" class="img-2" />
+        <img [src]="sneakers" alt="" class="img-3" />
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonials">
+    <h2 class="testimonials-title">Loved by designers, worn by everyone.</h2>
+    <div class="testimonials-grid">
+      @for (t of testimonials; track t.name) {
+        <figure class="testimonial-card glass-strong">
+          <div class="stars">
+            @for (s of [1,2,3,4,5]; track s) {
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            }
+          </div>
+          <blockquote class="quote">"{{ t.body }}"</blockquote>
+          <figcaption class="caption">
+            <div class="avatar">{{ getInitials(t.name) }}</div>
+            <div>
+              <p class="name">{{ t.name }}</p>
+              <p class="role">{{ t.role }}</p>
+            </div>
+          </figcaption>
+        </figure>
+      }
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="pricing" class="cta-section">
+    <div class="cta-wrap">
+      <div class="cta-card">
+        <div class="cta-mesh bg-mesh"></div>
+        <div class="cta-content">
+          <h2 class="cta-title">Your first garment is on us.</h2>
+          <p class="cta-sub">
+            Sign up, complete a 60-second style profile, and we'll generate three custom designs ready to print.
+          </p>
+          <a routerLink="/auth" class="cta-btn-white">
+            Create your account
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img [src]="logo" alt="" class="footer-logo" />
+        © 2026 Wearly Atelier, Inc.
+      </div>
+      <div class="footer-links">
+        <a href="#" class="story-link">Privacy</a>
+        <a href="#" class="story-link">Terms</a>
+        <a href="#" class="story-link">Contact</a>
+      </div>
+    </div>
+  </footer>
+</div>

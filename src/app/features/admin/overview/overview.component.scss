@@ -1,0 +1,114 @@
+:host { display: block; }
+
+.overview { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.page-head {
+  .eyebrow {
+    font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--primary); margin: 0;
+  }
+  .title {
+    margin: 0.5rem 0 0;
+    font-family: "Playfair Display", serif;
+    font-size: 2.25rem; font-weight: 600; letter-spacing: -0.02em;
+    .italic-light { font-style: italic; font-weight: 300; }
+  }
+  .sub { margin: 0.5rem 0 0; color: var(--muted-foreground); }
+}
+
+.stats-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+  @media (min-width: 1024px) { grid-template-columns: repeat(4, 1fr); }
+}
+
+.stat-card {
+  border-radius: 16px; border: 1px solid var(--border);
+  background: var(--card); padding: 1.25rem;
+}
+
+.stat-icon {
+  height: 40px; width: 40px; border-radius: 12px;
+  display: grid; place-items: center;
+  &.users { background: oklch(0.48 0.05 250 / 0.1); color: var(--primary); }
+  &.orders { background: oklch(0.7 0.19 35 / 0.15); color: var(--accent); }
+  &.revenue { background: oklch(0.78 0.14 175 / 0.15); color: var(--success); }
+  &.pending { background: oklch(0.82 0.09 230 / 0.15); color: oklch(0.45 0.1 230); }
+  &.products { background: oklch(0.6 0.06 250 / 0.15); color: var(--primary); }
+  &.templates { background: oklch(0.7 0.19 35 / 0.1); color: var(--accent); }
+  &.public { background: oklch(0.78 0.14 175 / 0.1); color: var(--success); }
+  &.moderation { background: oklch(0.62 0.24 25 / 0.15); color: var(--destructive); }
+}
+
+.stat-value {
+  margin: 1rem 0 0;
+  font-family: "Playfair Display", serif;
+  font-size: 1.75rem; font-weight: 600;
+}
+
+.stat-label { margin: 0.25rem 0 0; font-size: 0.75rem; color: var(--muted-foreground); }
+
+.chart-card, .orders-card {
+  border-radius: 16px; border: 1px solid var(--border);
+  background: var(--card); padding: 1.5rem;
+}
+
+.card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  .card-title {
+    margin: 0; font-family: "Playfair Display", serif;
+    font-size: 1.25rem; font-weight: 600;
+  }
+  .muted { font-size: 0.75rem; color: var(--muted-foreground); }
+  .view-all { font-size: 0.75rem; color: var(--primary); }
+}
+
+.chart-body {
+  margin-top: 1rem;
+  display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: center;
+  @media (min-width: 768px) { grid-template-columns: 200px 1fr; }
+}
+
+.donut { width: 200px; height: 200px; display: block; }
+.donut-total { font-size: 14px; font-weight: 700; fill: var(--foreground); }
+.donut-label { font-size: 6px; fill: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.1em; }
+
+.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+
+.legend-item {
+  display: grid; grid-template-columns: 16px 1fr auto auto;
+  gap: 0.75rem; align-items: center; font-size: 0.875rem;
+  .swatch { height: 12px; width: 12px; border-radius: 4px; }
+  .legend-status { color: var(--foreground); }
+  .legend-count { font-weight: 600; }
+  .legend-pct { color: var(--muted-foreground); font-size: 0.75rem; min-width: 40px; text-align: right; }
+}
+
+.table-wrap { margin-top: 1rem; overflow-x: auto; }
+
+.orders-table {
+  width: 100%; border-collapse: collapse; font-size: 0.875rem;
+  thead {
+    background: oklch(0.95 0.01 80 / 0.5);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--muted-foreground); font-size: 0.7rem;
+  }
+  th, td { padding: 0.75rem 1rem; text-align: left; }
+  tbody tr {
+    border-top: 1px solid var(--border);
+    &:hover { background: var(--muted); }
+  }
+  .mono { font-family: monospace; font-size: 0.75rem; }
+  .muted { color: var(--muted-foreground); }
+}
+
+.status-pill {
+  padding: 0.125rem 0.625rem; border-radius: 9999px;
+  font-size: 0.7rem; font-weight: 600;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  &.status-pending { background: oklch(0.95 0.04 35); color: var(--accent); }
+  &.status-processing { background: oklch(0.82 0.09 230 / 0.2); color: oklch(0.45 0.1 230); }
+  &.status-shipped { background: oklch(0.78 0.14 175 / 0.15); color: var(--success); }
+  &.status-delivered { background: oklch(0.48 0.05 250 / 0.1); color: var(--primary); }
+  &.status-cancelled { background: oklch(0.62 0.24 25 / 0.1); color: var(--destructive); }
+  &.status-returned { background: oklch(0.6 0.06 280 / 0.1); color: oklch(0.5 0.06 280); }
+}

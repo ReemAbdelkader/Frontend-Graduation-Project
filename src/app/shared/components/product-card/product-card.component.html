@@ -1,0 +1,41 @@
+<article
+  class="product-card hover-lift"
+  [class.clickable]="cardClick.observers.length > 0"
+  (click)="onCardClick()"
+>
+  @if (product.badge) {
+    <span class="badge" [class.badge-bestseller]="product.badge === 'BESTSELLER'" [class.badge-new]="product.badge === 'NEW'" [class.badge-limited]="product.badge === 'LIMITED'">
+      {{ product.badge }}
+    </span>
+  }
+
+  <button class="heart-btn" (click)="onHeartClick($event)" aria-label="Save">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>
+    </svg>
+  </button>
+
+  <div class="image-wrap">
+    <img [src]="product.image" [alt]="product.name" loading="lazy" />
+  </div>
+
+  <div class="body">
+    <p class="category">{{ product.category }}</p>
+    <h3 class="name">{{ product.name }}</h3>
+    <div class="rating">
+      <svg class="star" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+      <span class="rating-value">{{ product.rating }}</span>
+      <span class="rating-count">({{ product.reviews }})</span>
+    </div>
+    <div class="footer">
+      <div class="colors">
+        @for (c of product.colors; track c) {
+          <span class="color-dot" [style.background]="c"></span>
+        }
+      </div>
+      <span class="price">${{ product.price }}</span>
+    </div>
+  </div>
+</article>

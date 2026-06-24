@@ -1,0 +1,104 @@
+<div class="page">
+  <app-nav />
+
+  <main class="container">
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">The Wearly Community</p>
+        <h1 class="title">Designs in the wild.</h1>
+      </div>
+      <button class="publish-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>
+        Publish your design
+      </button>
+    </header>
+
+    <div class="grid-layout">
+      <!-- FEED -->
+      <section class="feed">
+        @for (p of posts; track p.id; let i = $index) {
+          <article
+            class="post-card hover-lift"
+            [class.featured]="i === 0"
+            (click)="openDetail(p)"
+          >
+            <div class="image-wrap" [class.featured-img]="i === 0">
+              <img [src]="p.image" [alt]="p.title" loading="lazy" />
+            </div>
+            <div class="body">
+              <div class="author-row">
+                <div class="avatar">{{ p.avatar }}</div>
+                <div class="author-info">
+                  <p class="author-name">{{ p.author }}</p>
+                  <p class="author-meta">{{ p.uses }} creators used this</p>
+                </div>
+                <div class="rating">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span class="rating-value">{{ p.rating }}</span>
+                  <span class="rating-count">({{ p.ratings }})</span>
+                </div>
+              </div>
+              <h3 class="post-title">{{ p.title }}</h3>
+              <div class="actions">
+                <button class="action-btn heart">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
+                  {{ p.ratings }}
+                </button>
+                <button class="action-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  {{ p.comments }}
+                </button>
+                <button class="use-template-btn">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>
+                  Use Template
+                </button>
+              </div>
+            </div>
+          </article>
+        }
+      </section>
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="trending-card glass-strong">
+          <div class="card-head">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            <p class="card-label accent-label">Trending now</p>
+          </div>
+          <ul class="trending-list">
+            @for (t of trending; track t.tag) {
+              <li class="trending-item">
+                <span class="tag-name">{{ t.tag }}</span>
+                <span class="tag-count">{{ t.posts }}k posts</span>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <div class="creators-card">
+          <div class="card-head">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>
+            <p class="card-label accent-label">Top creators</p>
+          </div>
+          <ul class="creators-list">
+            @for (c of creators; track c.name; let i = $index) {
+              <li class="creator-item">
+                <span class="rank">{{ i + 1 }}</span>
+                <div class="avatar">{{ c.initials }}</div>
+                <div class="creator-info">
+                  <p class="creator-name">{{ c.name }}</p>
+                  <p class="creator-meta">{{ c.followers }} followers</p>
+                </div>
+                <span class="trend">{{ c.trend }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  @if (openPost(); as p) {
+    <app-post-detail-modal [post]="p" (close)="closeDetail()" />
+  }
+</div>

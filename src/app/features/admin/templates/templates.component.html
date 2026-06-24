@@ -1,0 +1,104 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1 class="title">Templates</h1>
+      <p class="sub">
+        Read-only view — templates belong to their creators. Admins can view but not edit or delete.
+      </p>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="search-row">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" [ngModel]="query()" (ngModelChange)="setQuery($event)" placeholder="Search templates…" name="q" />
+    </div>
+  </div>
+
+  @if (filtered().length === 0) {
+    <div class="empty-state">
+      <p>No templates match your search.</p>
+    </div>
+  } @else {
+    <div class="grid">
+      @for (t of filtered(); track t.id) {
+        <article class="tmpl-card">
+          <div class="tmpl-image" [style.background-image]="'url(' + t.imageUrl + ')'">
+            @if (t.isPublic) {
+              <span class="public-pill">Public</span>
+            } @else {
+              <span class="private-pill">Private</span>
+            }
+          </div>
+          <div class="tmpl-body">
+            <p class="tmpl-cat">{{ t.categoryName }}</p>
+            <h3 class="tmpl-name">{{ t.name }}</h3>
+            <p class="tmpl-creator">by {{ t.creatorName }}</p>
+            <div class="tmpl-meta">
+              <span class="status-pill" [class]="'status-' + t.status.toLowerCase().replace(' ', '')">{{ t.status }}</span>
+              <span class="likes">❤ {{ t.likesCount }}</span>
+            </div>
+            <div class="tmpl-foot">
+              <span class="date">{{ t.createdAt | date:'MMM d, y' }}</span>
+              <button class="view-btn" (click)="viewDetails(t)">View details</button>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>
+
+<!-- VIEW DETAILS MODAL (read-only) -->
+@if (viewing(); as t) {
+  <div class="modal-overlay" (click)="closeDetails()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <h2>{{ t.name }}</h2>
+        <button class="modal-close" (click)="closeDetails()" aria-label="Close">×</button>
+      </header>
+
+      <div class="modal-body">
+        <div class="detail-image" [style.background-image]="'url(' + t.imageUrl + ')'"></div>
+
+        <div class="detail-grid">
+          <div class="detail-field">
+            <p class="detail-label">Creator</p>
+            <p class="detail-value">{{ t.creatorName }}</p>
+          </div>
+          <div class="detail-field">
+            <p class="detail-label">Category</p>
+            <p class="detail-value">{{ t.categoryName }}</p>
+          </div>
+          <div class="detail-field">
+            <p class="detail-label">Status</p>
+            <p class="detail-value">
+              <span class="status-pill" [class]="'status-' + t.status.toLowerCase().replace(' ', '')">{{ t.status }}</span>
+            </p>
+          </div>
+          <div class="detail-field">
+            <p class="detail-label">Visibility</p>
+            <p class="detail-value">{{ t.isPublic ? 'Public' : 'Private' }}</p>
+          </div>
+          <div class="detail-field">
+            <p class="detail-label">Likes</p>
+            <p class="detail-value">{{ t.likesCount }}</p>
+          </div>
+          <div class="detail-field">
+            <p class="detail-label">Created</p>
+            <p class="detail-value">{{ t.createdAt | date:'MMM d, y' }}</p>
+          </div>
+        </div>
+
+        <div class="readonly-notice">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>This template belongs to {{ t.creatorName }}. Only the original creator can edit or delete it.</span>
+        </div>
+
+        <footer class="modal-foot">
+          <button type="button" class="ghost-btn" (click)="closeDetails()">Close</button>
+        </footer>
+      </div>
+    </div>
+  </div>
+}

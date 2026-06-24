@@ -1,0 +1,367 @@
+import { Component, inject, signal, computed } from "@angular/core";
+import { RouterLink } from "@angular/router";
+import { FormsModule } from "@angular/forms";
+import { CheckoutPayModalComponent } from "../../shared/components/checkout-pay-modal/checkout-pay-modal.component";
+import { DesignCanvasComponent } from "../../shared/components/design-canvas/design-canvas.component";
+import { ProductService } from "../../core/services/product.service";
+import {
+  CategoryDto,
+  ProductDto,
+  ProductImageDto,
+} from "../../core/models/shop.models";
+import { environment } from "../../../environments/environment";
+
+interface ChatMsg {
+  role: "ai" | "user";
+  text: string;
+}
+
+interface CategoryWithCount extends CategoryDto {
+  count: number;
+}
+
+type StudioTab = "products" | "custom" | "ai";
+
+enum ViewAngle {
+  Front = 1,
+  Back = 2,
+}
+
+type StudioProduct = ProductDto & {
+  image: string;
+  images: ProductImageDto[];
+  colors: string[];
+  category: string;
+  price: number;
+};
+
+@Component({
+  selector: "app-studio",
+  standalone: true,
+  imports: [
+    RouterLink,
+    FormsModule,
+    CheckoutPayModalComponent,
+    DesignCanvasComponent,
+  ],
+  templateUrl: "./studio.component.html",
+  styleUrl: "./studio.component.scss",
+})
+export class StudioComponent {
+  private readonly productService = inject(ProductService);
+
+  readonly logo = "assets/wearly-logo.png";
+  readonly baseApiUrl = environment.apiUrl;
+  readonly ViewAngle = ViewAngle;
+  readonly categories = signal<CategoryDto[]>([]);
+  readonly allProducts = signal<StudioProduct[]>([]);
+  readonly productLoading = signal(true);
+  readonly categoryLoading = signal(true);
+  readonly loadError = signal(false);
+  readonly selectedCategory = signal<string>("All");
+
+  readonly tab = signal<StudioTab>("products");
+  readonly tabOptions: StudioTab[] = ["products", "custom", "ai"];
+  readonly selected = signal<StudioProduct>(this.createDefaultProduct());
+  activeViewAngle: ViewAngle = ViewAngle.Front;
+
+  get selectedProduct(): StudioProduct {
+    return this.selected();
+  }
+  readonly color = signal<string>("#1A1A2E");
+  readonly size = signal<string>("L");
+  readonly canvasOpen = signal(false);
+  readonly payOpen = signal(false);
+
+  readonly chatInput = signal("");
+  readonly messages = signal<ChatMsg[]>([
+    {
+      role: "ai",
+      text: "Hi Elena — I'm Atelier, your design co-pilot. Tell me a mood, palette, or garment and I'll render it on the mannequin.",
+    },
+    {
+      role: "user",
+      text: "I want a heavyweight hoodie with prism color blocks — violet, coral, mint.",
+    },
+    {
+      role: "ai",
+      text: "Love it. I'll layer the prism on the chest in 400gsm French terry. Want the back panel left clean, or a tonal 'W' monogram?",
+    },
+    {
+      role: "user",
+      text: "Clean back, but add a small embroidered W on the left sleeve.",
+    },
+    {
+      role: "ai",
+      text: "Locked in. Generating 4 variations now — coral-forward, mint-forward, violet-forward, and a balanced tri-tone. Ready in ~12s.",
+    },
+  ]);
+
+  readonly categoryCounts = computed<CategoryWithCount[]>(() => {
+    const products = this.allProducts();
+    return this.categories().map((category) => ({
+      ...category,
+      count: products.filter(
+        (product) => product.categoryName === category.name,
+      ).length,
+    }));
+  });
+
+  readonly leftPanelProducts = computed(() => {
+    const filtered =
+      this.selectedCategory() === "All"
+        ? this.allProducts()
+        : this.allProducts().filter(
+            (product) => product.categoryName === this.selectedCategory(),
+          );
+
+    return filtered.slice(0, 6);
+  });
+
+  readonly colorPalette = [
+    "#1A1A2E",
+    "#FAF8F5",
+    "#7AA7D9",
+    "#FF6B4A",
+    "#00C9A7",
+    "#556B2F",
+  ];
+
+  readonly fabricOptions = [
+    "French Terry 380gsm",
+    "Heavyweight 400gsm",
+    "Organic Cotton 220gsm",
+  ];
+
+  readonly sizes = ["XS", "S", "M", "L", "XL", "XXL"];
+
+  readonly quickPrompts = [
+    "Make it cream",
+    "Add embroidery",
+    "Try oversized fit",
+  ];
+
+  get currentProductImageUrl(): string {
+    const selectedProduct = this.selectedProduct;
+    const images = Array.isArray(selectedProduct?.images)
+      ? selectedProduct.images
+      : [];
+    const activeImage = images.find(
+      (image) => image.viewAngle === this.activeViewAngle,
+    );
+    const imageUrl =
+      activeImage?.imageUrl || selectedProduct?.image || this.logo;
+
+    if (!imageUrl) {
+      return this.logo;
+    }
+
+    return /^https?:\/\//i.test(imageUrl) || imageUrl.startsWith("data:")
+      ? imageUrl
+      : `${this.baseApiUrl}${imageUrl}`;
+  }
+
+  constructor() {
+    this.loadCategories();
+    this.loadProducts();
+  }
+
+  private createDefaultProduct(): StudioProduct {
+    return {
+      id: "",
+      name: "Untitled product",
+      basePrice: 0,
+      categoryName: "Uncategorized",
+      previewImageUrl: "",
+      isAvailable: false,
+      averageRating: 0,
+      image: this.logo,
+      images: [],
+      colors: ["#1A1A2E", "#FAF8F5", "#7AA7D9"],
+      category: "Uncategorized",
+      price: 0,
+    };
+  }
+
+  private mapProduct(dto: ProductDto): StudioProduct {
+    return {
+      ...dto,
+      image: dto.previewImageUrl
+        ? `${this.baseApiUrl}${dto.previewImageUrl}`
+        : this.logo,
+      images: [
+        {
+          id: "",
+          productId: dto.id,
+          imageUrl: dto.previewImageUrl ?? "",
+          viewAngle: ViewAngle.Front,
+          isPrimary: true,
+          displayOrder: 0,
+        },
+      ],
+      colors: this.getCategoryColors(dto.categoryName),
+      category: dto.categoryName,
+      price: Number(dto.basePrice),
+    };
+  }
+
+  private getCategoryColors(categoryName: string): string[] {
+    const paletteMap: Record<string, string[]> = {
+      "T-Shirts": ["#1A1A2E", "#FAF8F5", "#7AA7D9"],
+      Hoodies: ["#1A1A2E", "#556B2F", "#FF6B4A"],
+      Pants: ["#556B2F", "#1A1A2E", "#FAF8F5"],
+      Footwear: ["#7AA7D9", "#FF6B4A", "#00C9A7"],
+      Headwear: ["#1A1A2E", "#FF6B4A", "#FAF8F5"],
+    };
+
+    return paletteMap[categoryName] ?? ["#1A1A2E", "#FAF8F5", "#7AA7D9"];
+  }
+
+  private loadProducts(): void {
+    this.productLoading.set(true);
+    this.productService.getProducts(1, 20).subscribe({
+      next: (result) => {
+        const mapped = result.data.map((dto) => this.mapProduct(dto));
+        this.allProducts.set(mapped);
+        if (mapped.length) {
+          this.selected.set(mapped[0]);
+          this.color.set(mapped[0].colors[0]);
+        }
+        this.productLoading.set(false);
+      },
+      error: () => {
+        this.productLoading.set(false);
+        this.loadError.set(true);
+      },
+    });
+  }
+
+  private loadCategories(): void {
+    this.categoryLoading.set(true);
+    this.productService.getCategories().subscribe({
+      next: (categories) => {
+        this.categories.set(categories);
+        this.categoryLoading.set(false);
+      },
+      error: () => {
+        this.categoryLoading.set(false);
+        this.loadError.set(true);
+      },
+    });
+  }
+
+  setTab(t: StudioTab): void {
+    this.tab.set(t);
+  }
+
+  setSelectedCategory(categoryName: string): void {
+    this.selectedCategory.set(categoryName);
+  }
+
+  toggleViewAngle(): void {
+    this.activeViewAngle =
+      this.activeViewAngle === ViewAngle.Front
+        ? ViewAngle.Back
+        : ViewAngle.Front;
+  }
+
+  setActiveViewAngle(viewAngle: ViewAngle): void {
+    this.activeViewAngle = viewAngle;
+  }
+
+  selectProduct(productId: string): void {
+    const product = this.allProducts().find((item) => item.id === productId);
+
+    if (!product) {
+      return;
+    }
+
+    this.selected.set({
+      ...product,
+      id: product.id,
+      name: product.name,
+      images: product.images ?? [],
+    });
+    this.color.set(product.colors[0]);
+    this.activeViewAngle = ViewAngle.Front;
+
+    this.productService.getProductImages(productId).subscribe({
+      next: (images) => {
+        const mappedImages = images.map((image) => ({
+          ...image,
+          viewAngle: image.viewAngle ?? ViewAngle.Front,
+        }));
+
+        this.selected.update((current) => ({
+          ...current,
+          id: product.id,
+          name: product.name,
+          images: mappedImages,
+          image:
+            mappedImages.find((image) => image.viewAngle === ViewAngle.Front)
+              ?.imageUrl || product.image,
+        }));
+      },
+      error: () => {
+        this.selected.update((current) => ({
+          ...current,
+          id: product.id,
+          name: product.name,
+          images: product.images ?? [],
+        }));
+      },
+    });
+  }
+
+  pickColor(c: string): void {
+    this.color.set(c);
+  }
+
+  pickSize(s: string): void {
+    this.size.set(s);
+  }
+
+  openCanvas(): void {
+    this.canvasOpen.set(true);
+  }
+
+  closeCanvas(): void {
+    this.canvasOpen.set(false);
+  }
+
+  openPay(): void {
+    this.payOpen.set(true);
+  }
+
+  closePay(): void {
+    this.payOpen.set(false);
+  }
+
+  setChatInput(v: string): void {
+    this.chatInput.set(v);
+  }
+
+  useQuickPrompt(q: string): void {
+    this.chatInput.set(q);
+  }
+
+  sendChat(): void {
+    const value = this.chatInput().trim();
+    if (!value) return;
+    this.messages.update((m) => [...m, { role: "user", text: value }]);
+    this.chatInput.set("");
+    setTimeout(() => {
+      this.messages.update((m) => [
+        ...m,
+        {
+          role: "ai",
+          text: "Got it — I'll restyle the current piece around that direction and refresh the mannequin preview.",
+        },
+      ]);
+    }, 700);
+  }
+
+  get originalPrice(): number {
+    return this.selected().basePrice + 32;
+  }
+}
