@@ -29,12 +29,20 @@ export interface ProductDto {
   averageRating: number;
 }
 
+export interface PrintableZoneBounds {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 export interface ProductImageDto {
   id: string;
   productId: string;
   imageUrl: string;
   viewAngle?: number | null;
   printableZoneJson?: string | null;
+  printableZone?: PrintableZoneBounds | null;
   isPrimary: boolean;
   displayOrder: number;
 }

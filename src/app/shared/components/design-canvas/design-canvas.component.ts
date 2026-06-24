@@ -13,6 +13,7 @@ import { firstValueFrom } from "rxjs";
 import { ProductService } from "../../../core/services/product.service";
 import { FabricDesignStateService } from "./services/fabric-design-state.service";
 import { FabricImageLayerService } from "./services/fabric-image-layer.service";
+import { FabricPrintableZoneConstraintService } from "./services/fabric-printable-zone-constraint.service";
 import { FabricTextLayerService } from "./services/fabric-text-layer.service";
 
 @Component({
@@ -27,6 +28,12 @@ export class DesignCanvasComponent
   @Input() imageUrl = "";
   @Input() alt = "Design preview";
   @Input() viewAngle: "front" | "back" = "front";
+  @Input() printableZone: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null = null;
 
   @ViewChild("fabricCanvas", { static: false })
   fabricCanvasRef!: ElementRef<HTMLCanvasElement>;
@@ -57,6 +64,7 @@ export class DesignCanvasComponent
   private fabricCanvas?: FabricCanvas;
   private resizeObserver?: ResizeObserver;
   private resizeFrame = 0;
+  private pendingConstraintFrame = 0;
   private readonly keyboardHandler = (event: KeyboardEvent) => {
     this.handleKeyboardShortcut(event);
   };
@@ -65,6 +73,7 @@ export class DesignCanvasComponent
     private readonly textLayerService: FabricTextLayerService,
     private readonly imageLayerService: FabricImageLayerService,
     private readonly stateService: FabricDesignStateService,
+    private readonly constraintService: FabricPrintableZoneConstraintService,
     private readonly productService: ProductService,
   ) {}
 
@@ -110,6 +119,10 @@ export class DesignCanvasComponent
 
     if (this.resizeFrame) {
       cancelAnimationFrame(this.resizeFrame);
+    }
+
+    if (this.pendingConstraintFrame) {
+      cancelAnimationFrame(this.pendingConstraintFrame);
     }
 
     this.unbindCanvasEvents();
@@ -171,6 +184,7 @@ export class DesignCanvasComponent
     this.viewAngle = nextView;
     this.loadViewState(this.viewAngle);
     this.syncCanvasSize();
+    this.schedulePrintableConstraint();
     this.syncToolbarState();
   }
 
@@ -253,6 +267,7 @@ export class DesignCanvasComponent
       });
       this.fabricCanvas.loadFromJSON(state as any, () => {
         this.fabricCanvas?.requestRenderAll();
+        this.schedulePrintableConstraint();
         this.syncToolbarState();
         console.log(`[Fabric] loadFromJSON callback complete`, {
           targetSide: viewAngle,
@@ -318,6 +333,7 @@ export class DesignCanvasComponent
       );
 
       if (imageLayer) {
+        this.schedulePrintableConstraint();
         this.syncToolbarState();
       }
     } finally {
@@ -332,6 +348,7 @@ export class DesignCanvasComponent
 
     this.syncCanvasSize();
     const textLayer = this.textLayerService.createTextLayer(this.fabricCanvas);
+    this.schedulePrintableConstraint();
     this.syncToolbarState();
     this.textLayerService.startEditingText(this.fabricCanvas, textLayer);
   }
@@ -448,6 +465,43 @@ export class DesignCanvasComponent
 
     this.fabricCanvas.on("object:modified", () => {
       this.syncToolbarState();
+      this.schedulePrintableConstraint();
+    });
+
+    this.fabricCanvas.on("object:moving", (event) => {
+      const target = event.target;
+      if (!target) {
+        return;
+      }
+      this.constraintService.constrainObject(
+        this.fabricCanvas,
+        target,
+        this.printableZone,
+      );
+    });
+
+    this.fabricCanvas.on("object:scaling", (event) => {
+      const target = event.target;
+      if (!target) {
+        return;
+      }
+      this.constraintService.constrainObject(
+        this.fabricCanvas,
+        target,
+        this.printableZone,
+      );
+    });
+
+    this.fabricCanvas.on("object:rotating", (event) => {
+      const target = event.target;
+      if (!target) {
+        return;
+      }
+      this.constraintService.constrainObject(
+        this.fabricCanvas,
+        target,
+        this.printableZone,
+      );
     });
   }
 
@@ -460,6 +514,9 @@ export class DesignCanvasComponent
     this.fabricCanvas.off("selection:updated");
     this.fabricCanvas.off("selection:cleared");
     this.fabricCanvas.off("object:modified");
+    this.fabricCanvas.off("object:moving");
+    this.fabricCanvas.off("object:scaling");
+    this.fabricCanvas.off("object:rotating");
   }
 
   private setupResizeObserver(): void {
@@ -513,6 +570,7 @@ export class DesignCanvasComponent
     this.fabricCanvas.setDimensions({ width, height });
     this.fabricCanvas.calcOffset();
     this.fabricCanvas.renderAll();
+    this.schedulePrintableConstraint();
   }
 
   private parseCanvasState(canvasStateJSON: string): {
@@ -561,6 +619,20 @@ export class DesignCanvasComponent
     }
 
     return new File([bytes], filename, { type: mime });
+  }
+
+  private schedulePrintableConstraint(): void {
+    if (this.pendingConstraintFrame) {
+      cancelAnimationFrame(this.pendingConstraintFrame);
+    }
+
+    this.pendingConstraintFrame = requestAnimationFrame(() => {
+      this.constraintService.constrainAllObjects(
+        this.fabricCanvas,
+        this.printableZone,
+      );
+      this.pendingConstraintFrame = 0;
+    });
   }
 
   private syncToolbarState(): void {

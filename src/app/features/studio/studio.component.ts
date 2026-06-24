@@ -7,6 +7,7 @@ import { ProductService } from "../../core/services/product.service";
 import { AuthService } from "../../core/services/auth.service";
 import {
   CategoryDto,
+  PrintableZoneBounds,
   ProductDto,
   ProductImageDto,
 } from "../../core/models/shop.models";
@@ -167,6 +168,20 @@ export class StudioComponent {
       : `${this.baseApiUrl}${imageUrl}`;
   }
 
+  get currentPrintableZone(): PrintableZoneBounds | null {
+    const selectedProduct = this.selectedProduct;
+    const images = Array.isArray(selectedProduct?.images)
+      ? selectedProduct.images
+      : [];
+    const activeImage = images.find(
+      (image) => image.viewAngle === this.activeViewAngle,
+    );
+
+    return this.parsePrintableZone(
+      activeImage?.printableZone ?? activeImage?.printableZoneJson ?? null,
+    );
+  }
+
   constructor() {
     this.loadCategories();
     this.loadProducts();
@@ -303,6 +318,9 @@ export class StudioComponent {
         const mappedImages = images.map((image) => ({
           ...image,
           viewAngle: image.viewAngle ?? ViewAngle.Front,
+          printableZone: this.parsePrintableZone(
+            image.printableZone ?? image.printableZoneJson ?? null,
+          ),
         }));
 
         this.selected.update((current) => ({
@@ -461,6 +479,43 @@ export class StudioComponent {
 
   get originalPrice(): number {
     return this.selected().basePrice + 32;
+  }
+
+  private parsePrintableZone(zone: unknown): PrintableZoneBounds | null {
+    if (!zone) {
+      return null;
+    }
+
+    if (typeof zone === "string") {
+      try {
+        const parsed = JSON.parse(zone) as Partial<PrintableZoneBounds>;
+        return this.parsePrintableZone(parsed);
+      } catch {
+        return null;
+      }
+    }
+
+    if (typeof zone !== "object") {
+      return null;
+    }
+
+    const candidate = zone as Partial<PrintableZoneBounds>;
+
+    const left = Number(candidate.left);
+    const top = Number(candidate.top);
+    const width = Number(candidate.width);
+    const height = Number(candidate.height);
+
+    if ([left, top, width, height].some((value) => !Number.isFinite(value))) {
+      return null;
+    }
+
+    return {
+      left,
+      top,
+      width,
+      height,
+    };
   }
 
   private mapSizeToEnum(size: string): number | null {
