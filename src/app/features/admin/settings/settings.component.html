@@ -1,0 +1,44 @@
+<div class="page">
+  <header class="page-head">
+    <h1 class="title">Settings</h1>
+    <p class="sub">Platform-wide controls and preferences.</p>
+  </header>
+
+  <section class="card">
+    <h2 class="card-title">Organization</h2>
+    <label class="field">
+      <span class="label">Organization name</span>
+      <input type="text" [ngModel]="orgName()" (ngModelChange)="orgName.set($event)" name="orgName" />
+    </label>
+    <label class="field">
+      <span class="label">Support email</span>
+      <input type="email" [ngModel]="supportEmail()" (ngModelChange)="supportEmail.set($event)" name="supportEmail" />
+    </label>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Access</h2>
+    <div class="toggle-row">
+      <div>
+        <p class="toggle-label">Allow new sign-ups</p>
+        <p class="toggle-desc">Anyone with the link can create an account.</p>
+      </div>
+      <button class="toggle" [class.on]="allowSignups()" (click)="toggleSignups()" [attr.aria-pressed]="allowSignups()">
+        <span class="knob"></span>
+      </button>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <p class="toggle-label">Maintenance mode</p>
+        <p class="toggle-desc">Show a maintenance page to non-admin users.</p>
+      </div>
+      <button class="toggle" [class.on]="maintenance()" (click)="toggleMaintenance()" [attr.aria-pressed]="maintenance()">
+        <span class="knob"></span>
+      </button>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button class="save-btn" (click)="saveChanges()">Save changes</button>
+  </div>
+</div>

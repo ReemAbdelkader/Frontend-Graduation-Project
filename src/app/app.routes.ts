@@ -15,6 +15,18 @@ export const routes: Routes = [
       import('./features/auth/auth.component').then((m) => m.AuthComponent),
     title: 'Sign in — Wearly',
   },
+  {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./features/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent),
+    title: 'Forgot password — Wearly',
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./features/reset-password/reset-password.component').then((m) => m.ResetPasswordComponent),
+    title: 'Reset password — Wearly',
+  },
 
   // ============ USER-SIDE ============
   {
@@ -92,6 +104,12 @@ export const routes: Routes = [
         title: 'Users — Control Center',
       },
       {
+        path: 'creators',
+        loadComponent: () =>
+          import('./features/admin/creators/creators.component').then((m) => m.CreatorsComponent),
+        title: 'Creators — Control Center',
+      },
+      {
         path: 'orders',
         loadComponent: () =>
           import('./features/admin/orders/orders.component').then((m) => m.OrdersComponent),
@@ -120,6 +138,24 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/moderation/moderation.component').then((m) => m.ModerationComponent),
         title: 'Moderation — Control Center',
+      },
+      {
+        path: 'rewards',
+        loadComponent: () =>
+          import('./features/admin/rewards/rewards.component').then((m) => m.RewardsComponent),
+        title: 'Rewards — Control Center',
+      },
+      {
+        path: 'ai-reports',
+        loadComponent: () =>
+          import('./features/admin/ai-reports/ai-reports.component').then((m) => m.AiReportsComponent),
+        title: 'AI Reports — Control Center',
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/admin/settings/settings.component').then((m) => m.SettingsComponent),
+        title: 'Settings — Control Center',
       },
     ],
   },

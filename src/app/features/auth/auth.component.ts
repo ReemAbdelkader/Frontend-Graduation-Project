@@ -29,6 +29,10 @@ export class AuthComponent {
     this.tab.set(t);
   }
 
+  googleSignIn(): void {
+    this.toastService.info('Google sign-in coming soon.');
+  }
+
   handleSubmit(): void {
     const emailVal = this.email().trim();
     const passVal = this.password().trim();
