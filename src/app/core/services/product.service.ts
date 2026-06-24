@@ -10,6 +10,18 @@ import {
 } from "../models/shop.models";
 import { environment } from "../../../environments/environment";
 
+interface DesignCreatePayload {
+  userId: string;
+  productId: string;
+  templateId?: string | null;
+  canvasStateJSON: string;
+  snapshotImageURL: string;
+  selectedSize?: number | null;
+  selectedFabric?: number | null;
+  selectedPrintMethod?: number | null;
+  selectedColor?: string | null;
+}
+
 @Injectable({ providedIn: "root" })
 export class ProductService {
   private readonly apiUrl = `${environment.apiUrl}/api`;
@@ -84,6 +96,31 @@ export class ProductService {
       .pipe(
         map((response) => response.data ?? []),
         catchError(() => of([])),
+      );
+  }
+
+  uploadDesignSnapshot(file: File): Observable<string | null> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return this.http
+      .post(`${this.apiUrl}/designstudio/upload-snapshot`, formData, {
+        responseType: "text",
+      })
+      .pipe(
+        map((response) => (response ? response : null)),
+        catchError(() => of(null)),
+      );
+  }
+
+  createDesign(payload: DesignCreatePayload): Observable<string | null> {
+    return this.http
+      .post(`${this.apiUrl}/designstudio`, payload, {
+        responseType: "text",
+      })
+      .pipe(
+        map((response) => (response ? response : null)),
+        catchError(() => of(null)),
       );
   }
 }

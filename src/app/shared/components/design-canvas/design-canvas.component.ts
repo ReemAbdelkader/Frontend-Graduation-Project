@@ -9,6 +9,8 @@ import {
   ViewChild,
 } from "@angular/core";
 import { Canvas as FabricCanvas, Textbox } from "fabric";
+import { firstValueFrom } from "rxjs";
+import { ProductService } from "../../../core/services/product.service";
 import { FabricDesignStateService } from "./services/fabric-design-state.service";
 import { FabricImageLayerService } from "./services/fabric-image-layer.service";
 import { FabricTextLayerService } from "./services/fabric-text-layer.service";
@@ -63,6 +65,7 @@ export class DesignCanvasComponent
     private readonly textLayerService: FabricTextLayerService,
     private readonly imageLayerService: FabricImageLayerService,
     private readonly stateService: FabricDesignStateService,
+    private readonly productService: ProductService,
   ) {}
 
   ngAfterViewInit(): void {
@@ -122,6 +125,37 @@ export class DesignCanvasComponent
     this.fabricCanvas?.clear();
     this.fabricCanvas?.renderAll();
     this.syncToolbarState();
+  }
+
+  getCurrentCanvasState(): string {
+    if (!this.fabricCanvas) {
+      return "";
+    }
+
+    return JSON.stringify(this.fabricCanvas.toJSON());
+  }
+
+  async exportCurrentDesignSnapshot(): Promise<string | null> {
+    if (!this.fabricCanvas) {
+      return null;
+    }
+
+    this.syncCanvasSize();
+
+    const dataUrl = this.fabricCanvas.toDataURL({
+      format: "png",
+      multiplier: 2,
+      quality: 1,
+      enableRetinaScaling: true,
+    });
+
+    const file = this.dataUrlToFile(dataUrl, `design-${Date.now()}.png`);
+
+    if (!file) {
+      return null;
+    }
+
+    return firstValueFrom(this.productService.uploadDesignSnapshot(file));
   }
 
   saveCurrentViewState(viewAngle: "front" | "back" = this.viewAngle): void {
@@ -439,6 +473,24 @@ export class DesignCanvasComponent
     this.fabricCanvas.setDimensions({ width, height });
     this.fabricCanvas.calcOffset();
     this.fabricCanvas.renderAll();
+  }
+
+  private dataUrlToFile(dataUrl: string, filename: string): File | null {
+    const [header, payload] = dataUrl.split(",");
+
+    if (!header || !payload) {
+      return null;
+    }
+
+    const mime = header.match(/data:(.*?);base64/)?.[1] ?? "image/png";
+    const binary = atob(payload);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+
+    return new File([bytes], filename, { type: mime });
   }
 
   private syncToolbarState(): void {

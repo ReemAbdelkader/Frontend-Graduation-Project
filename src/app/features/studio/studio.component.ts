@@ -1,9 +1,10 @@
-import { Component, inject, signal, computed } from "@angular/core";
+import { Component, inject, signal, computed, ViewChild } from "@angular/core";
 import { RouterLink } from "@angular/router";
 import { FormsModule } from "@angular/forms";
 import { CheckoutPayModalComponent } from "../../shared/components/checkout-pay-modal/checkout-pay-modal.component";
 import { DesignCanvasComponent } from "../../shared/components/design-canvas/design-canvas.component";
 import { ProductService } from "../../core/services/product.service";
+import { AuthService } from "../../core/services/auth.service";
 import {
   CategoryDto,
   ProductDto,
@@ -49,6 +50,10 @@ type StudioProduct = ProductDto & {
 })
 export class StudioComponent {
   private readonly productService = inject(ProductService);
+  private readonly authService = inject(AuthService);
+
+  @ViewChild(DesignCanvasComponent)
+  private readonly designCanvas?: DesignCanvasComponent;
 
   readonly logo = "assets/wearly-logo.png";
   readonly baseApiUrl = environment.apiUrl;
@@ -368,7 +373,77 @@ export class StudioComponent {
     }, 700);
   }
 
+  async saveToDrafts(): Promise<void> {
+    const selectedProduct = this.selected();
+
+    if (!selectedProduct?.id || !this.designCanvas) {
+      return;
+    }
+
+    const snapshotUrl = await this.designCanvas.exportCurrentDesignSnapshot();
+    const canvasState = this.designCanvas.getCurrentCanvasState();
+    const currentUser = this.authService.user();
+    const userId = currentUser?.email
+      ? this.createStableUserId(currentUser.email)
+      : this.createStableUserId("guest");
+
+    this.productService
+      .createDesign({
+        userId,
+        productId: selectedProduct.id,
+        templateId: null,
+        canvasStateJSON: canvasState,
+        snapshotImageURL: snapshotUrl ?? "",
+        selectedSize: this.mapSizeToEnum(this.size()),
+        selectedFabric: null,
+        selectedPrintMethod: null,
+        selectedColor: this.color(),
+      })
+      .subscribe({
+        next: (designId) => {
+          console.log("[Studio] design saved", { designId, snapshotUrl });
+        },
+        error: (error) => {
+          console.error("[Studio] failed to save design", error);
+        },
+      });
+  }
+
   get originalPrice(): number {
     return this.selected().basePrice + 32;
+  }
+
+  private mapSizeToEnum(size: string): number | null {
+    switch (size) {
+      case "XS":
+        return 1;
+      case "S":
+        return 2;
+      case "M":
+        return 3;
+      case "L":
+        return 4;
+      case "XL":
+        return 5;
+      case "XXL":
+        return 6;
+      case "XXXL":
+        return 7;
+      default:
+        return null;
+    }
+  }
+
+  private createStableUserId(email: string): string {
+    const normalized = (email || "guest").trim().toLowerCase();
+    let hash = 0;
+
+    for (let index = 0; index < normalized.length; index += 1) {
+      hash = (hash << 5) - hash + normalized.charCodeAt(index);
+      hash |= 0;
+    }
+
+    const hex = Math.abs(hash).toString(16).padStart(8, "0");
+    return `${hex.slice(0, 8)}-0000-4000-8000-${hex.slice(0, 12)}`;
   }
 }
