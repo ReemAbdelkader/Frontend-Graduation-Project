@@ -10,6 +10,7 @@ import {
 } from "../models/shop.models";
 import { environment } from "../../../environments/environment";
 
+<<<<<<< HEAD
 interface DesignCreatePayload {
   userId: string;
   productId: string;
@@ -38,6 +39,8 @@ interface DesignResponsePayload {
   calculatedPrice?: number;
 }
 
+=======
+>>>>>>> 206a691 (Add my updates)
 @Injectable({ providedIn: "root" })
 export class ProductService {
   private readonly apiUrl = `${environment.apiUrl}/api`;
@@ -114,6 +117,7 @@ export class ProductService {
         catchError(() => of([])),
       );
   }
+<<<<<<< HEAD
 
   uploadDesignSnapshot(file: File): Observable<string | null> {
     const formData = new FormData();
@@ -148,4 +152,6 @@ export class ProductService {
         catchError(() => of(null)),
       );
   }
+=======
+>>>>>>> 206a691 (Add my updates)
 }

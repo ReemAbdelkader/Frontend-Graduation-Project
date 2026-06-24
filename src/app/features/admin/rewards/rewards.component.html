@@ -1,0 +1,121 @@
+<div class="page">
+  <header class="page-head">
+    <p class="eyebrow">REWARDS</p>
+    <h1 class="title">Coupons & badges</h1>
+    <p class="sub">Manage discount codes and creator rewards.</p>
+  </header>
+
+  <!-- Top stat cards -->
+  <section class="stats-grid">
+    @for (s of stats; track s.label) {
+      <div class="stat-card">
+        <p class="stat-value">{{ s.value }}</p>
+        <p class="stat-label">{{ s.label }}</p>
+      </div>
+    }
+  </section>
+
+  <!-- Coupons section -->
+  <section class="coupons-section">
+    <div class="section-head">
+      <h2 class="section-title">Discount coupons</h2>
+      <button class="new-btn" (click)="openCreateCoupon()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        New coupon
+      </button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="coupons-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Discount</th>
+            <th>Uses</th>
+            <th>Expires</th>
+            <th class="right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of coupons(); track c.id) {
+            <tr>
+              <td class="mono">{{ c.code }}</td>
+              <td>{{ c.discount }}</td>
+              <td>{{ c.uses.toLocaleString() }} uses</td>
+              <td class="muted">{{ c.expires | date:'MMM d, y' }}</td>
+              <td class="right">
+                <div class="action-row">
+                  <button class="icon-action" (click)="openEditCoupon(c)" title="Edit">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+                  </button>
+                  <button class="icon-action danger" (click)="askDelete(c)" title="Delete">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+          @if (coupons().length === 0) {
+            <tr><td colspan="5" class="empty">No coupons yet.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- CREATE / EDIT COUPON MODAL -->
+@if (showCouponModal()) {
+  <div class="modal-overlay" (click)="closeCouponModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <h2>{{ editingId() ? 'Edit coupon' : 'New coupon' }}</h2>
+        <button class="modal-close" (click)="closeCouponModal()" aria-label="Close">×</button>
+      </header>
+
+      <form (ngSubmit)="saveCoupon(); $event.preventDefault()" class="modal-body">
+        <label class="field">
+          <span class="label">Code *</span>
+          <input type="text" [ngModel]="formCode()" (ngModelChange)="formCode.set($event.toUpperCase())" name="code" placeholder="WEARLY10" required />
+        </label>
+
+        <div class="field">
+          <span class="label">Discount type *</span>
+          <div class="type-options">
+            <button type="button" class="type-option" [class.active]="formDiscountType() === 'percentage'" (click)="setDiscountType('percentage')">Percentage (%)</button>
+            <button type="button" class="type-option" [class.active]="formDiscountType() === 'free-shipping'" (click)="setDiscountType('free-shipping')">Free shipping</button>
+          </div>
+        </div>
+
+        @if (formDiscountType() === 'percentage') {
+          <label class="field">
+            <span class="label">Value (%)</span>
+            <input type="number" min="1" max="100" [ngModel]="formValue()" (ngModelChange)="formValue.set(+$event)" name="value" />
+          </label>
+        }
+
+        <label class="field">
+          <span class="label">Expiry date *</span>
+          <input type="date" [ngModel]="formExpiry()" (ngModelChange)="formExpiry.set($event)" name="expiry" required />
+        </label>
+
+        <footer class="modal-foot">
+          <button type="button" class="ghost-btn" (click)="closeCouponModal()">Cancel</button>
+          <button type="submit" class="primary-btn">
+            {{ editingId() ? 'Save changes' : 'Create coupon' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!deleteTarget()"
+  [title]="deleteTarget() ? 'Delete coupon ' + deleteTarget()!.code + '?' : ''"
+  description="The coupon will be removed and can no longer be redeemed."
+  confirmLabel="Delete"
+  [destructive]="true"
+  (cancel)="cancelDelete()"
+  (confirm)="confirmDelete()"
+/>

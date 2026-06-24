@@ -1,0 +1,87 @@
+:host { display: block; }
+.page { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.page-head {
+  .eyebrow {
+    margin: 0; font-size: 0.75rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--primary);
+  }
+  .title {
+    margin: 0.5rem 0 0; font-family: "Playfair Display", serif;
+    font-size: 2rem; font-weight: 600; letter-spacing: -0.02em;
+  }
+  .sub { margin: 0.375rem 0 0; color: var(--muted-foreground); font-size: 0.875rem; }
+}
+
+.grid {
+  display: grid; grid-template-columns: 1fr; gap: 1rem;
+  @media (min-width: 768px) { grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 1024px) { grid-template-columns: repeat(3, 1fr); }
+}
+
+.creator-card {
+  border-radius: 16px; border: 1px solid var(--border);
+  background: var(--card); padding: 1.25rem;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+
+.card-head {
+  display: flex; align-items: center; gap: 0.75rem;
+}
+
+.avatar {
+  height: 44px; width: 44px; border-radius: 9999px;
+  background: var(--success); color: var(--success-foreground);
+  display: grid; place-items: center;
+  font-size: 0.875rem; font-weight: 600; flex-shrink: 0;
+}
+
+.head-meta { flex: 1; min-width: 0; }
+.creator-name { margin: 0; font-weight: 600; font-size: 0.9375rem; }
+.creator-email {
+  margin: 0.125rem 0 0; font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.featured-pill {
+  padding: 0.125rem 0.5rem; border-radius: 9999px;
+  background: oklch(0.78 0.14 175 / 0.15); color: var(--success);
+  font-size: 0.65rem; font-weight: 600; white-space: nowrap;
+}
+
+.stats-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
+}
+
+.mini-stat {
+  padding: 0.75rem; border-radius: 10px;
+  background: var(--muted); text-align: center;
+}
+
+.mini-value {
+  margin: 0; font-family: "Playfair Display", serif;
+  font-size: 1.125rem; font-weight: 600;
+}
+
+.mini-label {
+  margin: 0.125rem 0 0; font-size: 0.65rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.actions { display: flex; gap: 0.5rem; }
+
+.feature-btn {
+  flex: 1; height: 40px; border-radius: 8px; border: none;
+  background: var(--primary); color: var(--primary-foreground);
+  font-size: 0.8125rem; font-weight: 500; cursor: pointer;
+  &:hover { opacity: 0.9; }
+}
+
+.reward-btn {
+  flex: 1; height: 40px; border-radius: 8px;
+  border: 1px solid var(--primary); background: transparent;
+  color: var(--primary); font-size: 0.8125rem; font-weight: 500; cursor: pointer;
+  &:hover { background: oklch(0.48 0.05 250 / 0.05); }
+}

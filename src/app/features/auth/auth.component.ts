@@ -29,6 +29,13 @@ export class AuthComponent {
     this.tab.set(t);
   }
 
+<<<<<<< HEAD
+=======
+  googleSignIn(): void {
+    this.toastService.info('Google sign-in coming soon.');
+  }
+
+>>>>>>> 206a691 (Add my updates)
   handleSubmit(): void {
     const emailVal = this.email().trim();
     const passVal = this.password().trim();
@@ -46,12 +53,18 @@ export class AuthComponent {
         return;
       }
       this.toastService.success('Welcome to Wearly! Let\'s set up your style profile.');
+<<<<<<< HEAD
       // After register → go straight to onboarding (no separate login step)
+=======
+>>>>>>> 206a691 (Add my updates)
       this.router.navigate(['/onboarding']);
       return;
     }
 
+<<<<<<< HEAD
     // Sign-in flow
+=======
+>>>>>>> 206a691 (Add my updates)
     const result = this.auth.login(emailVal, passVal);
     if (!result.ok || !result.user) {
       this.toastService.error(result.error ?? 'Login failed.');

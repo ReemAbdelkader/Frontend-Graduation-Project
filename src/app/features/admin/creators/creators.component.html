@@ -1,0 +1,46 @@
+<div class="page">
+  <header class="page-head">
+    <p class="eyebrow">CREATORS</p>
+    <h1 class="title">Creator network</h1>
+    <p class="sub">Feature creators, approve rewards, and monitor performance.</p>
+  </header>
+
+  <div class="grid">
+    @for (c of creators(); track c.id) {
+      <article class="creator-card">
+        <div class="card-head">
+          <div class="avatar">{{ initials(c.name) }}</div>
+          <div class="head-meta">
+            <p class="creator-name">{{ c.name }}</p>
+            <p class="creator-email">{{ c.email }}</p>
+          </div>
+          @if (c.featured) {
+            <span class="featured-pill">★ Featured</span>
+          }
+        </div>
+
+        <div class="stats-row">
+          <div class="mini-stat">
+            <p class="mini-value">{{ formatCurrency(c.sales) }}</p>
+            <p class="mini-label">Sales</p>
+          </div>
+          <div class="mini-stat">
+            <p class="mini-value">{{ c.orders }}</p>
+            <p class="mini-label">Orders</p>
+          </div>
+          <div class="mini-stat">
+            <p class="mini-value">{{ c.rating }}</p>
+            <p class="mini-label">Rating</p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="feature-btn" (click)="feature(c)">
+            {{ c.featured ? 'Unfeature' : 'Feature' }}
+          </button>
+          <button class="reward-btn" (click)="approveReward(c)">Approve reward</button>
+        </div>
+      </article>
+    }
+  </div>
+</div>

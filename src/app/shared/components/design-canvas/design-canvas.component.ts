@@ -9,8 +9,11 @@ import {
   ViewChild,
 } from "@angular/core";
 import { Canvas as FabricCanvas, Textbox } from "fabric";
+<<<<<<< HEAD
 import { firstValueFrom } from "rxjs";
 import { ProductService } from "../../../core/services/product.service";
+=======
+>>>>>>> 206a691 (Add my updates)
 import { FabricDesignStateService } from "./services/fabric-design-state.service";
 import { FabricImageLayerService } from "./services/fabric-image-layer.service";
 import { FabricTextLayerService } from "./services/fabric-text-layer.service";
@@ -65,7 +68,10 @@ export class DesignCanvasComponent
     private readonly textLayerService: FabricTextLayerService,
     private readonly imageLayerService: FabricImageLayerService,
     private readonly stateService: FabricDesignStateService,
+<<<<<<< HEAD
     private readonly productService: ProductService,
+=======
+>>>>>>> 206a691 (Add my updates)
   ) {}
 
   ngAfterViewInit(): void {
@@ -127,6 +133,7 @@ export class DesignCanvasComponent
     this.syncToolbarState();
   }
 
+<<<<<<< HEAD
   getCurrentCanvasState(): string {
     if (!this.fabricCanvas) {
       return "";
@@ -197,6 +204,8 @@ export class DesignCanvasComponent
     return firstValueFrom(this.productService.uploadDesignSnapshot(file));
   }
 
+=======
+>>>>>>> 206a691 (Add my updates)
   saveCurrentViewState(viewAngle: "front" | "back" = this.viewAngle): void {
     if (!this.fabricCanvas) {
       return;
@@ -217,12 +226,20 @@ export class DesignCanvasComponent
     });
   }
 
+<<<<<<< HEAD
   loadViewState(viewAngle: "front" | "back", stateOverride?: unknown): void {
+=======
+  loadViewState(viewAngle: "front" | "back"): void {
+>>>>>>> 206a691 (Add my updates)
     if (!this.fabricCanvas) {
       return;
     }
 
+<<<<<<< HEAD
     const state = stateOverride ?? this.stateService.getState(viewAngle);
+=======
+    const state = this.stateService.getState(viewAngle);
+>>>>>>> 206a691 (Add my updates)
     const objectCountBeforeLoad = this.fabricCanvas.getObjects().length;
 
     console.log(`[Fabric] loadViewState start`, {
@@ -247,7 +264,10 @@ export class DesignCanvasComponent
     }
 
     try {
+<<<<<<< HEAD
       this.stateService.saveState(viewAngle, state);
+=======
+>>>>>>> 206a691 (Add my updates)
       console.log(`[Fabric] calling loadFromJSON for ${viewAngle}`, {
         targetState: state,
       });
@@ -515,6 +535,7 @@ export class DesignCanvasComponent
     this.fabricCanvas.renderAll();
   }
 
+<<<<<<< HEAD
   private parseCanvasState(canvasStateJSON: string): {
     activeView: "front" | "back";
     front: unknown;
@@ -563,6 +584,8 @@ export class DesignCanvasComponent
     return new File([bytes], filename, { type: mime });
   }
 
+=======
+>>>>>>> 206a691 (Add my updates)
   private syncToolbarState(): void {
     const activeObject = this.fabricCanvas?.getActiveObject();
 

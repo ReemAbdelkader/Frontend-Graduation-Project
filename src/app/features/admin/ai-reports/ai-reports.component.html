@@ -1,0 +1,165 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">AI REPORTS · ADMIN → ATELIER AI</p>
+      <h1 class="title">Ask, and the data <span class="italic-light">answers back.</span></h1>
+      <p class="sub">Generate on-demand reports across sales, creators, production, and more.</p>
+    </div>
+  </header>
+
+  <div class="grid-layout">
+    <!-- LEFT: categories + suggested prompts -->
+    <aside class="side-panel">
+      <div class="side-section">
+        <p class="side-label">Overall reports</p>
+        <div class="cat-list">
+          @for (c of categories; track c.key) {
+            <button class="cat-item" (click)="sendCategoryReport(c.key)">
+              <span class="cat-icon">
+                @switch (c.icon) {
+                  @case ('bar') {
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                  }
+                  @case ('package') {
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                  }
+                  @case ('users') {
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  }
+                  @case ('layers') {
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 8 12 14 22 8 12 2"/><polyline points="2 16 12 22 22 16"/><polyline points="2 12 12 18 22 12"/></svg>
+                  }
+                  @case ('factory') {
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20a3 3 0 0 0 3-3V8a3 3 0 0 1 3 3v6a3 3 0 0 0 3-3V8a3 3 0 0 1 3 3v6a3 3 0 0 0 3-3V8a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3Z"/></svg>
+                  }
+                  @case ('message') {
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  }
+                }
+              </span>
+              {{ c.key }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="side-section">
+        <p class="side-label">Suggested prompts</p>
+        <div class="prompt-list">
+          @for (s of suggestions; track s) {
+            <button class="prompt-chip" (click)="sendSuggestion(s)">{{ s }}</button>
+          }
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: chat -->
+    <section class="chat-card">
+      <div #scrollRef class="messages">
+        @for (m of messages(); track m.id) {
+          @if (m.role === 'admin') {
+            <div class="msg-row admin">
+              <div class="bubble admin-bubble">{{ m.text }}</div>
+            </div>
+          } @else {
+            <div class="msg-row ai">
+              <div class="ai-avatar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+              </div>
+              <div class="ai-content">
+                @if (m.text) {
+                  <div class="bubble ai-bubble">{{ m.text }}</div>
+                }
+                @if (m.reportTitle) {
+                  <article class="report-card">
+                    <div class="report-head">
+                      <p class="report-tag">Generated report</p>
+                      <h3 class="report-title">{{ m.reportTitle }}</h3>
+                      <p class="report-summary">{{ m.reportSummary }}</p>
+                    </div>
+                    @if (m.reportMetrics) {
+                      <div class="report-metrics">
+                        @for (mt of m.reportMetrics; track mt.label) {
+                          <div class="metric-cell">
+                            <p class="metric-label">{{ mt.label }}</p>
+                            <p class="metric-value">{{ mt.value }}</p>
+                            @if (mt.delta) {
+                              <p class="metric-delta" [class.up]="mt.trend === 'up'" [class.down]="mt.trend === 'down'">
+                                @if (mt.trend === 'up') {
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                                } @else if (mt.trend === 'down') {
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+                                }
+                                {{ mt.delta }}
+                              </p>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                    @if (m.reportInsights) {
+                      <div class="report-section">
+                        <p class="report-section-label">Key insights</p>
+                        <ul class="insight-list">
+                          @for (i of m.reportInsights; track $index) {
+                            <li class="insight-item" [class.positive]="i.kind === 'positive'" [class.negative]="i.kind === 'negative'">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                              <span>{{ i.text }}</span>
+                            </li>
+                          }
+                        </ul>
+                      </div>
+                    }
+                    @if (m.reportRecommendations) {
+                      <div class="report-section">
+                        <p class="report-section-label">Recommendations</p>
+                        <ul class="rec-list">
+                          @for (r of m.reportRecommendations; track $index) {
+                            <li class="rec-item">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+                              <span>{{ r }}</span>
+                            </li>
+                          }
+                        </ul>
+                      </div>
+                    }
+                  </article>
+                }
+              </div>
+            </div>
+          }
+        }
+
+        @if (thinking()) {
+          <div class="msg-row ai">
+            <div class="ai-avatar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+            </div>
+            <div class="bubble ai-bubble thinking">
+              <span class="dot-pulse"></span>
+              <span class="dot-pulse"></span>
+              <span class="dot-pulse"></span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <form class="composer" (ngSubmit)="send(); $event.preventDefault()">
+        <input
+          type="text"
+          class="input"
+          placeholder="Ask the AI… e.g. 'Why did sales drop this month?'"
+          [ngModel]="input()"
+          (ngModelChange)="setInput($event)"
+          name="text"
+          [disabled]="thinking()"
+          autocomplete="off"
+        />
+        <button type="submit" class="send-btn" [disabled]="thinking() || !input().trim()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+          Send
+        </button>
+      </form>
+    </section>
+  </div>
+</div>
