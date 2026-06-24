@@ -5,14 +5,116 @@
   height: auto;
 }
 
-.design-canvas-shell {
-  position: relative;
-  width: 100%;
-  max-width: 100%;
-  height: auto;
+.design-editor-shell {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 100%;
+}
+
+.canvas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  background: oklch(1 0 0 / 0.06);
+  border: 1px solid oklch(1 0 0 / 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.toolbar-btn,
+.toolbar-control select,
+.toolbar-control input[type="text"],
+.toolbar-control input[type="color"] {
+  border: 1px solid oklch(1 0 0 / 0.1);
+  border-radius: 999px;
+  background: oklch(1 0 0 / 0.08);
+  color: var(--foreground);
+}
+
+.toolbar-btn {
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: opacity 0.2s ease;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.toolbar-btn.primary {
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+}
+
+.toolbar-btn.danger {
+  background: oklch(0.72 0.16 18 / 0.16);
+  color: oklch(0.94 0.03 18);
+}
+
+.toolbar-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: oklch(1 0 0 / 0.05);
+  font-size: 0.78rem;
+}
+
+.toolbar-control input[type="range"] {
+  accent-color: var(--primary);
+}
+
+.toolbar-control input[type="color"] {
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.toolbar-control select,
+.toolbar-control input[type="text"] {
+  padding: 0.35rem 0.6rem;
+  min-width: 120px;
+  font-size: 0.78rem;
+}
+
+.text-input-wrap {
+  flex: 1;
+  min-width: min(240px, 100%);
+}
+
+.text-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.value-pill {
+  min-width: 1.75rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.design-canvas-shell {
+  position: relative;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
   overflow: hidden;
 }
 
@@ -25,12 +127,21 @@
   object-fit: contain;
   margin: 0 auto;
   pointer-events: none;
+  position: relative;
+  z-index: 1;
   filter: drop-shadow(0 30px 60px oklch(0.66 0.22 300 / 0.25));
 }
 
-.fabric-canvas {
+.fabric-canvas-host {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+.fabric-canvas {
+  display: block;
   width: 100%;
   height: 100%;
   pointer-events: auto;
