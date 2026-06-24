@@ -342,6 +342,7 @@
           <app-design-canvas
             [imageUrl]="currentProductImageUrl"
             [alt]="selected().name"
+            [viewAngle]="activeViewAngle === ViewAngle.Front ? 'front' : 'back'"
           ></app-design-canvas>
           <div class="preview-shadow"></div>
         </div>
@@ -469,7 +470,7 @@
   </div>
 
   <!-- Floating prompt bar -->
-  
+
   <!-- Canvas Editor overlay -->
   @if (canvasOpen()) {
     <div class="canvas-overlay">

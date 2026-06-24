@@ -9,6 +9,7 @@ import {
   ViewChild,
 } from "@angular/core";
 import { Canvas as FabricCanvas, Textbox } from "fabric";
+import { FabricDesignStateService } from "./services/fabric-design-state.service";
 import { FabricImageLayerService } from "./services/fabric-image-layer.service";
 import { FabricTextLayerService } from "./services/fabric-text-layer.service";
 
@@ -23,6 +24,7 @@ export class DesignCanvasComponent
 {
   @Input() imageUrl = "";
   @Input() alt = "Design preview";
+  @Input() viewAngle: "front" | "back" = "front";
 
   @ViewChild("fabricCanvas", { static: false })
   fabricCanvasRef!: ElementRef<HTMLCanvasElement>;
@@ -60,6 +62,7 @@ export class DesignCanvasComponent
   constructor(
     private readonly textLayerService: FabricTextLayerService,
     private readonly imageLayerService: FabricImageLayerService,
+    private readonly stateService: FabricDesignStateService,
   ) {}
 
   ngAfterViewInit(): void {
@@ -72,7 +75,26 @@ export class DesignCanvasComponent
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes["imageUrl"] && !changes["imageUrl"].firstChange) {
-      this.syncCanvasSize();
+      console.log(`[Fabric] ngOnChanges imageUrl`, {
+        imageUrl: this.imageUrl,
+      });
+      requestAnimationFrame(() => this.syncCanvasSize());
+    }
+
+    if (changes["viewAngle"] && !changes["viewAngle"].firstChange) {
+      const previousView = changes["viewAngle"].previousValue as
+        | "front"
+        | "back"
+        | undefined;
+
+      console.log(`[Fabric] ngOnChanges viewAngle`, {
+        previousView,
+        currentView: this.viewAngle,
+      });
+
+      requestAnimationFrame(() => {
+        this.switchView(this.viewAngle, previousView);
+      });
     }
   }
 
@@ -100,6 +122,106 @@ export class DesignCanvasComponent
     this.fabricCanvas?.clear();
     this.fabricCanvas?.renderAll();
     this.syncToolbarState();
+  }
+
+  saveCurrentViewState(viewAngle: "front" | "back" = this.viewAngle): void {
+    if (!this.fabricCanvas) {
+      return;
+    }
+
+    const snapshot = this.fabricCanvas.toJSON();
+    const objectCount = this.fabricCanvas.getObjects().length;
+
+    console.log(`[Fabric] saveCurrentViewState`, {
+      targetSide: viewAngle,
+      objectCountBeforeSave: objectCount,
+      snapshot,
+    });
+
+    this.stateService.saveState(viewAngle, snapshot);
+    console.log(`[Fabric] saved state for ${viewAngle}`, {
+      storedState: this.stateService.getState(viewAngle),
+    });
+  }
+
+  loadViewState(viewAngle: "front" | "back"): void {
+    if (!this.fabricCanvas) {
+      return;
+    }
+
+    const state = this.stateService.getState(viewAngle);
+    const objectCountBeforeLoad = this.fabricCanvas.getObjects().length;
+
+    console.log(`[Fabric] loadViewState start`, {
+      targetSide: viewAngle,
+      objectCountBeforeLoad,
+      stateExists: Boolean(state),
+      state,
+    });
+
+    this.fabricCanvas.discardActiveObject();
+    this.fabricCanvas.clear();
+    this.fabricCanvas.requestRenderAll();
+    console.log(`[Fabric] canvas cleanup complete`, {
+      targetSide: viewAngle,
+      objectCountAfterClear: this.fabricCanvas.getObjects().length,
+    });
+
+    if (!state) {
+      this.syncToolbarState();
+      console.log(`[Fabric] no saved state for ${viewAngle}; canvas cleared`);
+      return;
+    }
+
+    try {
+      console.log(`[Fabric] calling loadFromJSON for ${viewAngle}`, {
+        targetState: state,
+      });
+      this.fabricCanvas.loadFromJSON(state as any, () => {
+        this.fabricCanvas?.requestRenderAll();
+        this.syncToolbarState();
+        console.log(`[Fabric] loadFromJSON callback complete`, {
+          targetSide: viewAngle,
+          objectCountAfterLoad: this.fabricCanvas?.getObjects().length ?? 0,
+        });
+      });
+    } catch (error) {
+      console.error(`[Fabric] Failed to restore state for ${viewAngle}`, error);
+      this.fabricCanvas.clear();
+      this.fabricCanvas.requestRenderAll();
+    }
+  }
+
+  switchView(
+    nextViewAngle: "front" | "back",
+    previousViewAngle?: "front" | "back",
+  ): void {
+    if (!this.fabricCanvas) {
+      return;
+    }
+
+    const currentView = previousViewAngle ?? this.viewAngle;
+
+    console.log(`[Fabric] === SWITCH START ===`, {
+      currentSide: currentView,
+      nextSide: nextViewAngle,
+      objectCountBeforeSwitch: this.fabricCanvas.getObjects().length,
+    });
+
+    this.saveCurrentViewState(currentView);
+    this.viewAngle = nextViewAngle;
+    console.log(`[Fabric] activeView updated`, {
+      activeView: this.viewAngle,
+    });
+
+    requestAnimationFrame(() => {
+      this.loadViewState(nextViewAngle);
+      this.syncCanvasSize();
+      console.log(`[Fabric] === SWITCH END ===`, {
+        activeView: this.viewAngle,
+        objectCountAfterSwitch: this.fabricCanvas?.getObjects().length ?? 0,
+      });
+    });
   }
 
   triggerImageUpload(): void {
@@ -209,8 +331,13 @@ export class DesignCanvasComponent
 
   private initializeCanvas(): void {
     if (!this.fabricCanvasRef?.nativeElement) {
+      console.log(`[Fabric] initializeCanvas skipped; canvas element missing`);
       return;
     }
+
+    console.log(`[Fabric] initializeCanvas start`, {
+      initialView: this.viewAngle,
+    });
 
     this.fabricCanvas = new FabricCanvas(this.fabricCanvasRef.nativeElement, {
       backgroundColor: "transparent",
@@ -225,6 +352,7 @@ export class DesignCanvasComponent
 
     this.fabricCanvas.hoverCursor = "move";
     this.fabricCanvas.setDimensions({ width: 0, height: 0 });
+    this.loadViewState(this.viewAngle);
   }
 
   private bindCanvasEvents(): void {

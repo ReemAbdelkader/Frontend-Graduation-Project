@@ -266,7 +266,14 @@ export class StudioComponent {
   }
 
   setActiveViewAngle(viewAngle: ViewAngle): void {
+    console.log(`[Studio] setActiveViewAngle`, {
+      previousView: this.activeViewAngle,
+      nextView: viewAngle,
+    });
     this.activeViewAngle = viewAngle;
+    console.log(`[Studio] activeViewAngle updated`, {
+      activeViewAngle: this.activeViewAngle,
+    });
   }
 
   selectProduct(productId: string): void {
