@@ -51,6 +51,7 @@ type StudioProduct = ProductDto & {
 export class StudioComponent {
   private readonly productService = inject(ProductService);
   private readonly authService = inject(AuthService);
+  private readonly lastDraftStorageKey = "atelier-last-design-id";
 
   @ViewChild(DesignCanvasComponent)
   private readonly designCanvas?: DesignCanvasComponent;
@@ -401,12 +402,61 @@ export class StudioComponent {
       })
       .subscribe({
         next: (designId) => {
+          if (designId) {
+            localStorage.setItem(this.lastDraftStorageKey, designId);
+          }
           console.log("[Studio] design saved", { designId, snapshotUrl });
         },
         error: (error) => {
           console.error("[Studio] failed to save design", error);
         },
       });
+  }
+
+  loadLatestDraft(): void {
+    const savedDesignId = localStorage.getItem(this.lastDraftStorageKey);
+
+    if (!savedDesignId) {
+      return;
+    }
+
+    this.loadDesign(savedDesignId);
+  }
+
+  loadDesign(designId: string): void {
+    if (!designId) {
+      return;
+    }
+
+    this.productService.getDesignById(designId).subscribe({
+      next: (design) => {
+        if (!design) {
+          return;
+        }
+
+        const existingProduct = this.allProducts().find(
+          (product) => product.id === design.productId,
+        );
+
+        if (existingProduct) {
+          this.selected.set({
+            ...existingProduct,
+            images: existingProduct.images ?? [],
+          });
+        }
+
+        this.color.set(design.selectedColor ?? this.color());
+        this.size.set(this.mapStoredSize(design.selectedSize));
+        this.canvasOpen.set(true);
+
+        requestAnimationFrame(() => {
+          this.designCanvas?.restoreDesignState(design.canvasStateJSON);
+        });
+      },
+      error: (error) => {
+        console.error("[Studio] failed to load design", error);
+      },
+    });
   }
 
   get originalPrice(): number {
@@ -431,6 +481,36 @@ export class StudioComponent {
         return 7;
       default:
         return null;
+    }
+  }
+
+  private mapStoredSize(sizeValue: string | null | undefined): string {
+    const normalized = (sizeValue ?? "").trim().toUpperCase();
+
+    switch (normalized) {
+      case "1":
+      case "XS":
+        return "XS";
+      case "2":
+      case "S":
+        return "S";
+      case "3":
+      case "M":
+        return "M";
+      case "4":
+      case "L":
+        return "L";
+      case "5":
+      case "XL":
+        return "XL";
+      case "6":
+      case "XXL":
+        return "XXL";
+      case "7":
+      case "XXXL":
+        return "XXXL";
+      default:
+        return this.size();
     }
   }
 

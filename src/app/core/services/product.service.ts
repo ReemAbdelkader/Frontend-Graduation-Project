@@ -22,6 +22,22 @@ interface DesignCreatePayload {
   selectedColor?: string | null;
 }
 
+interface DesignResponsePayload {
+  id: string;
+  userId: string;
+  productId: string;
+  productName: string;
+  templateId?: string | null;
+  canvasStateJSON: string;
+  snapshotImageURL: string;
+  status: string;
+  selectedSize?: string | null;
+  selectedFabric?: string | null;
+  selectedPrintMethod?: string | null;
+  selectedColor?: string | null;
+  calculatedPrice?: number;
+}
+
 @Injectable({ providedIn: "root" })
 export class ProductService {
   private readonly apiUrl = `${environment.apiUrl}/api`;
@@ -120,6 +136,15 @@ export class ProductService {
       })
       .pipe(
         map((response) => (response ? response : null)),
+        catchError(() => of(null)),
+      );
+  }
+
+  getDesignById(id: string): Observable<DesignResponsePayload | null> {
+    return this.http
+      .get<DesignResponsePayload>(`${this.apiUrl}/designstudio/${id}`)
+      .pipe(
+        map((response) => response ?? null),
         catchError(() => of(null)),
       );
   }

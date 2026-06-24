@@ -132,7 +132,46 @@ export class DesignCanvasComponent
       return "";
     }
 
-    return JSON.stringify(this.fabricCanvas.toJSON());
+    this.saveCurrentViewState(this.viewAngle);
+
+    return JSON.stringify({
+      activeView: this.viewAngle,
+      front: this.stateService.getState("front"),
+      back: this.stateService.getState("back"),
+    });
+  }
+
+  restoreDesignState(canvasStateJSON: string): void {
+    if (!this.fabricCanvas) {
+      return;
+    }
+
+    const parsedState = this.parseCanvasState(canvasStateJSON);
+
+    if (!parsedState) {
+      return;
+    }
+
+    const nextView = parsedState.activeView;
+    const frontState = parsedState.front;
+    const backState = parsedState.back;
+
+    if (frontState) {
+      this.stateService.saveState("front", frontState);
+    } else {
+      this.stateService.clearState("front");
+    }
+
+    if (backState) {
+      this.stateService.saveState("back", backState);
+    } else {
+      this.stateService.clearState("back");
+    }
+
+    this.viewAngle = nextView;
+    this.loadViewState(this.viewAngle);
+    this.syncCanvasSize();
+    this.syncToolbarState();
   }
 
   async exportCurrentDesignSnapshot(): Promise<string | null> {
@@ -178,12 +217,12 @@ export class DesignCanvasComponent
     });
   }
 
-  loadViewState(viewAngle: "front" | "back"): void {
+  loadViewState(viewAngle: "front" | "back", stateOverride?: unknown): void {
     if (!this.fabricCanvas) {
       return;
     }
 
-    const state = this.stateService.getState(viewAngle);
+    const state = stateOverride ?? this.stateService.getState(viewAngle);
     const objectCountBeforeLoad = this.fabricCanvas.getObjects().length;
 
     console.log(`[Fabric] loadViewState start`, {
@@ -208,6 +247,7 @@ export class DesignCanvasComponent
     }
 
     try {
+      this.stateService.saveState(viewAngle, state);
       console.log(`[Fabric] calling loadFromJSON for ${viewAngle}`, {
         targetState: state,
       });
@@ -473,6 +513,36 @@ export class DesignCanvasComponent
     this.fabricCanvas.setDimensions({ width, height });
     this.fabricCanvas.calcOffset();
     this.fabricCanvas.renderAll();
+  }
+
+  private parseCanvasState(canvasStateJSON: string): {
+    activeView: "front" | "back";
+    front: unknown;
+    back: unknown;
+  } | null {
+    try {
+      const parsed = JSON.parse(canvasStateJSON) as Record<string, unknown>;
+
+      if (!parsed || typeof parsed !== "object") {
+        return null;
+      }
+
+      if (parsed["front"] !== undefined || parsed["back"] !== undefined) {
+        return {
+          activeView: parsed["activeView"] === "back" ? "back" : "front",
+          front: parsed["front"],
+          back: parsed["back"],
+        };
+      }
+
+      return {
+        activeView: "front",
+        front: parsed,
+        back: null,
+      };
+    } catch {
+      return null;
+    }
   }
 
   private dataUrlToFile(dataUrl: string, filename: string): File | null {
