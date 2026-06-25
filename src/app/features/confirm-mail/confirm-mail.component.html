@@ -1,0 +1,15 @@
+<section class="confirm-mail-page">
+  <div class="card">
+    <div class="icon">✉️</div>
+    <h1>Confirm your email</h1>
+    <p class="subtitle">
+      Your confirmation link is being verified automatically.
+    </p>
+
+    <p class="status" [class.success]="status() === 'success'" [class.error]="status() === 'error'">
+      {{ message() }}
+    </p>
+
+    <a routerLink="/auth" class="back-link">Back to sign in</a>
+  </div>
+</section>

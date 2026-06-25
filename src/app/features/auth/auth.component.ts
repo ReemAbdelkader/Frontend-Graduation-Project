@@ -24,9 +24,14 @@ export class AuthComponent {
   readonly name = signal('');
   readonly email = signal('');
   readonly password = signal('');
+  readonly confirmPassword = signal('');
+  readonly registrationMessage = signal('');
+  readonly registrationSuccess = signal(false);
 
   setTab(t: 'signin' | 'signup'): void {
     this.tab.set(t);
+    this.registrationMessage.set('');
+    this.registrationSuccess.set(false);
   }
 
   googleSignIn(): void {
@@ -37,6 +42,7 @@ export class AuthComponent {
     const emailVal = this.email().trim();
     const passVal = this.password().trim();
     const nameVal = this.name().trim();
+    const confirmPassVal = this.confirmPassword().trim();
 
     if (!emailVal || !passVal) {
       this.toastService.error('Please enter your email and password.');
@@ -44,26 +50,47 @@ export class AuthComponent {
     }
 
     if (this.tab() === 'signup') {
-      const result = this.auth.register(nameVal, emailVal, passVal);
-      if (!result.ok) {
-        this.toastService.error(result.error ?? 'Registration failed.');
+      if (!nameVal) {
+        this.toastService.error('Please enter your full name.');
         return;
       }
-      this.toastService.success('Welcome to Wearly! Let\'s set up your style profile.');
-      // After register → go straight to onboarding (no separate login step)
-      this.router.navigate(['/onboarding']);
+      if (passVal !== confirmPassVal) {
+        this.toastService.error('Passwords do not match.');
+        return;
+      }
+
+      this.auth.register(nameVal, emailVal, passVal).subscribe((result) => {
+        console.log('Registration API result', result);
+
+        if (!result.ok) {
+          const errorMessage = result.message ?? result.error ?? 'Registration failed.';
+          this.toastService.error(errorMessage);
+          this.registrationMessage.set(errorMessage);
+          return;
+        }
+
+        const successMessage = result.message ?? 'Registration successful. Please check your email to confirm your account.';
+        this.registrationMessage.set(successMessage);
+        this.registrationSuccess.set(true);
+        this.name.set('');
+        this.email.set('');
+        this.password.set('');
+        this.confirmPassword.set('');
+      });
       return;
     }
 
-    // Sign-in flow
-    const result = this.auth.login(emailVal, passVal);
-    if (!result.ok || !result.user) {
-      this.toastService.error(result.error ?? 'Login failed.');
-      return;
-    }
-    this.toastService.success(
-      `Welcome${result.user.role === 'admin' ? ' back, Admin' : ''}!`,
-    );
-    this.router.navigate([this.auth.resolvePostLoginRoute()]);
+    this.auth.login(emailVal, passVal).subscribe((result) => {
+      console.log('Login API result', result);
+
+      if (!result.ok) {
+        const errorMessage = result.message ?? result.error ?? `Login request failed with status ${result.error ?? 'unknown'}`;
+        this.toastService.error(errorMessage);
+        return;
+      }
+
+      this.toastService.success(result.message ?? 'Login successful.');
+      this.router.navigate([this.auth.resolvePostLoginRoute()]);
+    });
   }
 }

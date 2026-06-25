@@ -27,6 +27,12 @@ export const routes: Routes = [
       import('./features/reset-password/reset-password.component').then((m) => m.ResetPasswordComponent),
     title: 'Reset password — Wearly',
   },
+  {
+    path: 'confirm-mail',
+    loadComponent: () =>
+      import('./features/confirm-mail/confirm-mail.component').then((m) => m.ConfirmMailComponent),
+    title: 'Confirm mail — Wearly',
+  },
 
   // ============ USER-SIDE ============
   {
