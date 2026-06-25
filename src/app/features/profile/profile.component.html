@@ -181,13 +181,8 @@
     </section>
   </main>
 
-  <app-confirm-dialog
+  <app-logout-dialog
     [open]="askLogout()"
-    title="Sign out of Wearly?"
-    description="You'll need to sign back in to access your studio and orders."
-    confirmLabel="Sign out"
-    [destructive]="true"
-    (cancel)="cancelLogout()"
-    (confirm)="confirmLogout()"
+    (closed)="closeLogout()"
   />
 </div>

@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -16,6 +16,7 @@ export class AuthComponent {
   private auth = inject(AuthService);
   readonly toastService = inject(ToastService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   readonly authImg = authImage;
   readonly logo = logoImage;
@@ -35,7 +36,7 @@ export class AuthComponent {
   }
 
   googleSignIn(): void {
-    this.toastService.info('Google sign-in coming soon.');
+    this.auth.loginWithGoogle();
   }
 
   handleSubmit(): void {
@@ -89,8 +90,9 @@ export class AuthComponent {
         return;
       }
 
+      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl')?.trim();
       this.toastService.success(result.message ?? 'Login successful.');
-      this.router.navigate([this.auth.resolvePostLoginRoute()]);
+      this.router.navigateByUrl(returnUrl || this.auth.resolvePostLoginRoute());
     });
   }
 }

@@ -77,8 +77,13 @@ export class AdminLayoutComponent {
 
   confirmLogout(): void {
     this.askLogout.set(false);
-    this.auth.logout();
-    this.toast.success('Signed out');
-    this.router.navigate(['/auth']);
+    this.auth.logout().subscribe((result) => {
+      if (result.ok) {
+        this.toast.success(result.message ?? 'Signed out successfully.');
+        this.router.navigate(['/auth']);
+      } else {
+        this.toast.error(result.message ?? result.error ?? 'Logout failed.');
+      }
+    });
   }
 }

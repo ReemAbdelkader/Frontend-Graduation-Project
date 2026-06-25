@@ -4,6 +4,7 @@ import { Observable, catchError, map, of, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type UserRole = 'user' | 'admin';
+export type LogoutScope = 'current-device' | 'all-devices';
 
 export interface WearlyUser {
   name: string;
@@ -47,6 +48,10 @@ export class AuthService {
   private readonly confirmEmailEndpoint = environment.auth?.confirmEmailEndpoint ?? '/api/Identity/confirm-email';
   private readonly loginEndpoint = environment.auth?.loginEndpoint ?? '/api/Identity/login';
   private readonly refreshEndpoint = environment.auth?.refreshEndpoint ?? '/api/Identity/RefreshToken';
+  private readonly forgotPasswordEndpoint = environment.auth?.forgotPasswordEndpoint ?? '/api/Identity/forget-password';
+  private readonly resetPasswordEndpoint = environment.auth?.resetPasswordEndpoint ?? '/api/Identity/reset-password';
+  private readonly logoutEndpoint = environment.auth?.logoutEndpoint ?? '/api/Identity/logout';
+  private readonly logoutAllEndpoint = environment.auth?.logoutAllEndpoint ?? '/api/Identity/logout-all';
   private readonly apiBaseUrl = (environment.apiUrl ?? '').replace(/\/$/, '');
 
   private readonly _authState = signal<AuthState | null>(null);
@@ -102,6 +107,14 @@ export class AuthService {
         return of({ ok: false, error: errorMessage, message: errorMessage });
       }),
     );
+  }
+
+  loginWithGoogle(): void {
+    window.location.href = `${environment.apiUrl}/api/Identity/external-login?provider=google`;
+  }
+
+  completeExternalLogin(state: AuthState): void {
+    this.setAuthState(state);
   }
 
   refreshTokenRequest(): Observable<AuthApiResult> {
@@ -193,10 +206,70 @@ export class AuthService {
     );
   }
 
-  logout(): void {
-    this._authState.set(null);
-    localStorage.removeItem(STORAGE_KEY);
-    this.refreshInProgress = null;
+  forgotPassword(email: string): Observable<AuthApiResult> {
+    const e = email.trim().toLowerCase();
+
+    if (!e) {
+      return of({ ok: false, error: 'Email is required.', message: 'Email is required.' });
+    }
+
+    return this.http.post<unknown>(`${this.apiBaseUrl}${this.forgotPasswordEndpoint}`, { email: e }).pipe(
+      map((response) => this.normalizeForgotPasswordResponse(response)),
+      catchError((error) => {
+        const message = this.extractErrorMessage(error) ?? this.toStringOrUndefined((error as any)?.message) ?? 'Password reset request failed.';
+        return of({ ok: false, error: message, message });
+      }),
+    );
+  }
+
+  resetPassword(email: string, token: string, newPassword: string): Observable<AuthApiResult> {
+    const e = email.trim().toLowerCase();
+    const authToken = token.trim();
+    const password = newPassword.trim();
+
+    if (!e || !authToken || !password) {
+      return of({ ok: false, error: 'Email, token and new password are required.', message: 'Email, token and new password are required.' });
+    }
+
+    return this.http.post<unknown>(`${this.apiBaseUrl}${this.resetPasswordEndpoint}`, {
+      email: e,
+      token: authToken,
+      newPassword: password,
+    }).pipe(
+      map((response) => this.normalizeResetPasswordResponse(response)),
+      catchError((error) => {
+        const message = this.extractErrorMessage(error) ?? this.toStringOrUndefined((error as any)?.message) ?? 'Password reset failed.';
+        return of({ ok: false, error: message, message });
+      }),
+    );
+  }
+
+  logout(scope: LogoutScope = 'current-device'): Observable<AuthApiResult> {
+    const payload = scope === 'current-device' ? { refreshToken: this.refreshToken().trim() } : {};
+    const endpoint = scope === 'current-device' ? this.logoutEndpoint : this.logoutAllEndpoint;
+    const requestLabel = scope === 'current-device' ? 'Logout request' : 'Logout all devices request';
+
+    console.log(requestLabel, scope === 'current-device' ? payload : { endpoint: `${this.apiBaseUrl}${endpoint}` });
+
+    return this.http.post<unknown>(`${this.apiBaseUrl}${endpoint}`, payload).pipe(
+      map((response) => {
+        console.log(scope === 'current-device' ? 'Logout success response' : 'Logout all devices success response', response);
+        const result = this.normalizeLogoutResponse(response);
+        if (result.ok) {
+          this.clearAuthState();
+        }
+        return result;
+      }),
+      catchError((error) => {
+        console.error(scope === 'current-device' ? 'Logout error response' : 'Logout all devices error response', error);
+        const message = this.extractErrorMessage(error) ?? this.toStringOrUndefined((error as any)?.message) ?? (scope === 'current-device' ? 'Logout request failed.' : 'Logout all devices request failed.');
+        return of({ ok: false, error: message, message });
+      }),
+    );
+  }
+
+  logoutAllDevices(): Observable<AuthApiResult> {
+    return this.logout('all-devices');
   }
 
   hasCompletedOnboarding(): boolean {
@@ -213,6 +286,12 @@ export class AuthService {
     return this.hasCompletedOnboarding() ? '/dashboard' : '/onboarding';
   }
 
+  clearAuthState(): void {
+    this._authState.set(null);
+    localStorage.removeItem(STORAGE_KEY);
+    this.refreshInProgress = null;
+  }
+
   private setAuthState(state: AuthState): void {
     this._authState.set(state);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -222,7 +301,7 @@ export class AuthService {
     if (typeof response === 'object' && response !== null) {
       const payload = response as Record<string, unknown>;
       const ok = payload['succeeded'] === true;
-      const message = this.toStringOrUndefined(payload['meta']) ?? this.toStringOrUndefined(payload['message']);
+      const message = this.extractDisplayMessage(payload);
       const data = payload['data'];
       const result: AuthApiResult = { ok, message, data };
 
@@ -262,7 +341,7 @@ export class AuthService {
     if (typeof response === 'object' && response !== null) {
       const payload = response as Record<string, unknown>;
       const ok = payload['succeeded'] === true;
-      const message = this.toStringOrUndefined(payload['meta']) ?? this.toStringOrUndefined(payload['message']);
+      const message = this.extractDisplayMessage(payload);
       const data = payload['data'];
       const result: AuthApiResult = { ok, message, data };
 
@@ -300,11 +379,60 @@ export class AuthService {
     return { ok: false, error: 'Refresh failed.', message: 'Refresh failed.' };
   }
 
+  private normalizeLogoutResponse(response: unknown): AuthApiResult {
+    if (typeof response === 'object' && response !== null) {
+      const payload = response as Record<string, unknown>;
+
+      const ok = payload['succeeded'] === true;
+
+      const data = typeof payload['data'] === 'string' ? payload['data'] : undefined;
+
+      const message =
+        data ??
+        this.toStringOrUndefined(payload['meta']) ??
+        this.toStringOrUndefined(payload['message']) ??
+        (ok ? 'Signed out successfully.' : 'Logout failed.');
+
+      return {
+        ok,
+        message,
+        data: payload['data'],
+      };
+    }
+
+    return {
+      ok: false,
+      message: 'Logout failed.',
+    };
+  }
+
+  private normalizeForgotPasswordResponse(response: unknown): AuthApiResult {
+    if (typeof response === 'object' && response !== null) {
+      const payload = response as Record<string, unknown>;
+      const ok = payload['succeeded'] === true;
+      const message = this.extractDisplayMessage(payload) ?? (ok ? 'Password reset link sent successfully.' : 'Password reset request failed.');
+      return { ok, message, data: payload['data'] };
+    }
+
+    return { ok: true, message: 'Password reset link sent successfully.' };
+  }
+
+  private normalizeResetPasswordResponse(response: unknown): AuthApiResult {
+    if (typeof response === 'object' && response !== null) {
+      const payload = response as Record<string, unknown>;
+      const ok = payload['succeeded'] === true;
+      const message = this.extractDisplayMessage(payload) ?? (ok ? 'Password reset successfully.' : 'Password reset failed.');
+      return { ok, message, data: payload['data'] };
+    }
+
+    return { ok: true, message: 'Password reset successfully.' };
+  }
+
   private normalizeRegistrationResponse(response: unknown): AuthApiResult {
     if (typeof response === 'object' && response !== null) {
       const payload = response as Record<string, unknown>;
       const ok = payload['succeeded'] === true;
-      const message = this.toStringOrUndefined(payload['meta']) ?? this.toStringOrUndefined(payload['message']);
+      const message = this.extractDisplayMessage(payload);
       let userId = this.toStringOrUndefined(payload['userId']) ?? this.toStringOrUndefined(payload['userID']);
       let token = this.toStringOrUndefined(payload['token']) ?? this.toStringOrUndefined(payload['Token']);
       let confirmUrl = this.toStringOrUndefined(payload['confirmUrl']) ?? this.toStringOrUndefined(payload['confirm_url']);
@@ -333,29 +461,29 @@ export class AuthService {
   private normalizeConfirmationResponse(response: unknown): AuthApiResult {
     if (typeof response === 'object' && response !== null) {
       const payload = response as Record<string, unknown>;
-      const statusCode = typeof payload['statusCode'] === 'number' ? payload['statusCode'] : undefined;
-      const ok = payload['succeeded'] === true || payload['success'] === true || payload['ok'] === true || (typeof statusCode === 'number' && statusCode >= 200 && statusCode < 300);
-      const message = this.extractMessageFromResponse(payload) ?? (ok ? 'Email confirmed successfully.' : 'Email confirmation failed.');
+      const ok = payload['succeeded'] === true;
+      const message = this.extractDisplayMessage(payload) ?? (ok ? 'Email confirmed successfully.' : 'Email confirmation failed.');
       return { ok, message, data: payload['data'] };
     }
 
     return { ok: true, message: 'Email confirmed successfully.' };
   }
 
-  private extractMessageFromResponse(payload: Record<string, unknown>): string | undefined {
-    return this.toStringOrUndefined(payload['message'])
-      ?? this.toStringOrUndefined(payload['meta'])
+  private extractDisplayMessage(payload: Record<string, unknown>): string | undefined {
+    return this.toStringOrUndefined(payload['meta'])
+      ?? this.extractDataMessage(payload['data'])
+      ?? this.extractErrorMessage(payload['error'])
+      ?? this.toStringOrUndefined(payload['message'])
       ?? this.toStringOrUndefined(payload['detail'])
-      ?? this.toStringOrUndefined(payload['error'])
       ?? this.toStringOrUndefined(payload['title'])
-      ?? this.extractMessageFromErrors(payload['errors'])
-      ?? this.extractMessageFromNested(payload['data']);
+      ?? this.extractMessageFromErrors(payload['errors']);
   }
 
-  private extractMessageFromNested(data: unknown): string | undefined {
+  private extractDataMessage(data: unknown): string | undefined {
     if (typeof data === 'object' && data !== null) {
       const nested = data as Record<string, unknown>;
       return this.toStringOrUndefined(nested['message'])
+        ?? this.extractErrorMessage(nested['error'])
         ?? this.toStringOrUndefined(nested['detail'])
         ?? this.extractMessageFromErrors(nested['errors']);
     }

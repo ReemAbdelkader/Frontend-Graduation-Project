@@ -1,8 +1,7 @@
 import { Routes } from '@angular/router';
-import { authGuard, adminGuard } from './core/guards/auth.guard';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  // ============ PUBLIC ============
   {
     path: '',
     loadComponent: () =>
@@ -14,6 +13,16 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/auth/auth.component').then((m) => m.AuthComponent),
     title: 'Sign in — Wearly',
+  },
+  {
+    path: 'login',
+    redirectTo: '/auth',
+    pathMatch: 'full',
+  },
+  {
+    path: 'register',
+    redirectTo: '/auth',
+    pathMatch: 'full',
   },
   {
     path: 'forgot-password',
@@ -33,22 +42,15 @@ export const routes: Routes = [
       import('./features/confirm-mail/confirm-mail.component').then((m) => m.ConfirmMailComponent),
     title: 'Confirm mail — Wearly',
   },
-
-  // ============ USER-SIDE ============
   {
-    path: 'shop',
+    path: 'auth/google-callback',
     loadComponent: () =>
-      import('./features/shop/shop.component').then((m) => m.ShopComponent),
-    title: 'Shop — Wearly',
-  },
-  {
-    path: 'templates',
-    loadComponent: () =>
-      import('./features/templates/templates.component').then((m) => m.TemplatesComponent),
-    title: 'Template Hub — Wearly',
+      import('./features/auth/google-callback.component').then((m) => m.GoogleCallbackComponent),
+    title: 'Google sign-in — Wearly',
   },
   {
     path: 'community',
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./features/community/community.component').then((m) => m.CommunityComponent),
     title: 'Community — Wearly',
@@ -61,39 +63,49 @@ export const routes: Routes = [
     title: 'Dashboard — Wearly',
   },
   {
-    path: 'orders',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/orders/orders.component').then((m) => m.OrdersComponent),
-    title: 'My Orders — Wearly',
-  },
-  {
-    path: 'onboarding',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/onboarding/onboarding.component').then((m) => m.OnboardingComponent),
-    title: 'Style onboarding — Wearly',
-  },
-  {
     path: 'profile',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/profile/profile.component').then((m) => m.ProfileComponent),
     title: 'Profile — Wearly',
   },
-
-  // ============ STUDIO — DO NOT TOUCH (teammate's custom work) ============
   {
     path: 'studio',
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./features/studio/studio.component').then((m) => m.StudioComponent),
     title: 'Design Studio — Wearly',
   },
-
-  // ============ ADMIN CONTROL CENTER (admin role required) ============
+  {
+    path: 'notifications',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    title: 'Notifications — Wearly',
+  },
+  {
+    path: 'marketplace',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    title: 'Marketplace — Wearly',
+  },
+  {
+    path: 'rewards',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    title: 'Rewards — Wearly',
+  },
+  {
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    title: 'Settings — Wearly',
+  },
   {
     path: 'control-center',
-    canActivate: [authGuard, adminGuard],
     loadComponent: () =>
       import('./features/admin/layout/admin-layout.component').then((m) => m.AdminLayoutComponent),
     children: [

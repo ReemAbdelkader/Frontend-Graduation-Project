@@ -1,6 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { logoImage } from '../../core/data/wearly-data';
 
@@ -12,57 +14,87 @@ import { logoImage } from '../../core/data/wearly-data';
   styleUrl: './reset-password.component.scss',
 })
 export class ResetPasswordComponent {
+  private auth = inject(AuthService);
   private toast = inject(ToastService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly logo = logoImage;
-
-  // Pre-fill the email from the query string if coming from /forgot-password.
   readonly email = signal(this.route.snapshot.queryParamMap.get('email') ?? '');
-  readonly password = signal('');
+  readonly token = signal(this.route.snapshot.queryParamMap.get('token') ?? '');
+  readonly newPassword = signal('');
+  readonly confirmPassword = signal('');
   readonly showPassword = signal(false);
   readonly error = signal('');
   readonly loading = signal(false);
 
-  setEmail(v: string): void {
-    this.email.set(v);
+  constructor() {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.email.set(params.get('email') ?? '');
+      this.token.set(params.get('token') ?? '');
+    });
+  }
+
+  setNewPassword(v: string): void {
+    this.newPassword.set(v);
     this.error.set('');
   }
 
-  setPassword(v: string): void {
-    this.password.set(v);
+  setConfirmPassword(v: string): void {
+    this.confirmPassword.set(v);
     this.error.set('');
   }
 
   toggleShowPassword(): void {
-    this.showPassword.update((v) => !v);
+    this.showPassword.update((value) => !value);
   }
 
   submit(): void {
     const e = this.email().trim();
-    const p = this.password().trim();
+    const authToken = this.token().trim();
+    const password = this.newPassword().trim();
+    const confirmPassword = this.confirmPassword().trim();
 
     if (!e) {
       this.error.set('Email is required.');
       return;
     }
-    if (!/^\S+@\S+\.\S+$/.test(e)) {
-      this.error.set('Please enter a valid email address.');
+    if (!authToken) {
+      this.error.set('Reset token is missing.');
       return;
     }
-    if (p.length < 6) {
-      this.error.set('Password must be at least 6 characters.');
+    if (!password) {
+      this.error.set('New password is required.');
+      return;
+    }
+    if (!confirmPassword) {
+      this.error.set('Please confirm your new password.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      this.error.set('Passwords do not match.');
       return;
     }
 
     this.loading.set(true);
+    this.error.set('');
 
-    // Mock reset — your team will swap for a real API call.
-    setTimeout(() => {
+    this.auth.resetPassword(e, authToken, password).subscribe((result) => {
       this.loading.set(false);
-      this.toast.success('Password reset successfully. Please log in.');
-      this.router.navigate(['/auth']);
-    }, 600);
+
+      if (!result.ok) {
+        const errorMessage = result.message ?? result.error ?? 'Unable to reset your password. Please try again.';
+        this.error.set(errorMessage);
+        this.toast.error(errorMessage);
+        return;
+      }
+
+      const successMessage = result.message ?? 'Password reset successfully. Please log in.';
+      this.toast.success(successMessage);
+      window.setTimeout(() => {
+        this.router.navigate(['/auth']);
+      }, 2000);
+    });
   }
 }

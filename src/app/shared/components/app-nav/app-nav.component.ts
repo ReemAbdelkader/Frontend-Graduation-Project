@@ -1,9 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { ToastService } from '../../../core/services/toast.service';
 import { NotificationBellComponent } from '../notifications/notifications.component';
-import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { LogoutDialogComponent } from '../logout-dialog/logout-dialog.component';
 import { logoImage } from '../../../core/data/wearly-data';
 
 interface NavLink {
@@ -15,14 +14,12 @@ interface NavLink {
 @Component({
   selector: 'app-nav',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, NotificationBellComponent, ConfirmDialogComponent],
+  imports: [RouterLink, RouterLinkActive, NotificationBellComponent, LogoutDialogComponent],
   templateUrl: './app-nav.component.html',
   styleUrl: './app-nav.component.scss',
 })
 export class AppNavComponent {
   private auth = inject(AuthService);
-  private toast = inject(ToastService);
-  private router = inject(Router);
 
   readonly logo = logoImage;
 
@@ -58,14 +55,7 @@ export class AppNavComponent {
     this.askLogout.set(true);
   }
 
-  cancelLogout(): void {
+  closeLogout(): void {
     this.askLogout.set(false);
-  }
-
-  confirmLogout(): void {
-    this.askLogout.set(false);
-    this.auth.logout();
-    this.toast.success('Signed out');
-    this.router.navigate(['/auth']);
   }
 }

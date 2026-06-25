@@ -5,7 +5,7 @@ import { DatePipe } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AppNavComponent } from '../../shared/components/app-nav/app-nav.component';
-import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { LogoutDialogComponent } from '../../shared/components/logout-dialog/logout-dialog.component';
 
 type ProfileTab = 'posts' | 'marketplace' | 'rewards' | 'settings';
 
@@ -19,7 +19,7 @@ interface Metric {
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe, AppNavComponent, ConfirmDialogComponent],
+  imports: [RouterLink, FormsModule, DatePipe, AppNavComponent, LogoutDialogComponent],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
 })
@@ -91,14 +91,7 @@ export class ProfileComponent {
     this.askLogout.set(true);
   }
 
-  cancelLogout(): void {
+  closeLogout(): void {
     this.askLogout.set(false);
-  }
-
-  confirmLogout(): void {
-    this.askLogout.set(false);
-    this.auth.logout();
-    this.toast.success('Signed out');
-    this.router.navigate(['/auth']);
   }
 }

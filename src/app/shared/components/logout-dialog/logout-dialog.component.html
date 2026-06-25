@@ -1,0 +1,36 @@
+@if (open) {
+  <div class="logout-overlay" role="dialog" aria-modal="true" aria-labelledby="logout-dialog-title">
+    <div class="logout-dialog" (click)="$event.stopPropagation()">
+      <h3 id="logout-dialog-title" class="logout-title">Sign out from</h3>
+      <p class="logout-description">{{ logoutDescription }}</p>
+
+      <div class="logout-options">
+        @for (option of logoutOptions; track option.value) {
+          <label class="logout-option">
+            <input
+              type="radio"
+              name="logout-scope"
+              [value]="option.value"
+              [checked]="logoutScope() === option.value"
+              [disabled]="isLoggingOut()"
+              (change)="logoutScope.set(option.value)"
+            />
+            <span>{{ option.label }}</span>
+          </label>
+        }
+      </div>
+
+      <div class="logout-actions">
+        <button type="button" class="logout-cancel-btn" (click)="close()" [disabled]="isLoggingOut()">
+          Cancel
+        </button>
+        <button type="button" class="logout-confirm-btn" (click)="submitLogout()" [disabled]="isLoggingOut()">
+          @if (isLoggingOut()) {
+            <span class="logout-spinner" aria-hidden="true"></span>
+          }
+          {{ isLoggingOut() ? 'Signing out...' : 'Sign Out' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

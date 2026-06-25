@@ -2,21 +2,30 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-/** Require the user to be logged in. */
-export const authGuard: CanActivateFn = () => {
+export const authGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  if (auth.isLoggedIn()) return true;
-  router.navigate(['/auth']);
-  return false;
+
+  if (auth.isLoggedIn()) {
+    return true;
+  }
+
+  return router.createUrlTree(['/login'], {
+    queryParams: { returnUrl: state.url },
+  });
 };
 
-/** Require the user to have the `admin` role. */
 export const adminGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  if (auth.isLoggedIn() && auth.isAdmin()) return true;
-  // Non-admins get redirected to login.
-  router.navigate(['/auth']);
-  return false;
+
+  if (!auth.isLoggedIn()) {
+    return router.createUrlTree(['/login']);
+  }
+
+  if (auth.isAdmin()) {
+    return true;
+  }
+
+  return router.createUrlTree(['/dashboard']);
 };
