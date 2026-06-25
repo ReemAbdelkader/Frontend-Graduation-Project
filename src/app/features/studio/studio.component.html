@@ -240,7 +240,28 @@
                     [class.user-bubble]="m.role === 'user'"
                     [class.ai-bubble]="m.role === 'ai'"
                   >
-                    {{ m.text }}
+                    @if (m.imageUrl) {
+                      <div class="ai-generated-image-wrap">
+                        <img [src]="m.imageUrl" class="ai-generated-img" alt="AI Generated graphic" />
+                        <button class="btn-add-canvas" (click)="addToCanvas(m.imageUrl)">
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <path d="M5 12h14" />
+                            <path d="M12 5v14" />
+                          </svg>
+                          Add to Canvas
+                        </button>
+                      </div>
+                    }
+                    <div class="bubble-text">{{ m.text }}</div>
                   </div>
                 </div>
               }
@@ -249,12 +270,12 @@
             <div class="chat-input-wrap">
               <div class="quick-prompts">
                 @for (q of quickPrompts; track q) {
-                  <button class="quick-pill" (click)="useQuickPrompt(q)">
+                  <button class="quick-pill" (click)="useQuickPrompt(q)" [disabled]="aiLoading()">
                     {{ q }}
                   </button>
                 }
               </div>
-              <div class="chat-input-row">
+              <div class="chat-input-row" [class.disabled]="aiLoading()">
                 <input
                   type="text"
                   class="chat-input"
@@ -262,21 +283,26 @@
                   [ngModel]="chatInput()"
                   (ngModelChange)="setChatInput($event)"
                   (keydown.enter)="sendChat()"
+                  [disabled]="aiLoading()"
                 />
-                <button class="chat-send" (click)="sendChat()">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="m22 2-7 20-4-9-9-4Z" />
-                    <path d="M22 2 11 13" />
-                  </svg>
+                <button class="chat-send" (click)="sendChat()" [disabled]="aiLoading() || !chatInput().trim()">
+                  @if (aiLoading()) {
+                    <span class="loading-spinner"></span>
+                  } @else {
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m22 2-7 20-4-9-9-4Z" />
+                      <path d="M22 2 11 13" />
+                    </svg>
+                  }
                 </button>
               </div>
             </div>

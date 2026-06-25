@@ -5,6 +5,8 @@ import { CheckoutPayModalComponent } from "../../shared/components/checkout-pay-
 import { DesignCanvasComponent } from "../../shared/components/design-canvas/design-canvas.component";
 import { ProductService } from "../../core/services/product.service";
 import { AuthService } from "../../core/services/auth.service";
+import { AiImageService } from "../../core/services/ai-image.service";
+import { ToastService } from "../../core/services/toast.service";
 import {
   CategoryDto,
   PrintableZoneBounds,
@@ -16,6 +18,8 @@ import { environment } from "../../../environments/environment";
 interface ChatMsg {
   role: "ai" | "user";
   text: string;
+  graphicAssetId?: string;
+  imageUrl?: string;
 }
 
 interface CategoryWithCount extends CategoryDto {
@@ -52,7 +56,11 @@ type StudioProduct = ProductDto & {
 export class StudioComponent {
   private readonly productService = inject(ProductService);
   private readonly authService = inject(AuthService);
+  private readonly aiImageService = inject(AiImageService);
+  private readonly toastService = inject(ToastService);
   private readonly lastDraftStorageKey = "atelier-last-design-id";
+
+  readonly aiLoading = signal(false);
 
   @ViewChild(DesignCanvasComponent)
   private readonly designCanvas?: DesignCanvasComponent;
@@ -378,18 +386,48 @@ export class StudioComponent {
 
   sendChat(): void {
     const value = this.chatInput().trim();
-    if (!value) return;
+    if (!value || this.aiLoading()) return;
+
     this.messages.update((m) => [...m, { role: "user", text: value }]);
-    this.chatInput.set("");
-    setTimeout(() => {
-      this.messages.update((m) => [
-        ...m,
-        {
-          role: "ai",
-          text: "Got it — I'll restyle the current piece around that direction and refresh the mannequin preview.",
-        },
-      ]);
-    }, 700);
+    this.aiLoading.set(true);
+
+    this.aiImageService.generateAiImage(value).subscribe({
+      next: (result) => {
+        this.aiLoading.set(false);
+        this.chatInput.set(""); // Clear prompt on success
+
+        if (result && result.imageUrl) {
+          const fullImageUrl = result.imageUrl.startsWith("http")
+            ? result.imageUrl
+            : `${this.baseApiUrl}${result.imageUrl}`;
+
+          this.messages.update((m) => [
+            ...m,
+            {
+              role: "ai",
+              text: `Generated graphic for: "${value}"`,
+              graphicAssetId: result.graphicAssetId,
+              imageUrl: fullImageUrl,
+            },
+          ]);
+        } else {
+          this.toastService.error("Failed to generate AI image. Invalid response.");
+        }
+      },
+      error: (err) => {
+        this.aiLoading.set(false);
+        // User prompt remains unchanged on error
+        const errMsg = err?.error?.Message || err?.message || "Failed to generate AI image.";
+        this.toastService.error(errMsg);
+      },
+    });
+  }
+
+  addToCanvas(imageUrl: string): void {
+    if (!imageUrl || !this.designCanvas) {
+      return;
+    }
+    this.designCanvas.addGraphicAsset(imageUrl);
   }
 
   async saveToDrafts(): Promise<void> {

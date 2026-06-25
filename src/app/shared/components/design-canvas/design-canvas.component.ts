@@ -341,6 +341,23 @@ export class DesignCanvasComponent
     }
   }
 
+  async addGraphicAsset(imageUrl: string): Promise<void> {
+    if (!this.fabricCanvas || !imageUrl) {
+      return;
+    }
+
+    this.syncCanvasSize();
+    const imageLayer = await this.imageLayerService.createImageLayer(
+      this.fabricCanvas,
+      imageUrl,
+    );
+
+    if (imageLayer) {
+      this.schedulePrintableConstraint();
+      this.syncToolbarState();
+    }
+  }
+
   addText(): void {
     if (!this.fabricCanvas) {
       return;
