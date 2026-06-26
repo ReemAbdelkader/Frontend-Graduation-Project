@@ -11,26 +11,43 @@ export class ProductDetailModalComponent {
   @Input({ required: true }) product!: Product;
   @Output() close = new EventEmitter<void>();
 
+  readonly selectedImage = signal<string>('');
   readonly selectedColor = signal<string>('');
-  readonly selectedSize = signal<string>('M');
 
   ngOnInit(): void {
-    this.selectedColor.set(this.product.colors[0]);
+    this.syncSelection();
+  }
+
+  ngOnChanges(): void {
+    this.syncSelection();
+  }
+
+  get hasReviewCount(): boolean {
+    return typeof this.product.reviews === 'number';
+  }
+
+  get hasColors(): boolean {
+    return (this.product.colors?.length ?? 0) > 0;
+  }
+
+  get galleryImages(): string[] {
+    return this.product.galleryImages?.length ? this.product.galleryImages : [this.product.image].filter(Boolean);
+  }
+
+  selectImage(image: string): void {
+    this.selectedImage.set(image);
   }
 
   pickColor(c: string): void {
     this.selectedColor.set(c);
   }
 
-  pickSize(s: string): void {
-    this.selectedSize.set(s);
+  onAddToCart(): void {
+    // TODO: No Cart API exists yet in the backend. Blocked until a Cart/CartItem endpoint is added. See OrdersController for the eventual checkout call once cart contents need to convert to a real order.
   }
 
-  get sizes(): string[] {
-    return ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-  }
-
-  get originalPrice(): number {
-    return this.product.price + 32;
+  private syncSelection(): void {
+    this.selectedImage.set(this.galleryImages[0] ?? '');
+    this.selectedColor.set(this.product.colors?.[0] ?? '');
   }
 }

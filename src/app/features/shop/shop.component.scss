@@ -151,6 +151,17 @@
   }
 }
 
+.shop-state {
+  margin-top: 1.5rem;
+  min-height: 12rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--muted-foreground);
+  background: var(--card);
+}
+
 /* ============ BOTTOM CTA ============ */
 .bottom-cta {
   margin-top: 4rem;

@@ -571,4 +571,14 @@
       (close)="closePay()"
     />
   }
+
+  <!-- Toast container -->
+  <div class="toast-container">
+    @for (t of toastService.toasts(); track t.id) {
+      <div class="toast" [class]="t.type">
+        {{ t.message }}
+        <button class="toast-close" (click)="toastService.remove(t.id)">×</button>
+      </div>
+    }
+  </div>
 </div>

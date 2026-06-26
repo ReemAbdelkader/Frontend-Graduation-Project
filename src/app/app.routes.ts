@@ -49,6 +49,26 @@ export const routes: Routes = [
     title: 'Google sign-in — Wearly',
   },
   {
+    path: 'shop',
+    loadComponent: () =>
+      import('./features/shop/shop.component').then((m) => m.ShopComponent),
+    title: 'Shop — Wearly',
+  },
+  {
+    path: 'templates',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/templates/templates.component').then((m) => m.TemplatesComponent),
+    title: 'Templates — Wearly',
+  },
+  {
+    path: 'orders',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/orders/orders.component').then((m) => m.OrdersComponent),
+    title: 'My Orders — Wearly',
+  },
+  {
     path: 'community',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -80,7 +100,7 @@ export const routes: Routes = [
     path: 'notifications',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      import('./features/notifications/notifications-page.component').then((m) => m.NotificationsPageComponent),
     title: 'Notifications — Wearly',
   },
   {

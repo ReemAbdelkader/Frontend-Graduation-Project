@@ -15,6 +15,7 @@ import { FabricDesignStateService } from "./services/fabric-design-state.service
 import { FabricImageLayerService } from "./services/fabric-image-layer.service";
 import { FabricPrintableZoneConstraintService } from "./services/fabric-printable-zone-constraint.service";
 import { FabricTextLayerService } from "./services/fabric-text-layer.service";
+import { ToastService } from "../../../core/services/toast.service";
 
 @Component({
   selector: "app-design-canvas",
@@ -75,6 +76,7 @@ export class DesignCanvasComponent
     private readonly stateService: FabricDesignStateService,
     private readonly constraintService: FabricPrintableZoneConstraintService,
     private readonly productService: ProductService,
+    private readonly toastService: ToastService,
   ) {}
 
   ngAfterViewInit(): void {
@@ -347,15 +349,42 @@ export class DesignCanvasComponent
     }
 
     this.syncCanvasSize();
-    const imageLayer = await this.imageLayerService.createImageLayer(
-      this.fabricCanvas,
-      imageUrl,
-    );
+    try {
+      const file = await this.fetchAsFile(imageUrl);
+      const imageLayer = await this.imageLayerService.createImageLayerFromFile(
+        this.fabricCanvas,
+        file,
+      );
 
-    if (imageLayer) {
-      this.schedulePrintableConstraint();
-      this.syncToolbarState();
+      if (imageLayer) {
+        this.schedulePrintableConstraint();
+        this.syncToolbarState();
+      }
+    } catch (err: any) {
+      console.error('[DesignCanvas] Failed to add graphic asset to canvas.', err);
+      this.toastService.error(`Failed to add image: ${err?.message || err || 'Unknown error'}`);
     }
+  }
+
+  private async fetchAsFile(imageUrl: string): Promise<File> {
+    // Map /GraphicAssets/{userId}/{fileName} to /api/DesignStudio/graphic-asset-file/{userId}/{fileName}
+    // so that the request automatically routes through the active /api dev proxy context.
+    const proxyPath = (() => {
+      try {
+        const path = new URL(imageUrl).pathname;
+        return path.replace(/^\/GraphicAssets\//, '/api/DesignStudio/graphic-asset-file/');
+      } catch {
+        return imageUrl.replace(/^\/GraphicAssets\//, '/api/DesignStudio/graphic-asset-file/');
+      }
+    })();
+
+    const response = await fetch(proxyPath);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    const filename = proxyPath.split('/').pop() ?? 'graphic-asset';
+    return new File([blob], filename, { type: blob.type });
   }
 
   addText(): void {

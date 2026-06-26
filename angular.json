@@ -70,5 +70,8 @@
     "cache": {
       "enabled": false
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }

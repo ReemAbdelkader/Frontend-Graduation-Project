@@ -21,26 +21,34 @@
     <!-- FILTERS -->
     <section class="filters">
       <div class="filter-tabs">
-        @for (c of categories; track c) {
+        @for (c of categories(); track categoryTrackId(c)) {
           <button
             class="filter-pill"
-            [class.active]="selectedCat() === c"
+            [class.active]="selectedCat().id === c.id"
             (click)="selectCat(c)"
-          >{{ c }}</button>
+          >{{ c.name }}</button>
         }
       </div>
-      <p class="count">{{ filteredProducts().length }} pieces</p>
+      <p class="count">{{ totalCount() }} pieces</p>
     </section>
 
     <!-- GRID -->
-    <section class="grid">
-      @for (p of filteredProducts(); track p.id) {
-        <app-product-card
-          [product]="p"
-          (cardClick)="openDetail($event)"
-        />
-      }
-    </section>
+    @if (loading()) {
+      <section class="shop-state">Loading products...</section>
+    } @else if (error()) {
+      <section class="shop-state">{{ error() }}</section>
+    } @else if (products().length === 0) {
+      <section class="shop-state">No products found.</section>
+    } @else {
+      <section class="grid">
+        @for (p of products(); track p.id) {
+          <app-product-card
+            [product]="p"
+            (cardClick)="openDetail($event)"
+          />
+        }
+      </section>
+    }
 
     <!-- CTA -->
     <section class="bottom-cta">
