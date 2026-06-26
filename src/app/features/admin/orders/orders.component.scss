@@ -46,6 +46,17 @@
   }
 }
 
+.table-empty {
+  text-align: center; padding: 2rem; color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.ghost-btn {
+  margin-top: 0.75rem; padding: 0.5rem 1rem; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--background);
+  color: var(--foreground); font-size: 0.875rem; cursor: pointer;
+}
+
 .table-wrap { overflow-x: auto; }
 
 .orders-table {
@@ -70,4 +81,36 @@
   background: var(--background); border: 1px solid var(--border);
   font-size: 0.75rem; color: var(--foreground); cursor: pointer;
   &:focus { outline: none; border-color: var(--primary); }
+}
+
+.gap-card {
+  border-radius: 16px; border: 1px dashed var(--border);
+  background: oklch(0.95 0.01 80 / 0.35);
+  padding: 3rem 2rem; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+}
+
+.gap-icon {
+  height: 56px; width: 56px; border-radius: 9999px;
+  background: var(--muted); color: var(--muted-foreground);
+  display: grid; place-items: center;
+}
+
+.gap-title {
+  margin: 0; font-family: "Playfair Display", serif;
+  font-size: 1.25rem; font-weight: 600;
+}
+
+.gap-text {
+  margin: 0; max-width: 36rem; color: var(--muted-foreground);
+  font-size: 0.875rem; line-height: 1.6;
+}
+
+.gap-hint {
+  margin: 0; max-width: 36rem; color: var(--muted-foreground);
+  font-size: 0.75rem; line-height: 1.5;
+  code {
+    font-family: monospace; font-size: 0.7rem;
+    background: var(--muted); padding: 0.1rem 0.35rem; border-radius: 4px;
+  }
 }

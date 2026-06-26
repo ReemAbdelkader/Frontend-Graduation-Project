@@ -1,15 +1,17 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
+import { forkJoin } from 'rxjs';
 import {
-  overviewStats,
-  ordersByStatus,
-  recentOrders,
-  MockOrder,
-} from '../../../core/data/admin-mock-data';
+  AdminApiService,
+  DashboardOverviewDto,
+  OrderStatus,
+  OrderStatusCountDto,
+  RecentOrderDto,
+} from '../../../core/services/admin-api.service';
 
 interface StatusSlice {
-  status: string;
+  status: OrderStatus;
   count: number;
   color: string;
   percent: number;
@@ -22,11 +24,27 @@ interface StatusSlice {
   templateUrl: './overview.component.html',
   styleUrl: './overview.component.scss',
 })
-export class OverviewComponent {
-  readonly stats = overviewStats;
-  readonly recentOrders: MockOrder[] = recentOrders;
+export class OverviewComponent implements OnInit {
+  private adminApi = inject(AdminApiService);
 
-  private readonly statusColors: Record<string, string> = {
+  readonly stats = signal<DashboardOverviewDto>({
+    totalUsers: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+    pendingOrders: 0,
+    totalProducts: 0,
+    totalTemplates: 0,
+    publicTemplates: 0,
+    pendingModerationReports: 0,
+  });
+  readonly recentOrders = signal<RecentOrderDto[]>([]);
+  readonly ordersByStatus = signal<OrderStatusCountDto[]>([]);
+  readonly loading = signal(true);
+  readonly error = signal<string | null>(null);
+
+  readonly statuses: OrderStatus[] = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
+
+  private readonly statusColors: Record<OrderStatus, string> = {
     Pending: '#FF6B4A',
     Processing: '#7AA7D9',
     Shipped: '#00C9A7',
@@ -36,7 +54,8 @@ export class OverviewComponent {
   };
 
   readonly statusSlices = computed<StatusSlice[]>(() => {
-    const slices = ordersByStatus;
+    const counts = new Map(this.ordersByStatus().map((slice) => [slice.status, slice.count]));
+    const slices = this.statuses.map((status) => ({ status, count: counts.get(status) ?? 0 }));
     const total = slices.reduce((sum, s) => sum + s.count, 0) || 1;
     return slices.map((s) => ({
       status: s.status,
@@ -62,6 +81,32 @@ export class OverviewComponent {
   readonly totalOrdersInChart = computed(() =>
     this.statusSlices().reduce((sum, s) => sum + s.count, 0),
   );
+
+  ngOnInit(): void {
+    this.loadOverview();
+  }
+
+  loadOverview(): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    forkJoin({
+      stats: this.adminApi.getDashboardOverview(),
+      ordersByStatus: this.adminApi.getOrdersByStatus(),
+      recentOrders: this.adminApi.getRecentOrders(10),
+    }).subscribe({
+      next: ({ stats, ordersByStatus, recentOrders }) => {
+        this.stats.set(stats);
+        this.ordersByStatus.set(ordersByStatus);
+        this.recentOrders.set(recentOrders);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set('Unable to load the overview right now.');
+        this.loading.set(false);
+      },
+    });
+  }
 
   // ============ SVG donut helpers ============
   private polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {

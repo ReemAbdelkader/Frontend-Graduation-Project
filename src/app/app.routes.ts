@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/guards/auth.guard';
+import { authGuard, adminGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -133,6 +133,7 @@ export const routes: Routes = [
   },
   {
     path: 'control-center',
+    canActivate: [adminGuard],
     loadComponent: () =>
       import('./features/admin/layout/admin-layout.component').then((m) => m.AdminLayoutComponent),
     children: [
@@ -150,9 +151,8 @@ export const routes: Routes = [
       },
       {
         path: 'creators',
-        loadComponent: () =>
-          import('./features/admin/creators/creators.component').then((m) => m.CreatorsComponent),
-        title: 'Creators — Control Center',
+        redirectTo: '',
+        pathMatch: 'full',
       },
       {
         path: 'orders',
@@ -186,9 +186,8 @@ export const routes: Routes = [
       },
       {
         path: 'rewards',
-        loadComponent: () =>
-          import('./features/admin/rewards/rewards.component').then((m) => m.RewardsComponent),
-        title: 'Rewards — Control Center',
+        redirectTo: '',
+        pathMatch: 'full',
       },
       {
         path: 'ai-reports',
@@ -198,9 +197,8 @@ export const routes: Routes = [
       },
       {
         path: 'settings',
-        loadComponent: () =>
-          import('./features/admin/settings/settings.component').then((m) => m.SettingsComponent),
-        title: 'Settings — Control Center',
+        redirectTo: '',
+        pathMatch: 'full',
       },
     ],
   },

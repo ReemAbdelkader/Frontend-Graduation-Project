@@ -7,6 +7,7 @@ import { ProductService } from "../../core/services/product.service";
 import { AuthService } from "../../core/services/auth.service";
 import { AiImageService } from "../../core/services/ai-image.service";
 import { ToastService } from "../../core/services/toast.service";
+import { resolveApiUrl } from "../../core/services/api-config";
 import {
   CategoryDto,
   PrintableZoneBounds,
@@ -61,6 +62,7 @@ export class StudioComponent {
   private readonly lastDraftStorageKey = "atelier-last-design-id";
 
   readonly aiLoading = signal(false);
+  readonly isSaving = signal(false);
 
   @ViewChild(DesignCanvasComponent)
   private readonly designCanvas?: DesignCanvasComponent;
@@ -171,9 +173,7 @@ export class StudioComponent {
       return this.logo;
     }
 
-    return /^https?:\/\//i.test(imageUrl) || imageUrl.startsWith("data:")
-      ? imageUrl
-      : `${this.baseApiUrl}${imageUrl}`;
+    return resolveApiUrl(imageUrl) || this.logo;
   }
 
   get currentPrintableZone(): PrintableZoneBounds | null {
@@ -216,7 +216,7 @@ export class StudioComponent {
     return {
       ...dto,
       image: dto.previewImageUrl
-        ? `${this.baseApiUrl}${dto.previewImageUrl}`
+        ? resolveApiUrl(dto.previewImageUrl)
         : this.logo,
       images: [
         {
@@ -411,13 +411,16 @@ export class StudioComponent {
             },
           ]);
         } else {
-          this.toastService.error("Failed to generate AI image. Invalid response.");
+          this.toastService.error(
+            "Failed to generate AI image. Invalid response.",
+          );
         }
       },
       error: (err) => {
         this.aiLoading.set(false);
         // User prompt remains unchanged on error
-        const errMsg = err?.error?.Message || err?.message || "Failed to generate AI image.";
+        const errMsg =
+          err?.error?.Message || err?.message || "Failed to generate AI image.";
         this.toastService.error(errMsg);
       },
     });
@@ -430,49 +433,122 @@ export class StudioComponent {
     this.designCanvas.addGraphicAsset(imageUrl);
   }
 
+  getProductImageUrlForAngle(angle: ViewAngle): string {
+    const selectedProduct = this.selected();
+    const images = Array.isArray(selectedProduct?.images)
+      ? selectedProduct.images
+      : [];
+    const activeImage = images.find((image) => image.viewAngle === angle);
+    const imageUrl =
+      activeImage?.imageUrl ||
+      (angle === ViewAngle.Front ? selectedProduct?.image : "") ||
+      this.logo;
+
+    if (!imageUrl) {
+      return this.logo;
+    }
+
+    return resolveApiUrl(imageUrl) || this.logo;
+  }
+
   async saveToDrafts(): Promise<void> {
     const selectedProduct = this.selected();
 
     if (!selectedProduct?.id || !this.designCanvas) {
+      this.toastService.error("Please select a product before saving.");
       return;
     }
 
-    const snapshotUrl = await this.designCanvas.exportCurrentDesignSnapshot();
-    const canvasState = this.designCanvas.getCurrentCanvasState();
-    const currentUser = this.authService.user();
-    const userId = currentUser?.email
-      ? this.createStableUserId(currentUser.email)
-      : this.createStableUserId("guest");
+    if (this.isSaving()) {
+      return;
+    }
 
-    this.productService
-      .createDesign({
-        userId,
-        productId: selectedProduct.id,
-        templateId: null,
-        canvasStateJSON: canvasState,
-        snapshotImageURL: snapshotUrl ?? "",
-        selectedSize: this.mapSizeToEnum(this.size()),
-        selectedFabric: null,
-        selectedPrintMethod: null,
-        selectedColor: this.color(),
-      })
-      .subscribe({
-        next: (designId) => {
-          if (designId) {
-            localStorage.setItem(this.lastDraftStorageKey, designId);
-          }
-          console.log("[Studio] design saved", { designId, snapshotUrl });
-        },
-        error: (error) => {
-          console.error("[Studio] failed to save design", error);
-        },
-      });
+    this.isSaving.set(true);
+
+    const originalViewAngle = this.activeViewAngle;
+    const originalCanvasView: "front" | "back" =
+      originalViewAngle === ViewAngle.Front ? "front" : "back";
+
+    try {
+      // 1. Persist the current editing state so both sides are saved in stateService
+      this.designCanvas.saveCurrentViewState(originalCanvasView);
+
+      const frontUrl = this.getProductImageUrlForAngle(ViewAngle.Front);
+      const backUrl = this.getProductImageUrlForAngle(ViewAngle.Back);
+
+      // 2. Sequentially capture front and back composite previews
+      const base64Front = await this.designCanvas.captureViewSnapshot(
+        "front",
+        frontUrl,
+      );
+      const base64Back = await this.designCanvas.captureViewSnapshot(
+        "back",
+        backUrl,
+      );
+
+      // 3. Restore the view the user was editing
+      await this.designCanvas.restoreViewSnapshot(originalCanvasView);
+
+      // 4. The SnapshotImageURL represents the side being actively edited
+      const base64Snapshot =
+        originalCanvasView === "front" ? base64Front : base64Back;
+
+      // 5. Build canvas state JSON (both sides are now saved in stateService)
+      const canvasState = this.designCanvas.getCurrentCanvasState();
+
+      const savedDesignId = localStorage.getItem(this.lastDraftStorageKey);
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const validDesignId =
+        savedDesignId && uuidRegex.test(savedDesignId) ? savedDesignId : null;
+
+      this.productService
+        .createDesign({
+          id: validDesignId,
+          productId: selectedProduct.id,
+          templateId: null,
+          canvasStateJSON: canvasState,
+          base64Snapshot,
+          base64Front,
+          base64Back,
+          selectedSize: this.mapSizeToEnum(this.size()),
+          selectedFabric: null,
+          selectedPrintMethod: null,
+          selectedColor: this.color(),
+        })
+        .subscribe({
+          next: (designId) => {
+            if (designId) {
+              localStorage.setItem(this.lastDraftStorageKey, designId);
+              this.toastService.success("Design saved successfully!");
+            }
+            console.log("[Studio] design saved", { designId });
+          },
+          error: (error) => {
+            console.error("[Studio] failed to save design", error);
+            const msg =
+              error?.error?.Message ||
+              error?.error?.message ||
+              error?.message ||
+              "Failed to save design.";
+            this.toastService.error(msg);
+          },
+        });
+    } catch (err: any) {
+      console.error("[Studio] saveToDrafts error", err);
+      const msg = err?.message || err || "Failed to save design.";
+      this.toastService.error(`Failed to save design: ${msg}`);
+    } finally {
+      this.isSaving.set(false);
+    }
   }
 
   loadLatestDraft(): void {
     const savedDesignId = localStorage.getItem(this.lastDraftStorageKey);
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-    if (!savedDesignId) {
+    if (!savedDesignId || !uuidRegex.test(savedDesignId)) {
       return;
     }
 

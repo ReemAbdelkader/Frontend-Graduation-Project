@@ -452,7 +452,7 @@
       </div>
 
       <div class="right-actions">
-        <button class="btn btn-accent">
+        <button class="btn btn-ghost" (click)="saveToDrafts()">
           <svg
             width="16"
             height="16"
@@ -463,17 +463,11 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <path d="M15 4V2" />
-            <path d="M15 16v-2" />
-            <path d="M8 9h2" />
-            <path d="M20 9h2" />
-            <path d="M17.8 11.8 19 13" />
-            <path d="M15 9h.01" />
-            <path d="M17.8 6.2 19 5" />
-            <path d="m3 21 9-9" />
-            <path d="M12.2 6.2 11 5" />
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+            <polyline points="17 21 17 13 7 13 7 21" />
+            <polyline points="7 3 7 8 15 8" />
           </svg>
-          Finish design — ${{ selected().price }}
+          Save Design
         </button>
         <button class="btn btn-primary" (click)="openPay()">
           <svg
@@ -486,16 +480,11 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <rect width="20" height="14" x="2" y="5" rx="2" />
-            <line x1="2" y1="10" x2="22" y2="10" />
+            <circle cx="8" cy="21" r="1" />
+            <circle cx="19" cy="21" r="1" />
+            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
           </svg>
-          Checkout & Pay
-        </button>
-       <button class="btn btn-ghost" (click)="saveToDrafts()">
-          Save to drafts
-        </button>
-        <button class="btn btn-ghost" (click)="loadLatestDraft()">
-          Load last draft
+          Add to Cart
         </button>
       </div>
     </aside>
@@ -570,6 +559,17 @@
       [price]="selected().price"
       (close)="closePay()"
     />
+  }
+
+  <!-- Saving overlay — hides sequential side-switching during snapshot capture -->
+  @if (isSaving()) {
+    <div class="saving-overlay" role="status" aria-label="Saving design…">
+      <div class="saving-card">
+        <div class="saving-spinner"></div>
+        <p class="saving-title">Saving design…</p>
+        <p class="saving-sub">Generating preview images</p>
+      </div>
+    </div>
   }
 
   <!-- Toast container -->

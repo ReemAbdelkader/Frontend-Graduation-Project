@@ -13,7 +13,6 @@ export const appConfig: ApplicationConfig = {
       multi: true,
     },
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideHttpClient(),
     provideRouter(
       routes,
       withInMemoryScrolling({

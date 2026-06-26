@@ -10,7 +10,15 @@
     </button>
   </header>
 
-  @if (categories().length === 0) {
+  @if (loading()) {
+    <div class="empty-state">
+      <p>Loading categories...</p>
+    </div>
+  } @else if (error()) {
+    <div class="empty-state">
+      <p>{{ error() }}</p>
+    </div>
+  } @else if (categories().length === 0) {
     <div class="empty-state">
       <p>No categories yet. Click "New category" to create your first one.</p>
     </div>
@@ -18,10 +26,8 @@
     <div class="grid">
       @for (c of categories(); track c.id) {
         <article class="cat-card">
-          <div class="cat-image" [style.background-image]="'url(' + c.imageUrl + ')'"></div>
           <div class="cat-body">
             <h3 class="cat-name">{{ c.name }}</h3>
-            <p class="cat-desc">{{ c.description || 'No description.' }}</p>
             <div class="cat-actions">
               <button class="ghost-btn" (click)="openEdit(c)">Edit</button>
               <button class="danger-btn" (click)="askDelete(c)">Delete</button>
@@ -54,13 +60,18 @@
         </label>
 
         <label class="field">
+          <span class="label">Printable area config {{ editingId() ? '' : '*' }}</span>
+          <textarea rows="4" [ngModel]="formPrintableAreaConfig()" (ngModelChange)="formPrintableAreaConfig.set($event)" name="printableAreaConfig" [required]="!editingId()"></textarea>
+        </label>
+
+        <label class="field">
           <span class="label">Image URL</span>
           <input type="text" [ngModel]="formImageUrl()" (ngModelChange)="formImageUrl.set($event)" name="img" placeholder="assets/..." />
         </label>
 
         <footer class="modal-foot">
           <button type="button" class="ghost-btn" (click)="closeModal()">Cancel</button>
-          <button type="submit" class="primary-btn">
+          <button type="submit" class="primary-btn" [disabled]="saving()">
             {{ editingId() ? 'Save changes' : 'Create category' }}
           </button>
         </footer>

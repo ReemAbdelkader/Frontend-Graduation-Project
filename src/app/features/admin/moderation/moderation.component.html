@@ -13,13 +13,22 @@
         [class.active]="statusFilter() === s"
         (click)="setStatusFilter(s)"
       >
-        {{ s === 'ActionTaken' ? 'Action Taken' : s }}
+        {{ statusLabel(s) }}
         <span class="count">{{ getCount(s) }}</span>
       </button>
     }
   </div>
 
-  @if (filtered().length === 0) {
+  @if (loading()) {
+    <div class="empty-state">
+      <p>Loading moderation reports...</p>
+    </div>
+  } @else if (error()) {
+    <div class="empty-state">
+      <p>{{ error() }}</p>
+      <button class="resolve-btn" (click)="setStatusFilter(statusFilter())">Try again</button>
+    </div>
+  } @else if (filtered().length === 0) {
     <div class="empty-state">
       <p>No moderation reports match this filter.</p>
     </div>
@@ -29,13 +38,11 @@
         <article class="report-card">
           <div class="report-head">
             <div>
-              <p class="report-template">{{ r.templateName }}</p>
+              <p class="report-template">{{ r.targetTemplateName }}</p>
               <p class="report-meta">
-                <span class="mono">ID: {{ r.templateId }}</span>
-                <span class="sep">·</span>
                 <span>Reported by <strong>{{ r.reporterName }}</strong></span>
-                <span class="sep">·</span>
-                <span>{{ r.submittedAt | date:'MMM d, y, h:mm a' }}</span>
+                <span class="sep">-</span>
+                <span>{{ r.createdAt | date:'MMM d, y, h:mm a' }}</span>
               </p>
             </div>
             <span class="status-pill" [class]="'status-' + r.status.toLowerCase()">
@@ -65,8 +72,8 @@
                 (ngModelChange)="setAction(r.id, $event)"
                 name="action-{{ r.id }}"
               />
-              <button class="resolve-btn" (click)="resolve(r)">
-                Mark as resolved
+              <button class="resolve-btn" (click)="resolve(r)" [disabled]="resolvingId() === r.id">
+                {{ resolvingId() === r.id ? 'Resolving...' : 'Mark as resolved' }}
               </button>
             </div>
           }

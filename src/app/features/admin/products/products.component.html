@@ -10,7 +10,15 @@
     </button>
   </header>
 
-  @if (products().length === 0) {
+  @if (loading()) {
+    <div class="empty-state">
+      <p>Loading products...</p>
+    </div>
+  } @else if (error()) {
+    <div class="empty-state">
+      <p>{{ error() }}</p>
+    </div>
+  } @else if (products().length === 0) {
     <div class="empty-state">
       <p>No products yet. Click "New product" to create your first one.</p>
     </div>
@@ -18,7 +26,7 @@
     <div class="grid">
       @for (p of products(); track p.id) {
         <article class="prod-card">
-          <div class="prod-image" [style.background-image]="'url(' + p.imageUrl + ')'">
+          <div class="prod-image" [style.background-image]="'url(' + imageUrl(p.previewImageUrl) + ')'">
             @if (!p.isAvailable) {
               <span class="unavailable-pill">Unavailable</span>
             }
@@ -27,8 +35,7 @@
             <p class="prod-cat">{{ p.categoryName }}</p>
             <h3 class="prod-name">{{ p.name }}</h3>
             <div class="prod-meta">
-              <span class="prod-price">${{ p.basePrice }}</span>
-              <span class="prod-stock">{{ p.stock }} in stock</span>
+              <span class="prod-price">{{ formatCurrency(p.basePrice) }}</span>
             </div>
             <div class="prod-actions">
               <button class="ghost-btn" (click)="openEdit(p)">Edit</button>
@@ -41,13 +48,12 @@
   }
 </div>
 
-<!-- CREATE / EDIT MODAL -->
 @if (showModal()) {
   <div class="modal-overlay" (click)="closeModal()">
     <div class="modal-card" (click)="$event.stopPropagation()">
       <header class="modal-head">
         <h2>{{ editingId() ? 'Edit product' : 'New product' }}</h2>
-        <button class="modal-close" (click)="closeModal()" aria-label="Close">×</button>
+        <button class="modal-close" (click)="closeModal()" aria-label="Close">x</button>
       </header>
 
       <form (ngSubmit)="submit(); $event.preventDefault()" class="modal-body">
@@ -62,25 +68,51 @@
             <input type="number" step="0.01" min="0" [ngModel]="formPrice()" (ngModelChange)="formPrice.set(+$event)" name="price" />
           </label>
           <label class="field">
-            <span class="label">Stock</span>
-            <input type="number" min="0" [ngModel]="formStock()" (ngModelChange)="formStock.set(+$event)" name="stock" />
+            <span class="label">Stock status {{ editingId() ? '' : '*' }}</span>
+            <select [ngModel]="formStockStatus()" (ngModelChange)="formStockStatus.set($event)" name="stockStatus" [required]="!editingId()">
+              @if (editingId()) {
+                <option value="">No change</option>
+              }
+              @for (s of stockStatuses; track s) {
+                <option [value]="s">{{ s }}</option>
+              }
+            </select>
           </label>
         </div>
 
-        <label class="field">
-          <span class="label">Category *</span>
-          <select [ngModel]="formCategory()" (ngModelChange)="formCategory.set($event)" name="cat" required>
-            <option value="" disabled>Select…</option>
-            @for (c of categories(); track c) {
-              <option [value]="c">{{ c }}</option>
-            }
-          </select>
-        </label>
+        @if (!editingId()) {
+          <label class="field">
+            <span class="label">Category *</span>
+            <select [ngModel]="formCategoryId()" (ngModelChange)="formCategoryId.set($event)" name="cat" required>
+              <option value="" disabled>Select...</option>
+              @for (c of categories(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          </label>
+        }
 
         <label class="field">
           <span class="label">Image URL</span>
           <input type="text" [ngModel]="formImage()" (ngModelChange)="formImage.set($event)" name="img" placeholder="assets/..." />
         </label>
+
+        <div class="field">
+          <span class="label">Available colors {{ editingId() ? '' : '*' }}</span>
+          <div class="flag-grid">
+            @for (color of colorOptions; track color.value) {
+              <label class="flag-check">
+                <input
+                  type="checkbox"
+                  [checked]="hasColor(color.value)"
+                  (change)="toggleColor(color.value, $any($event.target).checked)"
+                  [name]="'color-' + color.value"
+                />
+                <span>{{ color.label }}</span>
+              </label>
+            }
+          </div>
+        </div>
 
         <label class="check-row">
           <input type="checkbox" [ngModel]="formAvailable()" (ngModelChange)="formAvailable.set($event)" name="avail" />
@@ -89,7 +121,7 @@
 
         <footer class="modal-foot">
           <button type="button" class="ghost-btn" (click)="closeModal()">Cancel</button>
-          <button type="submit" class="primary-btn">
+          <button type="submit" class="primary-btn" [disabled]="saving()">
             {{ editingId() ? 'Save changes' : 'Create product' }}
           </button>
         </footer>
