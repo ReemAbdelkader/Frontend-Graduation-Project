@@ -13,6 +13,9 @@ export class ConfirmDialogComponent {
   @Input() confirmLabel = 'Confirm';
   @Input() cancelLabel = 'Cancel';
   @Input() destructive = false;
+  @Input() success = false;
+  @Input() previewImageUrl = '';
+  @Input() showCommunitySection = false;
 
   @Output() cancel = new EventEmitter<void>();
   @Output() confirm = new EventEmitter<void>();

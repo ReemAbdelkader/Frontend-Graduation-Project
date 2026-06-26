@@ -572,6 +572,19 @@
     </div>
   }
 
+  <app-confirm-dialog
+    [open]="saveSuccessOpen()"
+    [success]="true"
+    title="Design Saved"
+    description="Your design has been saved successfully."
+    [previewImageUrl]="saveSuccessPreviewUrl()"
+    [showCommunitySection]="true"
+    confirmLabel="Publish"
+    cancelLabel="Maybe Later"
+    (confirm)="onPublishDesign()"
+    (cancel)="onCloseSaveSuccess()"
+  ></app-confirm-dialog>
+
   <!-- Toast container -->
   <div class="toast-container">
     @for (t of toastService.toasts(); track t.id) {
