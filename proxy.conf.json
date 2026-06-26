@@ -10,5 +10,17 @@
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
+  },
+  "/GraphicAssets": {
+    "target": "http://localhost:5135",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/DesignSnapshots": {
+    "target": "http://localhost:5135",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
   }
 }

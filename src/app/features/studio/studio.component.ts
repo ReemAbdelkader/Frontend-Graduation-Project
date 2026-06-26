@@ -3,6 +3,7 @@ import { RouterLink } from "@angular/router";
 import { FormsModule } from "@angular/forms";
 import { CheckoutPayModalComponent } from "../../shared/components/checkout-pay-modal/checkout-pay-modal.component";
 import { DesignCanvasComponent } from "../../shared/components/design-canvas/design-canvas.component";
+import { ConfirmDialogComponent } from "../../shared/components/confirm-dialog/confirm-dialog.component";
 import { ProductService } from "../../core/services/product.service";
 import { AuthService } from "../../core/services/auth.service";
 import { AiImageService } from "../../core/services/ai-image.service";
@@ -50,6 +51,7 @@ type StudioProduct = ProductDto & {
     FormsModule,
     CheckoutPayModalComponent,
     DesignCanvasComponent,
+    ConfirmDialogComponent,
   ],
   templateUrl: "./studio.component.html",
   styleUrl: "./studio.component.scss",
@@ -63,6 +65,8 @@ export class StudioComponent {
 
   readonly aiLoading = signal(false);
   readonly isSaving = signal(false);
+  readonly saveSuccessOpen = signal(false);
+  readonly saveSuccessPreviewUrl = signal('');
 
   @ViewChild(DesignCanvasComponent)
   private readonly designCanvas?: DesignCanvasComponent;
@@ -496,15 +500,9 @@ export class StudioComponent {
       // 5. Build canvas state JSON (both sides are now saved in stateService)
       const canvasState = this.designCanvas.getCurrentCanvasState();
 
-      const savedDesignId = localStorage.getItem(this.lastDraftStorageKey);
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      const validDesignId =
-        savedDesignId && uuidRegex.test(savedDesignId) ? savedDesignId : null;
-
       this.productService
         .createDesign({
-          id: validDesignId,
+          id: null,
           productId: selectedProduct.id,
           templateId: null,
           canvasStateJSON: canvasState,
@@ -520,7 +518,21 @@ export class StudioComponent {
           next: (designId) => {
             if (designId) {
               localStorage.setItem(this.lastDraftStorageKey, designId);
-              this.toastService.success("Design saved successfully!");
+              
+              // Load design details to retrieve the generated SnapshotImageURL
+              this.productService.getDesignById(designId).subscribe({
+                next: (design) => {
+                  if (design && design.snapshotImageURL) {
+                    this.saveSuccessPreviewUrl.set(resolveApiUrl(design.snapshotImageURL) || "");
+                    this.saveSuccessOpen.set(true);
+                  } else {
+                    this.toastService.success("Design saved successfully!");
+                  }
+                },
+                error: () => {
+                  this.toastService.success("Design saved successfully!");
+                }
+              });
             }
             console.log("[Studio] design saved", { designId });
           },
@@ -541,6 +553,15 @@ export class StudioComponent {
     } finally {
       this.isSaving.set(false);
     }
+  }
+
+  onPublishDesign(): void {
+    this.saveSuccessOpen.set(false);
+    this.toastService.success("Community publishing is coming soon.");
+  }
+
+  onCloseSaveSuccess(): void {
+    this.saveSuccessOpen.set(false);
   }
 
   loadLatestDraft(): void {
@@ -566,23 +587,69 @@ export class StudioComponent {
           return;
         }
 
-        const existingProduct = this.allProducts().find(
-          (product) => product.id === design.productId,
+        const product = this.allProducts().find(
+          (p) => p.id === design.productId,
         );
 
-        if (existingProduct) {
-          this.selected.set({
-            ...existingProduct,
-            images: existingProduct.images ?? [],
-          });
+        if (!product) {
+          this.toastService.error("Product associated with this design was not found.");
+          return;
         }
 
-        this.color.set(design.selectedColor ?? this.color());
+        // Pre-set colors and size from design
+        this.color.set(design.selectedColor ?? product.colors[0]);
         this.size.set(this.mapStoredSize(design.selectedSize));
-        this.canvasOpen.set(true);
 
-        requestAnimationFrame(() => {
-          this.designCanvas?.restoreDesignState(design.canvasStateJSON);
+        // Fetch full product images and printable zones before canvas restoration
+        this.productService.getProductImages(design.productId).subscribe({
+          next: (images) => {
+            const mappedImages = images.map((image) => ({
+              ...image,
+              viewAngle: image.viewAngle ?? ViewAngle.Front,
+              printableZone: this.parsePrintableZone(
+                image.printableZone ?? image.printableZoneJson ?? null,
+              ),
+            }));
+
+            this.selected.set({
+              ...product,
+              images: mappedImages,
+              image:
+                mappedImages.find((img) => img.viewAngle === ViewAngle.Front)
+                  ?.imageUrl || product.image,
+            });
+
+            // Set active angle from design JSON to match what was saved
+            let activeView = ViewAngle.Front;
+            try {
+              if (design.canvasStateJSON) {
+                const parsedState = JSON.parse(design.canvasStateJSON);
+                if (parsedState && parsedState.activeView === "back") {
+                  activeView = ViewAngle.Back;
+                }
+              }
+            } catch (e) {
+              console.error("[Studio] Failed to parse activeView from canvasStateJSON", e);
+            }
+
+            this.activeViewAngle = activeView;
+            this.canvasOpen.set(true);
+
+            requestAnimationFrame(() => {
+              this.designCanvas?.restoreDesignState(design.canvasStateJSON);
+            });
+          },
+          error: () => {
+            // Fallback: use product default image if query fails
+            this.selected.set({
+              ...product,
+              images: product.images ?? [],
+            });
+            this.canvasOpen.set(true);
+            requestAnimationFrame(() => {
+              this.designCanvas?.restoreDesignState(design.canvasStateJSON);
+            });
+          }
         });
       },
       error: (error) => {
