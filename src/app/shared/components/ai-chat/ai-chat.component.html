@@ -1,0 +1,69 @@
+@if (isAuthenticated()) {
+  <div class="ai-chat-shell">
+    <button class="floating-trigger" type="button" (click)="toggleChat()" aria-label="Open Wearly AI assistant">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 10h8"/>
+        <path d="M8 14h5"/>
+        <path d="M9 3H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2v3l3-3h4a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H9Z"/>
+      </svg>
+    </button>
+
+    @if (isOpen()) {
+      <section class="chat-dialog" role="dialog" aria-label="Wearly AI assistant">
+        <header class="chat-header">
+          <div>
+            <p class="chat-title">Wearly AI</p>
+            <p class="chat-subtitle">Your Fashion Assistant</p>
+          </div>
+          <button class="icon-btn" type="button" (click)="closeChat()" aria-label="Close assistant">×</button>
+        </header>
+
+        <div class="messages" #messagesContainer>
+          @if (historyError()) {
+            <div class="empty-state">
+              <p>{{ historyError() }}</p>
+            </div>
+          }
+
+          @if (!messages().length && !isLoading()) {
+            <div class="empty-state">
+              <p>How can I help you today?</p>
+              <span>Ask about designs, orders, or studio ideas.</span>
+            </div>
+          }
+
+          @for (message of messages(); track message.id) {
+            <div class="message-row" [class.user]="message.role === 'user'" [class.assistant]="message.role === 'assistant'">
+              <div class="bubble">
+                <p>{{ message.content }}</p>
+                <span>{{ message.timestamp | date:'shortTime' }}</span>
+              </div>
+            </div>
+          }
+
+          @if (isLoading()) {
+            <div class="message-row assistant">
+              <div class="bubble typing">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <footer class="chat-footer">
+          <label class="sr-only" for="ai-chat-input">Message Wearly AI</label>
+          <input
+            id="ai-chat-input"
+            type="text"
+            [ngModel]="inputValue()"
+            (ngModelChange)="inputValue.set($event)"
+            (keydown)="onKeydown($event)"
+            placeholder="Ask Wearly AI..."
+            autocomplete="off"
+          />
+          <button type="button" (click)="sendMessage()" [disabled]="isLoading() || !inputValue().trim()">Send</button>
+        </footer>
+      </section>
+    }
+  </div>
+}
