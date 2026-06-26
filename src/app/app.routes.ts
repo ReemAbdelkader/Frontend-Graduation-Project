@@ -76,6 +76,13 @@ export const routes: Routes = [
     title: 'Community — Wearly',
   },
   {
+    path: 'onboarding',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/onboarding/onboarding.component').then((m) => m.OnboardingComponent),
+    title: 'Onboarding — Wearly',
+  },
+  {
     path: 'dashboard',
     canActivate: [authGuard],
     loadComponent: () =>
