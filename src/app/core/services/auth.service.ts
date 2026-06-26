@@ -289,6 +289,7 @@ export class AuthService {
   clearAuthState(): void {
     this._authState.set(null);
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('wearly.ai.sessionId');
     this.refreshInProgress = null;
   }
 
