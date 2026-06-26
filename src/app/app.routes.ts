@@ -49,6 +49,13 @@ export const routes: Routes = [
     title: 'Google sign-in — Wearly',
   },
   {
+    path: 'onboarding',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/onboarding/onboarding.component').then((m) => m.OnboardingComponent),
+    title: 'Style Onboarding — Wearly',
+  },
+  {
     path: 'shop',
     loadComponent: () =>
       import('./features/shop/shop.component').then((m) => m.ShopComponent),

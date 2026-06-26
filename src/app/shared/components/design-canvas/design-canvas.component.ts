@@ -8,7 +8,7 @@ import {
   SimpleChanges,
   ViewChild,
 } from "@angular/core";
-import { Canvas as FabricCanvas, Textbox } from "fabric";
+import { Canvas as FabricCanvas, Textbox, FabricObject } from "fabric";
 import { firstValueFrom } from "rxjs";
 import { ProductService } from "../../../core/services/product.service";
 import { FabricDesignStateService } from "./services/fabric-design-state.service";
@@ -514,7 +514,7 @@ export class DesignCanvasComponent
       this.schedulePrintableConstraint();
     });
 
-    this.fabricCanvas.on("object:moving", (event) => {
+    this.fabricCanvas.on("object:moving", (event: any) => {
       const target = event.target;
       if (!target) {
         return;
@@ -526,7 +526,7 @@ export class DesignCanvasComponent
       );
     });
 
-    this.fabricCanvas.on("object:scaling", (event) => {
+    this.fabricCanvas.on("object:scaling", (event: any) => {
       const target = event.target;
       if (!target) {
         return;
@@ -538,7 +538,7 @@ export class DesignCanvasComponent
       );
     });
 
-    this.fabricCanvas.on("object:rotating", (event) => {
+    this.fabricCanvas.on("object:rotating", (event: any) => {
       const target = event.target;
       if (!target) {
         return;

@@ -168,6 +168,113 @@
               Save changes
             </button>
           </div>
+                </div>
+
+        <!-- STYLE PREFERENCES CARD -->
+        <div class="prefs-card">
+          <div class="prefs-head">
+            <h2 class="form-title">Style preferences</h2>
+            <p class="prefs-subtitle">These help us personalize your recommendations.</p>
+          </div>
+
+          @if (prefsLoading()) {
+            <div class="prefs-loading">
+              <span class="prefs-spinner"></span>
+              <span>Loading preferences...</span>
+            </div>
+          } @else {
+            <!-- Colors -->
+            <div class="pref-section">
+              <label class="pref-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="13.5" cy="6.5" r="0.5" fill="currentColor"/><circle cx="17.5" cy="10.5" r="0.5" fill="currentColor"/><circle cx="8.5" cy="7.5" r="0.5" fill="currentColor"/><circle cx="6.5" cy="12.5" r="0.5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+                </svg>
+                Favorite colors
+              </label>
+              <div class="pref-chips color-chips">
+                @for (opt of colorOptions; track opt.value) {
+                  <button
+                    class="pref-chip"
+                    [class.selected]="isSelected('colors', opt.value)"
+                    (click)="toggleSelection('colors', opt.value)"
+                  >
+                    <span class="color-dot" [style.background]="opt.colorPreview"></span>
+                    <span class="chip-label">{{ opt.label }}</span>
+                    @if (isSelected('colors', opt.value)) {
+                      <span class="chip-check">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      </span>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- Interests -->
+            <div class="pref-section">
+              <label class="pref-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                </svg>
+                Interests & hobbies
+              </label>
+              <div class="pref-chips">
+                @for (opt of interestOptions; track opt.value) {
+                  <button
+                    class="pref-chip"
+                    [class.selected]="isSelected('interests', opt.value)"
+                    (click)="toggleSelection('interests', opt.value)"
+                  >
+                    <span class="chip-emoji">{{ opt.emoji }}</span>
+                    <span class="chip-label">{{ opt.label }}</span>
+                    @if (isSelected('interests', opt.value)) {
+                      <span class="chip-check">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      </span>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- Design preference -->
+            <div class="pref-section">
+              <label class="pref-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                </svg>
+                Design preference
+              </label>
+              <div class="pref-chips">
+                @for (opt of designOptions; track opt.value) {
+                  <button
+                    class="pref-chip"
+                    [class.selected]="isSelected('design', opt.value)"
+                    (click)="toggleSelection('design', opt.value)"
+                  >
+                    <span class="chip-emoji">{{ opt.emoji }}</span>
+                    <span class="chip-label">{{ opt.label }}</span>
+                    @if (isSelected('design', opt.value)) {
+                      <span class="chip-check">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      </span>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="prefs-actions">
+              <button class="save-btn" [disabled]="prefsSaving()" (click)="savePreferences()">
+                @if (prefsSaving()) {
+                  <span class="prefs-spinner-sm"></span>
+                } @else {
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446A9 9 0 1 1 12 3Z"/><path d="M17 4a2 2 0 0 0 2 2 2 2 0 0 0-2-2"/></svg>
+                }
+                Update preferences
+              </button>
+            </div>
+          }
         </div>
       </section>
     }

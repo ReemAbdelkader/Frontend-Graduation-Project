@@ -12,88 +12,150 @@
         Let's get to know<br /><span class="italic-light">your taste.</span>
       </h1>
       <p class="sub">
-        Tell Atelier what you love. We'll tune your feed, recommendations, and
-        design defaults to fit you — not the crowd.
+        Answer 3 quick questions so we can personalize your feed,
+        templates, and recommendations.
       </p>
       <ul class="bullets">
-        <li>~60 seconds to complete</li>
+        <li>Takes less than 30 seconds</li>
         <li>Skippable — revisit anytime from your profile</li>
         <li>Used to personalize templates & drops</li>
       </ul>
     </div>
   </aside>
 
-  <!-- Right chat panel -->
-  <section class="chat-side">
-    <header class="chat-head">
-      <div class="chat-id">
+  <!-- Right question panel -->
+  <section class="question-side">
+    <!-- Header -->
+    <header class="q-head">
+      <div class="q-head-left">
         <div class="ai-avatar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
           </svg>
         </div>
         <div>
-          <p class="chat-name">Atelier · Style Onboarding</p>
-          <p class="chat-status">
-            <span class="dot"></span> Online
+          <p class="q-name">Atelier &middot; Style Onboarding</p>
+          <p class="q-status">
+            <span class="dot"></span> Step {{ currentStep() + 1 }} of {{ steps.length }}
           </p>
         </div>
       </div>
-      <button class="skip-btn" (click)="finish()" title="Finish onboarding">
-        Skip &amp; continue
+      <button class="skip-btn" (click)="skip()" title="Skip onboarding">
+        Skip
       </button>
     </header>
 
-    <div #scrollRef class="messages">
-      @for (m of messages(); track m.id) {
-        <div class="msg-row" [class.user]="m.role === 'user'">
-          <div class="bubble" [class.user-bubble]="m.role === 'user'" [class.ai-bubble]="m.role === 'ai'">
-            {{ m.text }}
-          </div>
-        </div>
-      }
+    <!-- Progress bar -->
+    <div class="progress-track">
+      <div class="progress-fill" [style.width.%]="progressPercent"></div>
+    </div>
 
-      @if (thinking()) {
-        <div class="msg-row">
-          <div class="bubble ai-bubble thinking">
-            <span class="dot-pulse"></span>
-            <span class="dot-pulse"></span>
-            <span class="dot-pulse"></span>
-          </div>
-        </div>
+    <!-- Step indicators -->
+    <div class="step-dots">
+      @for (step of steps; track step.id; let i = $index) {
+        <button
+          class="step-dot"
+          [class.active]="i === currentStep()"
+          [class.done]="i < currentStep()"
+          (click)="currentStep.set(i)"
+          [attr.aria-label]="'Go to step ' + (i + 1)"
+        >
+          <svg *ngIf="i < currentStep()" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span *ngIf="i >= currentStep()">{{ i + 1 }}</span>
+        </button>
       }
     </div>
 
-    <!-- Quick replies -->
-    <div class="quick-replies">
-      @for (q of quickReplies(); track q) {
-        <button class="quick-chip" (click)="useQuickReply(q)">{{ q }}</button>
-      }
+    <!-- Question card -->
+    <div class="question-card">
+      <div class="q-icon">
+        <!-- Palette icon -->
+        @if (currentStepData.icon === 'palette') {
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="13.5" cy="6.5" r="0.5" fill="currentColor"/><circle cx="17.5" cy="10.5" r="0.5" fill="currentColor"/><circle cx="8.5" cy="7.5" r="0.5" fill="currentColor"/><circle cx="6.5" cy="12.5" r="0.5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+          </svg>
+        }
+        <!-- Heart icon -->
+        @if (currentStepData.icon === 'heart') {
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+          </svg>
+        }
+        <!-- Sparkles icon -->
+        @if (currentStepData.icon === 'sparkles') {
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>
+          </svg>
+        }
+      </div>
+
+      <h2 class="q-title">{{ currentStepData.question }}</h2>
+      <p class="q-subtitle">{{ currentStepData.subtitle }}</p>
+
+      <!-- Options grid -->
+      <div class="options-grid" [class.color-grid]="currentStepData.field === 'favoriteColors'">
+        @for (opt of currentStepData.options; track opt.value) {
+          <button
+            class="option-chip"
+            [class.selected]="isSelected(currentStepData.field, opt.value)"
+            (click)="toggleOption(currentStepData.field, opt.value)"
+          >
+            @if (opt.colorPreview) {
+              <span class="color-dot" [style.background]="opt.colorPreview"></span>
+            }
+            @if (opt.emoji) {
+              <span class="opt-emoji">{{ opt.emoji }}</span>
+            }
+            <span class="opt-label">{{ opt.label }}</span>
+            @if (isSelected(currentStepData.field, opt.value)) {
+              <span class="check-mark">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </span>
+            }
+          </button>
+        }
+      </div>
     </div>
 
-    <!-- Composer -->
-    <form class="composer" (ngSubmit)="send(); $event.preventDefault()">
-      <input
-        type="text"
-        class="input"
-        placeholder="Tell Atelier about your style…"
-        [ngModel]="input()"
-        (ngModelChange)="setInput($event)"
-        name="text"
-        [disabled]="thinking()"
-        autocomplete="off"
-      />
-      <button type="submit" class="send-btn" [disabled]="thinking() || !input().trim()">
+    <!-- Footer actions -->
+    <footer class="q-foot">
+      <button
+        class="btn-back"
+        [disabled]="isFirstStep"
+        (click)="prevStep()"
+      >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m22 2-7 20-4-9-9-4Z"/>
-          <path d="M22 2 11 13"/>
+          <path d="m15 18-6-6 6-6"/>
         </svg>
+        Back
       </button>
-    </form>
-
-    <footer class="chat-foot">
-      <button class="finish-btn" (click)="finish()">Finish &amp; continue to dashboard →</button>
-      <button class="signout" (click)="signOut()">Sign out</button>
+      <button
+        class="btn-continue"
+        [disabled]="!canProceed || saving()"
+        (click)="nextStep()"
+      >
+        @if (saving()) {
+          <span class="spinner"></span>
+        }
+        @if (isLastStep) {
+          Finish &amp; continue
+        } @else {
+          Continue
+        }
+        @if (!isLastStep && canProceed) {
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        }
+      </button>
     </footer>
+
+    <div class="foot-bottom">
+      <button class="signout" (click)="signOut()">Sign out</button>
+    </div>
   </section>
 </div>

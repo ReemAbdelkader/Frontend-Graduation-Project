@@ -19,6 +19,7 @@ export interface AuthState {
   email: string;
   name: string;
   roles: string[];
+  onboardingCompleted?: boolean;
 }
 
 export interface AuthApiResult {
@@ -28,6 +29,7 @@ export interface AuthApiResult {
   message?: string;
   accessToken?: string;
   refreshToken?: string;
+  onboardingCompleted?: boolean;
   expiresAt?: string;
   email?: string;
   name?: string;
@@ -273,11 +275,17 @@ export class AuthService {
   }
 
   hasCompletedOnboarding(): boolean {
+    const state = this._authState();
+    if (state?.onboardingCompleted === true) return true;
     return localStorage.getItem(ONBOARDING_KEY) === 'completed';
   }
 
   markOnboardingComplete(): void {
     localStorage.setItem(ONBOARDING_KEY, 'completed');
+    const state = this._authState();
+    if (state) {
+      this.setAuthState({ ...state, onboardingCompleted: true });
+    }
   }
 
   resolvePostLoginRoute(): string {
@@ -314,6 +322,7 @@ export class AuthService {
         result.email = this.toStringOrUndefined(dataPayload['email']);
         result.name = this.toStringOrUndefined(dataPayload['name']);
         result.roles = Array.isArray(dataPayload['roles']) ? dataPayload['roles'].filter((r): r is string => typeof r === 'string') : [];
+        result.onboardingCompleted = dataPayload['onboardingCompleted'] === true;
       }
 
       if (result.ok && result.accessToken && result.refreshToken && result.expiresAt && result.email && result.name && result.roles?.length) {
@@ -324,6 +333,7 @@ export class AuthService {
           email: result.email,
           name: result.name,
           roles: result.roles,
+          onboardingCompleted: result.onboardingCompleted,
         });
         result.user = {
           name: result.name,
@@ -354,9 +364,11 @@ export class AuthService {
         result.email = this.toStringOrUndefined(dataPayload['email']);
         result.name = this.toStringOrUndefined(dataPayload['name']);
         result.roles = Array.isArray(dataPayload['roles']) ? dataPayload['roles'].filter((r): r is string => typeof r === 'string') : [];
+        result.onboardingCompleted = dataPayload['onboardingCompleted'] === true;
       }
 
       if (result.ok && result.accessToken && result.refreshToken && result.expiresAt && result.email && result.name && result.roles?.length) {
+        const prevState = this._authState();
         this.setAuthState({
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
@@ -364,6 +376,7 @@ export class AuthService {
           email: result.email,
           name: result.name,
           roles: result.roles,
+          onboardingCompleted: result.onboardingCompleted ?? prevState?.onboardingCompleted,
         });
         result.user = {
           name: result.name,
