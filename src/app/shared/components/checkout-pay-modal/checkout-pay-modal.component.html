@@ -46,9 +46,9 @@
             </label>
           </div>
 
-          <button class="pay-btn" (click)="pay()">
+          <button class="pay-btn" (click)="pay()" [disabled]="isProcessing()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            Pay ${{ (price * 1.08).toFixed(2) }}
+            {{ isProcessing() ? 'Processing Payment...' : 'Pay $' + (price * 1.08).toFixed(2) }}
           </button>
 
           <p class="secure-note">🔒 Payments processed via Stripe. We never store your card details.</p>

@@ -1,97 +1,135 @@
-import { Component, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Component, OnInit, signal, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { ToastService } from '../../core/services/toast.service';
-import { AppNavComponent } from '../../shared/components/app-nav/app-nav.component';
-import { LogoutDialogComponent } from '../../shared/components/logout-dialog/logout-dialog.component';
 
-type ProfileTab = 'posts' | 'marketplace' | 'rewards' | 'settings';
-
-interface Metric {
-  icon: 'shopping' | 'store' | 'dollar' | 'layers' | 'star' | 'crown';
-  label: string;
-  value: string;
-  sub?: string;
+export interface UserProfileDto {
+  name: string;
+  username: string;
+  email: string;
+  bio: string;
+  photoUrl: string;
+  followers: number | null;
+  following: number | null;
+  designsCount: number | null;
+  itemsPurchased: number | null;
+  totalOrders: number | null;
+  totalSpent: number | null;
+  templatesCreated: number | null;
+  avgRating: number | null;
+  isTopProfile: boolean;
 }
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe, AppNavComponent, LogoutDialogComponent],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './profile.component.html',
-  styleUrl: './profile.component.scss',
+  styleUrl: './profile.component.scss'
 })
-export class ProfileComponent {
-  private auth = inject(AuthService);
-  private toast = inject(ToastService);
-  private router = inject(Router);
+export class ProfileComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private authService = inject(AuthService);
 
-  readonly user = this.auth.user();
+  activeTab = signal<string>('settings');
+  
+  showLogoutModal = signal<boolean>(false);
+  isLoggingOut = signal<boolean>(false);
 
-  readonly tab = signal<ProfileTab>('settings');
+  displayUser: UserProfileDto = {
+    name: '',
+    username: '', 
+    email: '',
+    bio: '',
+    photoUrl: '',
+    followers: null,
+    following: null,
+    designsCount: null,
+    itemsPurchased: null,
+    totalOrders: null,
+    totalSpent: null,
+    templatesCreated: null,
+    avgRating: null,
+    isTopProfile: false
+  };
 
-  // Editable form fields (pre-filled from current user)
-  readonly formName = signal(this.user?.name ?? '');
-  readonly formUsername = signal((this.user?.email ?? '').split('@')[0]);
-  readonly formEmail = signal(this.user?.email ?? '');
-  readonly formBio = signal("Designing quiet, sculptural pieces from Lisbon. SS '26 atelier drop now live.");
-  readonly formNewPassword = signal('');
+  editForm = {
+    name: '',
+    username: '',
+    email: '',
+    bio: '',
+    password: ''
+  };
 
-  readonly askLogout = signal(false);
+  userOrders = signal<any[]>([]); 
+  userRewards = signal<any[]>([]);
+  userTemplates = signal<any[]>([]);
 
-  readonly metrics: Metric[] = [
-    { icon: 'shopping', label: 'Items purchased', value: '38', sub: 'from 12 sellers' },
-    { icon: 'store', label: 'Total orders', value: '24' },
-    { icon: 'dollar', label: 'Total spent', value: '$4,218' },
-    { icon: 'layers', label: 'Templates created', value: '9' },
-    { icon: 'star', label: 'Avg. template rating', value: '4.82', sub: 'from other users' },
-    { icon: 'crown', label: 'Top profile', value: 'Yes', sub: 'High-rated templates' },
-  ];
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['tab']) {
+        this.activeTab.set(params['tab']);
+      }
+    });
 
-  readonly tabs: Array<{ key: ProfileTab; label: string; hasIcon: boolean }> = [
-    { key: 'posts', label: 'Community posts', hasIcon: false },
-    { key: 'marketplace', label: 'Marketplace', hasIcon: false },
-    { key: 'rewards', label: 'Rewards', hasIcon: false },
-    { key: 'settings', label: 'Settings', hasIcon: true },
-  ];
-
-  setTab(t: ProfileTab): void {
-    this.tab.set(t);
+    const currentUser = this.authService.user();
+    if (currentUser) {
+      this.displayUser.name = currentUser.name;
+      this.displayUser.email = currentUser.email;
+      this.displayUser.username = ''; 
+      this.syncEditForm();
+    }
   }
 
-  get initials(): string {
-    const name = this.user?.name ?? 'EA';
-    return name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase();
+  syncEditForm(): void {
+    this.editForm = {
+      name: this.displayUser.name,
+      username: this.displayUser.username,
+      email: this.displayUser.email,
+      bio: this.displayUser.bio,
+      password: ''
+    };
   }
 
-  get joinDate(): string {
-    return 'January 2026';
+  getInitials(name: string): string {
+    if (!name) return 'U';
+    return name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
   }
 
-  get username(): string {
-    return (this.user?.email ?? 'user').split('@')[0];
+  onPhotoSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.displayUser.photoUrl = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   saveChanges(): void {
-    const name = this.formName().trim();
-    const email = this.formEmail().trim();
-    const username = this.formUsername().trim();
-
-    if (!name || !username || !email) {
-      this.toast.error('Name, username and email are required.');
-      return;
-    }
-
-    this.toast.success('Profile updated successfully.');
+    this.displayUser = {
+      ...this.displayUser,
+      name: this.editForm.name,
+      username: this.editForm.username,
+      email: this.editForm.email,
+      bio: this.editForm.bio
+    };
+    console.log('Profile saved locally:', this.displayUser);
+    alert('Changes saved successfully!');
   }
 
-  openLogout(): void {
-    this.askLogout.set(true);
+  toggleLogoutModal(value: boolean): void {
+    this.showLogoutModal.set(value);
   }
 
-  closeLogout(): void {
-    this.askLogout.set(false);
+  confirmLogout(): void {
+    this.isLoggingOut.set(true);
+    setTimeout(() => {
+      this.isLoggingOut.set(false);
+      this.showLogoutModal.set(false);
+      alert('Signed out successfully');
+    }, 1500);
   }
 }

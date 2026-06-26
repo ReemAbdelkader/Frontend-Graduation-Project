@@ -51,3 +51,39 @@ export interface CategoryDto {
   id: string;
   name: string;
 }
+
+
+export interface NotificationItem {
+  id: string;       
+  title: string;
+  body: string;
+  time: string;
+  unread: boolean;
+}
+
+export interface OrderDetailItemDto {
+  designId: string;
+  designName: string;
+  variationDetails: string;
+  quantity: number;
+  unitPrice: number;
+  snapshotImageURL: string;
+}
+
+export interface OrderDto {
+  orderId: string;         
+  orderNumber: string;     
+  placedDate: string;      
+  estimatedDeliveryDate: string; 
+  orderStatus: string;      
+  subtotal: number;
+  shipping: number;
+  tax: number;
+  total: number;           
+  trackingNumber?: string | null;
+  orderItems: OrderDetailItemDto[];
+
+  id?: string;              
+  status?: string;
+  eta?: string;
+}

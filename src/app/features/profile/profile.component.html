@@ -1,188 +1,236 @@
 <div class="page">
-  <app-nav />
-
-  <main class="container">
-    <!-- HEADER CARD -->
-    <section class="header-card">
-      <div class="mesh-layer bg-mesh"></div>
+  <div class="container">
+    
+    <div class="header-card">
+      <div class="mesh-layer"></div>
       <div class="header-inner">
-        <div class="avatar-big">{{ initials }}</div>
+        
+        <div class="avatar-big">
+          @if (displayUser.photoUrl) {
+            <img [src]="displayUser.photoUrl" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 9999px; object-fit: cover;" />
+          } @else {
+            {{ getInitials(displayUser.name) }}
+          }
+        </div>
 
         <div class="header-meta">
           <div class="username-row">
-            <p class="username">&#64;{{ username }}</p>
-            <span class="top-chip">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>
-              Top Profile
-            </span>
+            <h2 class="username">&#64;{{ displayUser.username || 'username' }}</h2>
+            @if (displayUser.isTopProfile) {
+              <span class="top-chip">TOP PROFILE</span>
+            }
           </div>
-          <h1 class="display-name">{{ user?.name ?? 'Wearly User' }}</h1>
-          <p class="bio">{{ formBio() }}</p>
+          <h1 class="display-name">{{ displayUser.name || 'Your Name' }}</h1>
+          <p class="bio">{{ displayUser.bio || 'No bio added yet.' }}</p>
+          
           <div class="meta-row">
             <span class="meta-item">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
-              Lisbon, Portugal
-            </span>
-            <span class="meta-item">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-              Joined {{ joinDate }}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              Joined January 2026
             </span>
           </div>
         </div>
 
         <div class="header-stats">
           <div class="h-stat">
-            <p class="h-stat-value">4,892</p>
-            <p class="h-stat-label">Followers</p>
+            <p class="h-stat-value">{{ displayUser.followers }}</p>
+            <p class="h-stat-label">FOLLOWERS</p>
           </div>
           <div class="h-stat">
-            <p class="h-stat-value">318</p>
-            <p class="h-stat-label">Following</p>
+            <p class="h-stat-value">{{ displayUser.following }}</p>
+            <p class="h-stat-label">FOLLOWING</p>
           </div>
           <div class="h-stat">
-            <p class="h-stat-value">7</p>
-            <p class="h-stat-label">Designs</p>
+            <p class="h-stat-value">{{ displayUser.designsCount }}</p>
+            <p class="h-stat-label">DESIGNS</p>
           </div>
         </div>
+
       </div>
-    </section>
-
-    <!-- METRICS GRID -->
-    <section class="metrics-grid">
-      @for (m of metrics; track m.label) {
-        <div class="metric-card">
-          <div class="metric-head">
-            <div class="metric-icon">
-              @switch (m.icon) {
-                @case ('shopping') {
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                }
-                @case ('store') {
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7l-5 5-3-3-3 3-3-3-3 3-3-3Z"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M2 7h20"/></svg>
-                }
-                @case ('dollar') {
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                }
-                @case ('layers') {
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 8 12 14 22 8 12 2"/><polyline points="2 16 12 22 22 16"/><polyline points="2 12 12 18 22 12"/></svg>
-                }
-                @case ('star') {
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                }
-                @case ('crown') {
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>
-                }
-              }
-            </div>
-            <p class="metric-label">{{ m.label }}</p>
-          </div>
-          <p class="metric-value">{{ m.value }}</p>
-          @if (m.sub) {
-            <p class="metric-sub">{{ m.sub }}</p>
-          }
-        </div>
-      }
-    </section>
-
-    <!-- TABS -->
-    <div class="tabs-row">
-      @for (t of tabs; track t.key) {
-        <button
-          class="tab-btn"
-          [class.active]="tab() === t.key"
-          (click)="setTab(t.key)"
-        >
-          @if (t.hasIcon) {
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-          }
-          {{ t.label }}
-        </button>
-      }
     </div>
 
-    <!-- TAB CONTENT -->
-    @if (tab() === 'posts') {
-      <section class="empty-tab">
-        <p>No community posts yet.</p>
-      </section>
+    <div class="metrics-grid">
+      
+      <div class="metric-card">
+        <div class="metric-head">
+          <div class="metric-icon">🛍️</div>
+          <p class="metric-label">ITEMS PURCHASED</p>
+        </div>
+        <p class="metric-value">{{ displayUser.itemsPurchased }}</p>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-head">
+          <div class="metric-icon">📦</div>
+          <p class="metric-label">TOTAL ORDERS</p>
+        </div>
+        <p class="metric-value">{{ displayUser.totalOrders }}</p>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-head">
+          <div class="metric-icon">💲</div>
+          <p class="metric-label">TOTAL SPENT</p>
+        </div>
+        <p class="metric-value">
+          @if (displayUser.totalSpent !== null) { ${{ displayUser.totalSpent }} }
+        </p>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-head">
+          <div class="metric-icon">🎨</div>
+          <p class="metric-label">TEMPLATES CREATED</p>
+        </div>
+        <p class="metric-value">{{ displayUser.templatesCreated }}</p>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-head">
+          <div class="metric-icon">⭐</div>
+          <p class="metric-label">AVG. RATING</p>
+        </div>
+        <p class="metric-value">{{ displayUser.avgRating }}</p>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-head">
+          <div class="metric-icon">👑</div>
+          <p class="metric-label">TOP PROFILE</p>
+        </div>
+        <p class="metric-value" style="font-size: 1.15rem; margin-top: 0.75rem;">
+          {{ displayUser.isTopProfile ? 'Yes' : 'No' }}
+        </p>
+      </div>
+
+    </div>
+
+    <div class="tabs-row">
+      <button class="tab-btn" [class.active]="activeTab() === 'community'" (click)="activeTab.set('community')">Community posts</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'templates'" (click)="activeTab.set('templates')">Design studio templates</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'rewards'" (click)="activeTab.set('rewards')">Rewards</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="activeTab.set('orders')">My Orders</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'settings'" (click)="activeTab.set('settings')">⚙️ Settings</button>
+    </div>
+
+    @if (activeTab() === 'community') {
+      <div class="empty-tab">
+        <p>No community posts published yet.</p>
+      </div>
     }
 
-    @if (tab() === 'marketplace') {
-      <section class="empty-tab">
-        <p>No marketplace products yet.</p>
-      </section>
+    @if (activeTab() === 'templates') {
+      @if (userTemplates().length > 0) {
+        <div class="metrics-grid" style="margin-top: 1.5rem;">
+          </div>
+      } @else {
+        <div class="empty-tab">
+          <p>No design templates created yet. Start designing on the Studio canvas!</p>
+        </div>
+      }
     }
 
-    @if (tab() === 'rewards') {
-      <section class="empty-tab">
-        <p>No rewards yet.</p>
-      </section>
+    @if (activeTab() === 'rewards') {
+      @if (userRewards().length > 0) {
+        } @else {
+        <div class="empty-tab">
+          <p>No rewards or badges earned yet.</p>
+        </div>
+      }
     }
 
-    @if (tab() === 'settings') {
-      <section class="settings-grid">
-        <!-- SIDEBAR -->
-        <aside class="settings-side">
+    @if (activeTab() === 'orders') {
+      @if (userOrders().length > 0) {
+        } @else {
+        <div class="empty-tab">
+          <p>No orders yet, <a routerLink="/shop" style="color: var(--primary); font-weight: 500; text-decoration: underline;">add to cart now</a></p>
+        </div>
+      }
+    }
+
+    @if (activeTab() === 'settings') {
+      <div class="settings-grid">
+        
+        <div class="settings-side">
           <div class="side-head">
-            <div class="side-avatar">{{ initials }}</div>
+            <div class="side-avatar">
+              @if (displayUser.photoUrl) {
+                <img [src]="displayUser.photoUrl" alt="Avatar" style="width: 100%; height: 100%; border-radius: 9999px; object-fit: cover;" />
+              } @else {
+                {{ getInitials(editForm.name) }}
+              }
+            </div>
             <div>
-              <p class="side-name">{{ formName() }}</p>
-              <p class="side-username">&#64;{{ formUsername() }}</p>
+              <h3 class="side-name">{{ displayUser.name }}</h3>
+              <p class="side-username">&#64;{{ displayUser.username || 'username' }}</p>
             </div>
           </div>
-          <button type="button" class="change-photo">Change photo</button>
+          <button class="change-photo" (click)="fileInput.click()">Change photo</button>
+          <input #fileInput type="file" (change)="onPhotoSelected($event)" style="display: none;" accept="image/*" />
           <p class="side-note">Settings are only visible to you.</p>
-        </aside>
+        </div>
 
-        <!-- FORM -->
         <div class="settings-form">
           <h2 class="form-title">Account settings</h2>
-
           <div class="form-grid">
-            <label class="field">
-              <span class="label">Full name</span>
-              <input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" name="name" />
-            </label>
-            <label class="field">
-              <span class="label">Username</span>
-              <input type="text" [ngModel]="formUsername()" (ngModelChange)="formUsername.set($event)" name="username" />
-            </label>
-            <label class="field">
-              <span class="label">Email</span>
-              <input type="email" [ngModel]="formEmail()" (ngModelChange)="formEmail.set($event)" name="email" />
-            </label>
-            <label class="field">
-              <span class="label">New password</span>
-              <input type="password" placeholder="Leave blank to keep current" [ngModel]="formNewPassword()" (ngModelChange)="formNewPassword.set($event)" name="password" />
-            </label>
+            <div class="field">
+              <label class="label">Full name</label>
+              <input type="text" [(ngModel)]="editForm.name" placeholder="Full name" />
+            </div>
+            <div class="field">
+              <label class="label">Username</label>
+              <input type="text" [(ngModel)]="editForm.username" placeholder="Username" />
+            </div>
+            <div class="field">
+              <label class="label">Email</label>
+              <input type="email" [(ngModel)]="editForm.email" placeholder="Email address" />
+            </div>
+            <div class="field">
+              <label class="label">New password</label>
+              <input type="password" [(ngModel)]="editForm.password" placeholder="Leave blank to keep current" />
+            </div>
+            <div class="field bio-field" style="grid-column: span 2;">
+              <label class="label">Bio</label>
+              <textarea [(ngModel)]="editForm.bio" placeholder="Write something about yourself..."></textarea>
+            </div>
           </div>
-
-          <label class="field bio-field">
-            <span class="label">Bio</span>
-            <textarea rows="3" [ngModel]="formBio()" (ngModelChange)="formBio.set($event)" name="bio"></textarea>
-          </label>
-
           <div class="form-actions">
             <button class="save-btn" (click)="saveChanges()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M9 3v4a1 1 0 0 1-1 1H4"/><path d="M15 12H9"/><path d="M15 16H9"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
               Save changes
             </button>
           </div>
         </div>
-      </section>
+
+      </div>
     }
 
-    <!-- SIGN OUT -->
-    <section class="signout-section">
-      <button class="signout-btn" (click)="openLogout()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Sign out
+    <div class="signout-section">
+      <button class="signout-btn" (click)="toggleLogoutModal(true)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign Out
       </button>
-    </section>
-  </main>
+    </div>
 
-  <app-logout-dialog
-    [open]="askLogout()"
-    (closed)="closeLogout()"
-  />
+    @if (showLogoutModal()) {
+      <div class="logout-overlay">
+        <div class="logout-dialog">
+          <h3 class="logout-title">Sign Out</h3>
+          <p class="logout-description">Are you sure you want to sign out of Wearly?</p>
+          
+          <div class="logout-actions">
+            <button class="logout-cancel-btn" [disabled]="isLoggingOut()" (click)="toggleLogoutModal(false)">Cancel</button>
+            <button class="logout-confirm-btn" [disabled]="isLoggingOut()" (click)="confirmLogout()">
+              @if (isLoggingOut()) {
+                <span class="logout-spinner"></span>
+              } @else {
+                Confirm
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+  </div>
 </div>
