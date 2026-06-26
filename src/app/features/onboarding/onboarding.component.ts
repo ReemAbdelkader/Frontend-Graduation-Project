@@ -1,186 +1,166 @@
-import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, ElementRef, ViewChild, inject, signal, AfterViewChecked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { OnboardingApiService } from '../../core/services/onboarding-api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { logoImage } from '../../core/data/wearly-data';
 
-export interface OnboardingStep {
-  id: number;
-  question: string;
-  subtitle: string;
-  options: OnboardingOption[];
-  field: 'favoriteColors' | 'interests' | 'designPreference';
-  icon: string;
+interface ChatMessage {
+  id: string;
+  role: 'ai' | 'user';
+  text: string;
 }
 
-export interface OnboardingOption {
-  label: string;
-  value: string;
-  emoji?: string;
-  colorPreview?: string;
-}
-
-const STEPS: OnboardingStep[] = [
-  {
-    id: 1,
-    question: 'What colors do you usually like to wear?',
-    subtitle: 'Pick one or more that resonate with your style.',
-    field: 'favoriteColors',
-    icon: 'palette',
-    options: [
-      { label: 'Black', value: 'Black', colorPreview: '#1A1A2E' },
-      { label: 'White', value: 'White', colorPreview: '#F5F5F5' },
-      { label: 'Red', value: 'Red', colorPreview: '#E74C3C' },
-      { label: 'Blue', value: 'Blue', colorPreview: '#2C6BED' },
-      { label: 'Green', value: 'Green', colorPreview: '#27AE60' },
-      { label: 'Earth Tones', value: 'Earth Tones', colorPreview: '#A0826D' },
-      { label: 'Pastels', value: 'Pastels', colorPreview: '#B8D4E3' },
-      { label: 'Neutral', value: 'Neutral', colorPreview: '#95A5A6' },
-    ],
-  },
-  {
-    id: 2,
-    question: 'What are your interests or hobbies?',
-    subtitle: 'Help us tailor content to what you love.',
-    field: 'interests',
-    icon: 'heart',
-    options: [
-      { label: 'Music', value: 'Music', emoji: '🎵' },
-      { label: 'Travel', value: 'Travel', emoji: '✈️' },
-      { label: 'Sports', value: 'Sports', emoji: '⚽' },
-      { label: 'Art', value: 'Art', emoji: '🎨' },
-      { label: 'Gaming', value: 'Gaming', emoji: '🎮' },
-      { label: 'Photography', value: 'Photography', emoji: '📸' },
-      { label: 'Tech', value: 'Tech', emoji: '💻' },
-      { label: 'Fashion', value: 'Fashion', emoji: '👗' },
-    ],
-  },
-  {
-    id: 3,
-    question: 'Do you prefer bold or minimal designs?',
-    subtitle: 'This shapes your template and product recommendations.',
-    field: 'designPreference',
-    icon: 'sparkles',
-    options: [
-      { label: 'Bold Prints', value: 'Bold Prints', emoji: '🔥' },
-      { label: 'Clean & Simple', value: 'Clean & Simple', emoji: '✨' },
-      { label: 'Mixed', value: 'Mixed', emoji: '🎭' },
-    ],
-  },
-];
-
+/**
+ * AI Onboarding Chat page (user-only, full-screen).
+ *
+ * This is a DEDICATED onboarding flow shown once right after signup/login.
+ * It is completely separate from the floating chat assistant bubble that
+ * appears on every page. After the user finishes the chat (or skips), they
+ * are redirected to /dashboard.
+ *
+ * The chat uses a scripted AI conversation that adapts to the user's
+ * answers — no backend calls. Your team can later swap the `send()`
+ * method with a real /api/AiChat/send call.
+ */
 @Component({
   selector: 'app-onboarding',
   standalone: true,
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './onboarding.component.html',
   styleUrl: './onboarding.component.scss',
 })
-export class OnboardingComponent {
+export class OnboardingComponent implements AfterViewChecked {
   private auth = inject(AuthService);
-  private onboardingApi = inject(OnboardingApiService);
   private toast = inject(ToastService);
   private router = inject(Router);
 
   readonly logo = logoImage;
   readonly firstName = (this.auth.user()?.name ?? 'there').split(' ')[0];
-  readonly steps = STEPS;
 
-  readonly currentStep = signal(0);
-  readonly selections = signal<Record<string, string[]>>({});
+  @ViewChild('scrollRef') scrollRef?: ElementRef<HTMLDivElement>;
 
-  readonly saving = signal(false);
+  readonly messages = signal<ChatMessage[]>([
+    {
+      id: 'm0',
+      role: 'ai',
+      text: `Hi ${this.firstName} — I'm Atelier, your personal style co-pilot. Let's spend a minute getting to know your taste so I can recommend the right garments and templates. What are 2–3 of your favorite colors?`,
+    },
+  ]);
 
-  get currentStepData(): OnboardingStep {
-    return this.steps[this.currentStep()];
+  readonly input = signal('');
+  readonly thinking = signal(false);
+
+  /** Tracks which scripted step we're on (0 = colors, 1 = styles, 2 = garments, 3 = occasions, 4 = done). */
+  private step = 0;
+
+  /** Quick-reply prompts shown as chips under the conversation. */
+  readonly quickReplies = signal<string[]>([
+    'Earthy tones — olive, sand, terracotta',
+    'Black, white, and gray',
+    'Coral, violet, mint',
+  ]);
+
+  ngAfterViewChecked(): void {
+    this.scrollToBottom();
   }
 
-  get isFirstStep(): boolean {
-    return this.currentStep() === 0;
+  private scrollToBottom(): void {
+    const el = this.scrollRef?.nativeElement;
+    if (el) el.scrollTop = el.scrollHeight;
   }
 
-  get isLastStep(): boolean {
-    return this.currentStep() === this.steps.length - 1;
+  setInput(v: string): void {
+    this.input.set(v);
   }
 
-  get progressPercent(): number {
-    return ((this.currentStep() + 1) / this.steps.length) * 100;
-  }
-
-  get canProceed(): boolean {
-    const field = this.currentStepData.field;
-    return (this.selections()[field]?.length ?? 0) > 0;
-  }
-
-  toggleOption(field: string, value: string): void {
-    const current = [...(this.selections()[field] ?? [])];
-    const idx = current.indexOf(value);
-    if (idx > -1) {
-      current.splice(idx, 1);
-    } else {
-      current.push(value);
-    }
-    this.selections.update((s) => ({ ...s, [field]: current }));
-  }
-
-  isSelected(field: string, value: string): boolean {
-    return this.selections()[field]?.includes(value) ?? false;
-  }
-
-  nextStep(): void {
-    if (!this.canProceed) return;
-    if (this.isLastStep) {
+  useQuickReply(q: string): void {
+    if (q.toLowerCase().includes('skip')) {
       this.finish();
       return;
     }
-    this.currentStep.update((s) => s + 1);
+    this.send(q);
   }
 
-  prevStep(): void {
-    if (!this.isFirstStep) {
-      this.currentStep.update((s) => s - 1);
+  send(text?: string): void {
+    const value = (text ?? this.input()).trim();
+    if (!value || this.thinking()) return;
+
+    const userMsg: ChatMessage = {
+      id: `u-${Date.now()}`,
+      role: 'user',
+      text: value,
+    };
+    this.messages.update((m) => [...m, userMsg]);
+    this.input.set('');
+    this.thinking.set(true);
+
+    // Scripted AI reply — adapts to the user's progress.
+    setTimeout(() => {
+      const reply = this.nextAiReply(value);
+      this.thinking.set(false);
+      this.messages.update((m) => [
+        ...m,
+        { id: `a-${Date.now()}`, role: 'ai', text: reply },
+      ]);
+      this.step++;
+      this.updateQuickReplies();
+    }, 700);
+  }
+
+  /** Returns the next scripted AI reply based on the current step. */
+  private nextAiReply(userText: string): string {
+    switch (this.step) {
+      case 0:
+        return `Love those choices. Now — what styles do you naturally gravitate toward? Casual, formal, streetwear, minimalist, sporty, or something else?`;
+      case 1:
+        return `Got it. Which garment types are wardrobe staples for you? (e.g. t-shirts, hoodies, pants, sneakers, caps)`;
+      case 2:
+        return `Perfect. Last question — what occasions do you usually dress for? Work, weekends, nights out, gym, travel?`;
+      case 3:
+        return `That's everything I need. I've saved your style profile — your dashboard and recommendations are now tuned to your taste. Welcome to Atelier.`;
+      default:
+        return `You're all set! Click "Finish & continue" below to enter your dashboard.`;
     }
   }
 
-  finish(): void {
-    if (this.saving()) return;
-    this.saving.set(true);
-
-    const sel = this.selections();
-    this.onboardingApi
-      .saveOnboarding({
-        favoriteColors: (sel['favoriteColors'] ?? []).join(', '),
-        interests: (sel['interests'] ?? []).join(', '),
-        designPreference: (sel['designPreference'] ?? []).join(', '),
-      })
-      .subscribe({
-        next: (res) => {
-          if (res.ok) {
-            this.auth.markOnboardingComplete();
-            this.toast.success('Style profile saved — welcome to Wearly!');
-            this.router.navigate(['/dashboard']);
-          } else {
-            this.toast.error(res.message);
-            this.saving.set(false);
-          }
-        },
-        error: () => {
-          // Still mark locally so user isn't stuck
-          this.auth.markOnboardingComplete();
-          this.toast.success('Welcome to Wearly!');
-          this.router.navigate(['/dashboard']);
-        },
-      });
+  /** Updates the quick-reply chips based on the current step. */
+  private updateQuickReplies(): void {
+    switch (this.step) {
+      case 1:
+        this.quickReplies.set([
+          'Casual & comfortable',
+          'Streetwear & oversized',
+          'Minimal & tailored',
+        ]);
+        break;
+      case 2:
+        this.quickReplies.set([
+          'Hoodies & tees',
+          'Pants & sneakers',
+          'Caps & accessories',
+        ]);
+        break;
+      case 3:
+        this.quickReplies.set([
+          'Work & meetings',
+          'Weekends & social',
+          'Gym & active',
+        ]);
+        break;
+      default:
+        this.quickReplies.set(['Skip & continue to dashboard']);
+    }
   }
 
-  skip(): void {
+  /** Mark onboarding complete and navigate to /dashboard. */
+  finish(): void {
     this.auth.markOnboardingComplete();
+    this.toast.success('Style profile saved — welcome to Atelier!');
     this.router.navigate(['/dashboard']);
   }
 
+  /** Sign out and bail to /auth. */
   signOut(): void {
     this.auth.logout().subscribe((result) => {
       if (result.ok) {

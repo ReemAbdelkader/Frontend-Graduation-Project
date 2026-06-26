@@ -25,7 +25,7 @@ export class RewardsComponent {
   private toast = inject(ToastService);
 
   readonly coupons = signal<Coupon[]>([
-    { id: 'cp1', code: 'WEARLY10',  discount: '10%',          uses: 248,  expires: '2026-07-31', discountType: 'percentage',   value: 10 },
+    { id: 'cp1', code: 'ATELIER10',  discount: '10%',          uses: 248,  expires: '2026-07-31', discountType: 'percentage',   value: 10 },
     { id: 'cp2', code: 'SHIPFREE',  discount: 'Free shipping', uses: 1820, expires: '2026-12-31', discountType: 'free-shipping', value: 0  },
     { id: 'cp3', code: 'ATELIER20', discount: '20%',          uses: 41,   expires: '2026-06-30', discountType: 'percentage',   value: 20 },
   ]);

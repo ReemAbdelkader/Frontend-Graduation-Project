@@ -163,3 +163,29 @@
     opacity: 0.95;
   }
 }
+
+.control-center-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 36px;
+  padding: 0 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 12px;
+  transition: background 0.18s, color 0.18s, transform 0.12s;
+
+  &:hover {
+    background: oklch(0.48 0.05 250 / 0.06);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    background: var(--primary);
+    color: var(--primary-foreground, #fff);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  }
+}

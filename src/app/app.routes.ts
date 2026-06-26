@@ -6,13 +6,13 @@ export const routes: Routes = [
     path: '',
     loadComponent: () =>
       import('./features/landing/landing.component').then((m) => m.LandingComponent),
-    title: 'Wearly — Design. Generate. Wear.',
+    title: 'Atelier — Design. Generate. Wear.',
   },
   {
     path: 'auth',
     loadComponent: () =>
       import('./features/auth/auth.component').then((m) => m.AuthComponent),
-    title: 'Sign in — Wearly',
+    title: 'Sign in — Atelier',
   },
   {
     path: 'login',
@@ -28,25 +28,25 @@ export const routes: Routes = [
     path: 'forgot-password',
     loadComponent: () =>
       import('./features/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent),
-    title: 'Forgot password — Wearly',
+    title: 'Forgot password — Atelier',
   },
   {
     path: 'reset-password',
     loadComponent: () =>
       import('./features/reset-password/reset-password.component').then((m) => m.ResetPasswordComponent),
-    title: 'Reset password — Wearly',
+    title: 'Reset password — Atelier',
   },
   {
     path: 'confirm-mail',
     loadComponent: () =>
       import('./features/confirm-mail/confirm-mail.component').then((m) => m.ConfirmMailComponent),
-    title: 'Confirm mail — Wearly',
+    title: 'Confirm mail — Atelier',
   },
   {
     path: 'auth/google-callback',
     loadComponent: () =>
       import('./features/auth/google-callback.component').then((m) => m.GoogleCallbackComponent),
-    title: 'Google sign-in — Wearly',
+    title: 'Google sign-in — Atelier',
   },
   {
     path: 'onboarding',
@@ -59,77 +59,84 @@ export const routes: Routes = [
     path: 'shop',
     loadComponent: () =>
       import('./features/shop/shop.component').then((m) => m.ShopComponent),
-    title: 'Shop — Wearly',
+    title: 'Shop — Atelier',
   },
   {
     path: 'templates',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/templates/templates.component').then((m) => m.TemplatesComponent),
-    title: 'Templates — Wearly',
+    title: 'Templates — Atelier',
   },
   {
     path: 'orders',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/orders/orders.component').then((m) => m.OrdersComponent),
-    title: 'My Orders — Wearly',
+    title: 'My Orders — Atelier',
   },
   {
     path: 'community',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/community/community.component').then((m) => m.CommunityComponent),
-    title: 'Community — Wearly',
+    title: 'Community — Atelier',
+  },
+  {
+    path: 'onboarding',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/onboarding/onboarding.component').then((m) => m.OnboardingComponent),
+    title: 'Onboarding — Atelier',
   },
   {
     path: 'dashboard',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-    title: 'Dashboard — Wearly',
+    title: 'Dashboard — Atelier',
   },
   {
     path: 'profile',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/profile/profile.component').then((m) => m.ProfileComponent),
-    title: 'Profile — Wearly',
+    title: 'Profile — Atelier',
   },
   {
     path: 'studio',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/studio/studio.component').then((m) => m.StudioComponent),
-    title: 'Design Studio — Wearly',
+    title: 'Design Studio — Atelier',
   },
   {
     path: 'notifications',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/notifications/notifications-page.component').then((m) => m.NotificationsPageComponent),
-    title: 'Notifications — Wearly',
+    title: 'Notifications — Atelier',
   },
   {
     path: 'marketplace',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-    title: 'Marketplace — Wearly',
+    title: 'Marketplace — Atelier',
   },
   {
     path: 'rewards',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-    title: 'Rewards — Wearly',
+    title: 'Rewards — Atelier',
   },
   {
     path: 'settings',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-    title: 'Settings — Wearly',
+    title: 'Settings — Atelier',
   },
   {
     path: 'control-center',

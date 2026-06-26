@@ -1,5 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
+import { NgForOf, NgIf } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationBellComponent } from '../notifications/notifications.component';
 import { LogoutDialogComponent } from '../logout-dialog/logout-dialog.component';
@@ -14,7 +16,7 @@ interface NavLink {
 @Component({
   selector: 'app-nav',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, NotificationBellComponent, LogoutDialogComponent],
+  imports: [RouterLink, RouterLinkActive, NotificationBellComponent, LogoutDialogComponent, NgIf, NgForOf],
   templateUrl: './app-nav.component.html',
   styleUrl: './app-nav.component.scss',
 })
@@ -25,6 +27,7 @@ export class AppNavComponent {
 
   readonly user = this.auth.user;
   readonly isAdmin = this.auth.isAdmin;
+  private router = inject(Router);
 
   readonly askLogout = signal(false);
 
@@ -57,5 +60,17 @@ export class AppNavComponent {
 
   closeLogout(): void {
     this.askLogout.set(false);
+  }
+
+  isControlCenterActive(): boolean {
+    return this.router.url.startsWith('/control-center');
+  }
+
+  targetForControl(): string {
+    return this.isControlCenterActive() ? '/dashboard' : '/control-center';
+  }
+
+  controlLabel(): string {
+    return this.isControlCenterActive() ? 'User App' : 'Control Center';
   }
 }
