@@ -7,46 +7,132 @@
       <h1 class="title">
         Curated designs <span class="italic-light">ready for your garment,</span> <br />or share your own.
       </h1>
-      <p class="sub">A living library of editorial-grade prints — published by Atelier and refined by the Wearly community.</p>
+      <p class="sub">A living library of editorial-grade prints published through Wearly.</p>
     </header>
 
     <div class="toolbar">
       <div class="tab-switcher">
-        <button [class.active]="tab() === 'ai'" (click)="setTab('ai')" class="tab-btn">
+        <button class="tab-btn active">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg>
+          Public Templates
+        </button>
+        <button class="tab-btn disabled" disabled title="The API does not expose an AI-generated flag yet.">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
           AI Assistant Creations
         </button>
-        <button [class.active]="tab() === 'community'" (click)="setTab('community')" class="tab-btn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          User Community
-        </button>
       </div>
 
-      <button class="filter-btn">
+      <button class="filter-btn" disabled>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        Style · Season · Category
+        Style · Category
       </button>
     </div>
 
-    <section class="grid">
-      @for (t of filtered(); track t.id; let i = $index) {
-        <article class="card hover-lift">
-          <div class="image-wrap" [class]="bgClass(i)">
-            <img [src]="t.image" [alt]="t.name" loading="lazy" />
-            <div class="image-overlay"></div>
-            <button class="use-btn">Use Template</button>
-          </div>
-          <div class="body">
-            <div class="meta-row">
-              <p class="season">{{ t.season }}</p>
-              <span class="category-pill">{{ t.category }}</span>
+    @if (loading()) {
+      <div class="state-panel">Loading templates...</div>
+    } @else if (error()) {
+      <div class="state-panel error">{{ error() }}</div>
+    } @else if (templates().length === 0) {
+      <div class="state-panel">No public templates are available yet.</div>
+    } @else {
+      <section class="grid">
+        @for (t of templates(); track t.id; let i = $index) {
+          <article class="card hover-lift" (click)="openTemplate(t.id)">
+            <div class="image-wrap" [ngClass]="bgClass(i)">
+              <img [src]="previewUrl(t)" [alt]="t.name" loading="lazy" />
+              <div class="image-overlay"></div>
+              <button class="use-btn" type="button">Use Template</button>
             </div>
-            <h3 class="name">{{ t.name }}</h3>
-            <p class="tags">{{ t.tags.join(' · ') }}</p>
-            <p class="author">by <span class="author-name">{{ t.author }}</span></p>
-          </div>
-        </article>
-      }
-    </section>
+            <div class="body">
+              <div class="meta-row">
+                @if (categoryName(t.categoryId); as category) {
+                  <span class="category-pill">{{ category }}</span>
+                }
+                <span class="date">{{ t.createdAt | date:'MMM d, y' }}</span>
+              </div>
+              <h3 class="name">{{ t.name }}</h3>
+              @if (styleTags(t).length > 0) {
+                <p class="tags">{{ styleTags(t).join(' · ') }}</p>
+              }
+              <div class="stats-row">
+                <span>{{ t.likesCount }} likes</span>
+                <span>{{ t.remixesCount }} remixes</span>
+              </div>
+              @if (creatorName(t.creatorUserId); as author) {
+                <p class="author">by <span class="author-name">{{ author }}</span></p>
+              }
+            </div>
+          </article>
+        }
+      </section>
+
+      <div class="pagination">
+        <button class="page-btn" type="button" [disabled]="!hasPreviousPage()" (click)="loadPage(pageNumber() - 1)">
+          Previous
+        </button>
+        <span class="page-count">Page {{ pageNumber() }} of {{ totalPages() || 1 }} · {{ totalCount() }} templates</span>
+        <button class="page-btn" type="button" [disabled]="!hasNextPage()" (click)="loadPage(pageNumber() + 1)">
+          Next
+        </button>
+      </div>
+    }
   </main>
+
+  @if (detailLoading() || detailError() || selectedTemplate()) {
+    <div class="modal-backdrop" (click)="closeTemplate()">
+      <section class="template-modal" (click)="$event.stopPropagation()">
+        <button class="modal-close" type="button" (click)="closeTemplate()" aria-label="Close template details">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+
+        @if (detailLoading()) {
+          <div class="state-panel compact">Loading details...</div>
+        } @else if (detailError()) {
+          <div class="state-panel compact error">{{ detailError() }}</div>
+        } @else {
+          @if (selectedTemplate(); as selected) {
+          <div class="modal-grid">
+            <div class="modal-image">
+              <img [src]="previewUrl(selected)" [alt]="selected.name" />
+            </div>
+            <div class="modal-body">
+              <div class="meta-row">
+                @if (categoryName(selected.categoryId); as category) {
+                  <span class="category-pill">{{ category }}</span>
+                }
+                <span class="date">{{ selected.createdAt | date:'MMM d, y' }}</span>
+              </div>
+              <h2 class="modal-title">{{ selected.name }}</h2>
+              @if (styleTags(selected).length > 0) {
+                <p class="tags">{{ styleTags(selected).join(' · ') }}</p>
+              }
+              @if (creatorName(selected.creatorUserId); as author) {
+                <p class="author">by <span class="author-name">{{ author }}</span></p>
+              }
+              <div class="detail-stats">
+                <div>
+                  <span class="stat-value">{{ selected.likesCount }}</span>
+                  <span class="stat-label">Likes</span>
+                </div>
+                <div>
+                  <span class="stat-value">{{ selected.remixesCount }}</span>
+                  <span class="stat-label">Remixes</span>
+                </div>
+                <div>
+                  <span class="stat-value">{{ selected.averageRating }}</span>
+                  <span class="stat-label">Rating</span>
+                </div>
+                <div>
+                  <span class="stat-value">{{ selected.reviewCount }}</span>
+                  <span class="stat-label">Reviews</span>
+                </div>
+              </div>
+              <button class="modal-action" type="button">Use Template</button>
+            </div>
+          </div>
+          }
+        }
+      </section>
+    </div>
+  }
 </div>

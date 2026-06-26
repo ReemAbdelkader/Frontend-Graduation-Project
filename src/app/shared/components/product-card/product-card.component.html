@@ -1,12 +1,17 @@
 <article
   class="product-card hover-lift"
   [class.clickable]="cardClick.observers.length > 0"
+  [class.unavailable]="product.isAvailable === false"
   (click)="onCardClick()"
 >
   @if (product.badge) {
     <span class="badge" [class.badge-bestseller]="product.badge === 'BESTSELLER'" [class.badge-new]="product.badge === 'NEW'" [class.badge-limited]="product.badge === 'LIMITED'">
       {{ product.badge }}
     </span>
+  }
+
+  @if (product.isAvailable === false) {
+    <span class="stock-badge">Sold out</span>
   }
 
   <button class="heart-btn" (click)="onHeartClick($event)" aria-label="Save">
@@ -16,7 +21,11 @@
   </button>
 
   <div class="image-wrap">
-    <img [src]="product.image" [alt]="product.name" loading="lazy" />
+    @if (product.image) {
+      <img [src]="product.image" [alt]="product.name" loading="lazy" />
+    } @else {
+      <div class="image-placeholder">No image</div>
+    }
   </div>
 
   <div class="body">
@@ -27,14 +36,18 @@
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
       </svg>
       <span class="rating-value">{{ product.rating }}</span>
-      <span class="rating-count">({{ product.reviews }})</span>
+      @if (hasReviewCount) {
+        <span class="rating-count">({{ product.reviews }})</span>
+      }
     </div>
     <div class="footer">
-      <div class="colors">
-        @for (c of product.colors; track c) {
-          <span class="color-dot" [style.background]="c"></span>
-        }
-      </div>
+      @if (hasColors) {
+        <div class="colors">
+          @for (c of product.colors; track c) {
+            <span class="color-dot" [style.background]="c"></span>
+          }
+        </div>
+      }
       <span class="price">${{ product.price }}</span>
     </div>
   </div>

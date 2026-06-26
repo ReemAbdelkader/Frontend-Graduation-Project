@@ -1,11 +1,6 @@
 // Wearly data — ported from src/lib/wearly-data.ts
 
-export type ProductCategory =
-  | 'T-Shirts'
-  | 'Hoodies'
-  | 'Pants'
-  | 'Footwear'
-  | 'Headwear';
+export type ProductCategory = string;
 
 export type ProductBadge = 'BESTSELLER' | 'NEW' | 'LIMITED';
 
@@ -15,10 +10,12 @@ export interface Product {
   category: ProductCategory;
   price: number;
   rating: number;
-  reviews: number;
+  reviews?: number;
   image: string;
   colors: string[];
   badge?: ProductBadge;
+  isAvailable?: boolean;
+  galleryImages?: string[];
 }
 
 export interface Template {
