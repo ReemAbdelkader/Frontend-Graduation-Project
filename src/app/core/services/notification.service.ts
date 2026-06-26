@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/import';
+import { HttpClient } from '@angular/common/http'; // ✨ التصليح هنا: رجعناها http بدل import
 import { Observable, catchError, map, of, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
