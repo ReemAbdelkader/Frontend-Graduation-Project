@@ -100,7 +100,7 @@ export const routes: Routes = [
     path: 'notifications',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      import('./features/notifications/notifications-page.component').then((m) => m.NotificationsPageComponent),
     title: 'Notifications — Wearly',
   },
   {

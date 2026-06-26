@@ -1,52 +1,130 @@
-import { Component, signal } from '@angular/core';
-
-interface NotificationItem {
-  id: number;
-  title: string;
-  body: string;
-  time: string;
-  unread: boolean;
-}
+import { Component, OnInit, effect, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { NotificationService, NotificationItem } from '../../../core/services/notification.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-notification-bell',
   standalone: true,
+  imports: [RouterLink],
   templateUrl: './notifications.component.html',
   styleUrl: './notifications.component.scss',
 })
-export class NotificationBellComponent {
-  readonly open = signal(false);
+export class NotificationBellComponent implements OnInit {
+  private readonly notificationService = inject(NotificationService);
+  private readonly toastService = inject(ToastService);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
-  readonly notifications: NotificationItem[] = [
-    {
-      id: 1,
-      title: 'Order shipped',
-      body: 'WLY-2026-00482 is on its way to you.',
-      time: '2h ago',
-      unread: true,
-    },
-    {
-      id: 2,
-      title: 'New community like',
-      body: 'Aiko Tanaka liked your "Onyx Studio Tee" design.',
-      time: '5h ago',
-      unread: true,
-    },
-    {
-      id: 3,
-      title: 'AI design ready',
-      body: 'Your "Coral Mark Cap variant" is ready to review.',
-      time: '1d ago',
-      unread: false,
-    },
-  ];
+  readonly open = signal(false);
+  readonly closing = signal(false);
+  notifications: NotificationItem[] = [];
+  loading = false;
+  errorMessage = '';
+
+  constructor() {
+    effect(() => {
+      if (this.authService.isLoggedIn()) {
+        this.loadNotifications();
+      }
+    });
+  }
+
+  ngOnInit(): void {
+    this.loadNotifications();
+  }
 
   toggle(): void {
-    this.open.update((v) => !v);
+    if (this.closing()) {
+      return;
+    }
+
+    if (!this.open()) {
+      this.loadNotifications();
+      this.open.set(true);
+      return;
+    }
+
+    this.close();
   }
 
   close(): void {
-    this.open.set(false);
+    if (!this.open()) {
+      return;
+    }
+
+    this.closing.set(true);
+    window.setTimeout(() => {
+      this.open.set(false);
+      this.closing.set(false);
+    }, 180);
+  }
+
+  loadNotifications(): void {
+    if (!this.authService.isLoggedIn()) {
+      this.notifications = [];
+      return;
+    }
+
+    this.loading = true;
+    this.errorMessage = '';
+    this.notificationService.getUnread().subscribe({
+      next: (items) => {
+        this.notifications = items;
+        this.loading = false;
+      },
+      error: () => {
+        this.errorMessage = 'Unable to load notifications.';
+        this.loading = false;
+      },
+    });
+  }
+
+  markAsRead(notification: NotificationItem): void {
+    const shouldNavigate = !!notification.destination && !this.router.url.startsWith('/notifications');
+
+    const completeAction = () => {
+      if (shouldNavigate && notification.destination) {
+        this.close();
+        this.router.navigate([notification.destination]);
+      }
+    };
+
+    if (!notification.unread) {
+      completeAction();
+      return;
+    }
+
+    this.notificationService.markAsRead(notification.id).subscribe((success) => {
+      if (!success) {
+        this.toastService.error('Unable to mark this notification as read.');
+        return;
+      }
+
+      this.notifications = this.notifications.map((item) => (item.id === notification.id ? { ...item, unread: false } : item));
+      completeAction();
+    });
+  }
+
+  markAllAsRead(): void {
+    if (this.unreadCount === 0) {
+      return;
+    }
+
+    this.notificationService.markAllAsRead().subscribe((success) => {
+      if (!success) {
+        this.toastService.error('Unable to mark all notifications as read.');
+        return;
+      }
+
+      this.notifications = this.notifications.map((item) => ({ ...item, unread: false }));
+    });
+  }
+
+  goToNotificationsPage(): void {
+    this.close();
+    this.router.navigate(['/notifications']);
   }
 
   get unreadCount(): number {
