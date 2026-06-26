@@ -57,7 +57,7 @@ export class StudioComponent {
   private readonly productService = inject(ProductService);
   private readonly authService = inject(AuthService);
   private readonly aiImageService = inject(AiImageService);
-  private readonly toastService = inject(ToastService);
+  readonly toastService = inject(ToastService);
   private readonly lastDraftStorageKey = "atelier-last-design-id";
 
   readonly aiLoading = signal(false);
