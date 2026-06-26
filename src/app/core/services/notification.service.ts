@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, map, of } from 'rxjs';
+import { HttpClient } from '@angular/common/import';
+import { Observable, catchError, map, of, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface NotificationApiItem {
@@ -41,6 +41,20 @@ export interface NotificationItem {
 export class NotificationService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/api/Notifications`;
+
+  private readonly newNotificationSource = new Subject<NotificationItem>();
+  readonly newNotification$ = this.newNotificationSource.asObservable();
+
+  pushNewNotification(item: NotificationApiItem): void {
+    if (!item) return;
+
+    const normalizedArray = this.normalizeNotifications([item]);
+    if (normalizedArray.length > 0) {
+      const normalizedItem = normalizedArray[0];
+      
+      this.newNotificationSource.next(normalizedItem);
+    }
+  }
 
   getAll(): Observable<NotificationItem[]> {
     return this.http.get<NotificationApiItem[] | { data: NotificationApiItem[] }>(this.baseUrl).pipe(
