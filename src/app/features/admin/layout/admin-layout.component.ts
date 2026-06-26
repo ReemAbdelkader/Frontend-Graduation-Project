@@ -34,15 +34,15 @@ export class AdminLayoutComponent {
   readonly nav: NavItem[] = [
     { to: '/control-center',              label: 'Overview',    icon: 'dashboard',  exact: true },
     { to: '/control-center/users',        label: 'Users',       icon: 'users',      exact: false },
-    { to: '/control-center/creators',     label: 'Creators',    icon: 'creators',   exact: false },
+  // { to: '/control-center/creators',     label: 'Creators',    icon: 'creators',   exact: false },
     { to: '/control-center/orders',       label: 'Orders',      icon: 'orders',     exact: false },
     { to: '/control-center/categories',   label: 'Categories',  icon: 'categories', exact: false },
     { to: '/control-center/products',     label: 'Products',    icon: 'products',   exact: false },
     { to: '/control-center/templates',    label: 'Templates',   icon: 'templates',  exact: false },
     { to: '/control-center/moderation',   label: 'Moderation',  icon: 'moderation', exact: false },
-    { to: '/control-center/rewards',      label: 'Rewards',     icon: 'rewards',    exact: false },
+  // { to: '/control-center/rewards',      label: 'Rewards',     icon: 'rewards',    exact: false },
     { to: '/control-center/ai-reports',   label: 'AI Reports',  icon: 'ai-reports', exact: false },
-    { to: '/control-center/settings',     label: 'Settings',    icon: 'settings',   exact: false },
+  // { to: '/control-center/settings',     label: 'Settings',    icon: 'settings',   exact: false },
   ];
 
   readonly currentLabel = computed(() => {

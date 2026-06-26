@@ -1,16 +1,19 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import {
-  mockUsers,
-  MockUser,
+  AdminApiService,
   AdminRole,
-} from '../../../core/data/admin-mock-data';
+  InviteUserRequest,
+  UserListItemDto,
+} from '../../../core/services/admin-api.service';
 
-type ConfirmKind = 'suspend' | 'delete';
-interface ConfirmState { kind: ConfirmKind; user: MockUser; }
+interface StatusConfirmState {
+  user: UserListItemDto;
+  nextActive: boolean;
+}
 
 @Component({
   selector: 'app-admin-users',
@@ -19,23 +22,24 @@ interface ConfirmState { kind: ConfirmKind; user: MockUser; }
   templateUrl: './users.component.html',
   styleUrl: './users.component.scss',
 })
-export class UsersComponent {
+export class UsersComponent implements OnInit {
   private toast = inject(ToastService);
+  private adminApi = inject(AdminApiService);
 
-  readonly users = signal<MockUser[]>(mockUsers);
+  readonly users = signal<UserListItemDto[]>([]);
   readonly query = signal('');
-  readonly confirm = signal<ConfirmState | null>(null);
+  readonly loading = signal(true);
+  readonly saving = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly confirm = signal<StatusConfirmState | null>(null);
   readonly showAddModal = signal(false);
+  readonly changingRoleId = signal<string | null>(null);
 
-  // Add-user form state
+  readonly roles: AdminRole[] = ['User', 'Printer', 'Admin'];
+
   readonly formName = signal('');
   readonly formEmail = signal('');
-  readonly formPassword = signal('');
   readonly formRole = signal<AdminRole>('User');
-  // Printer-specific
-  readonly formCompanyName = signal('');
-  readonly formLocation = signal('');
-  readonly formCapacity = signal('');
 
   readonly filtered = computed(() => {
     const q = this.query().toLowerCase().trim();
@@ -46,17 +50,33 @@ export class UsersComponent {
     );
   });
 
-  setQuery(v: string): void { this.query.set(v); }
+  ngOnInit(): void {
+    this.loadUsers();
+  }
 
-  // ============ Add User modal ============
+  loadUsers(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.adminApi.getUsers(1, 100).subscribe({
+      next: (result) => {
+        this.users.set(result.data ?? []);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(this.extractError(err, 'Unable to load users.'));
+        this.loading.set(false);
+      },
+    });
+  }
+
+  setQuery(v: string): void {
+    this.query.set(v);
+  }
+
   openAddModal(): void {
     this.formName.set('');
     this.formEmail.set('');
-    this.formPassword.set('');
     this.formRole.set('User');
-    this.formCompanyName.set('');
-    this.formLocation.set('');
-    this.formCapacity.set('');
     this.showAddModal.set(true);
   }
 
@@ -68,90 +88,108 @@ export class UsersComponent {
     this.formRole.set(v);
   }
 
-  get showPrinterFields(): boolean {
-    return this.formRole() === 'Printer';
-  }
-
   submitAddUser(): void {
     const name = this.formName().trim();
     const email = this.formEmail().trim();
-    const password = this.formPassword();
 
-    if (!name || !email || !password) {
-      this.toast.error('Full name, email and password are required.');
-      return;
-    }
-    if (password.length < 6) {
-      this.toast.error('Password must be at least 6 characters.');
+    if (!name || !email) {
+      this.toast.error('Full name and email are required.');
       return;
     }
 
-    const role = this.formRole();
-    const newUser: MockUser = {
-      id: `u${Date.now()}`,
-      name: role === 'Printer' && this.formCompanyName()
-        ? this.formCompanyName()
-        : name,
+    const payload: InviteUserRequest = {
+      name,
       email,
-      role,
-      joinedAt: new Date().toISOString().slice(0, 10),
-      status: 'active',
+      role: this.formRole(),
     };
 
-    this.users.update((u) => [newUser, ...u]);
-    this.toast.success(`${newUser.name} added as ${role}`);
-    this.closeAddModal();
+    this.saving.set(true);
+    this.adminApi.inviteUser(payload).subscribe({
+      next: () => {
+        this.toast.success(`${name} invited as ${this.formRole()}`);
+        this.saving.set(false);
+        this.closeAddModal();
+        this.loadUsers();
+      },
+      error: (err) => {
+        this.toast.error(this.extractError(err, 'User invite failed.'));
+        this.saving.set(false);
+      },
+    });
   }
 
-  // ============ Existing user actions ============
-  askSuspend(u: MockUser): void { this.confirm.set({ kind: 'suspend', user: u }); }
-  askDelete(u: MockUser): void { this.confirm.set({ kind: 'delete', user: u }); }
+  askSuspend(u: UserListItemDto): void {
+    this.confirm.set({ user: u, nextActive: !u.isActive });
+  }
 
-  cancelConfirm(): void { this.confirm.set(null); }
-
-  runConfirm(): void {
-    const state = this.confirm() as ConfirmState | null;
-    if (!state) return;
-    const kind: ConfirmKind = state.kind;
-    const user: MockUser = state.user;
-
-    if (kind === 'suspend') {
-      const next = user.status === 'active' ? 'suspended' : 'active';
-      this.users.update((s) =>
-        s.map((x) => (x.id === user.id ? { ...x, status: next } : x)),
-      );
-      this.toast.success(`${user.name} ${next === 'active' ? 'activated' : 'suspended'}`);
-    } else if (kind === 'delete') {
-      this.users.update((s) => s.filter((x) => x.id !== user.id));
-      this.toast.success(`${user.name} deleted`);
-    }
+  cancelConfirm(): void {
     this.confirm.set(null);
   }
 
-  // ============ Helpers ============
+  runConfirm(): void {
+    const state = this.confirm();
+    if (!state) return;
+
+    this.adminApi.changeUserStatus(state.user.id, { isActive: state.nextActive }).subscribe({
+      next: () => {
+        this.users.update((list) =>
+          list.map((x) =>
+            x.id === state.user.id ? { ...x, isActive: state.nextActive } : x,
+          ),
+        );
+        const action = state.nextActive ? 'activated' : 'suspended';
+        this.toast.success(`${state.user.name} ${action}`);
+        this.confirm.set(null);
+      },
+      error: (err) => {
+        this.toast.error(this.extractError(err, 'Status update failed.'));
+        this.confirm.set(null);
+      },
+    });
+  }
+
+  onRoleChange(user: UserListItemDto, newRole: AdminRole): void {
+    if (newRole === user.role) return;
+
+    this.changingRoleId.set(user.id);
+    this.adminApi.changeUserRole(user.id, { newRole }).subscribe({
+      next: () => {
+        this.users.update((list) =>
+          list.map((u) => (u.id === user.id ? { ...u, role: newRole } : u)),
+        );
+        this.toast.success(`${user.name} role updated to ${newRole}`);
+        this.changingRoleId.set(null);
+      },
+      error: (err) => {
+        this.toast.error(this.extractError(err, 'Role update failed.'));
+        this.changingRoleId.set(null);
+      },
+    });
+  }
+
   get confirmTitle(): string {
-    const c = this.confirm() as ConfirmState | null;
+    const c = this.confirm();
     if (!c) return '';
-    if (c.kind === 'delete') return `Delete ${c.user.name}?`;
-    return `Update ${c.user.name}?`;
+    return c.nextActive ? `Activate ${c.user.name}?` : `Suspend ${c.user.name}?`;
   }
 
   get confirmDescription(): string {
-    const c = this.confirm() as ConfirmState | null;
-    if (!c) return '';
-    return c.kind === 'delete'
-      ? 'This action cannot be undone.'
-      : 'The change takes effect immediately.';
+    return 'The change takes effect immediately.';
   }
 
   get confirmLabel(): string {
-    const c = this.confirm() as ConfirmState | null;
+    const c = this.confirm();
     if (!c) return 'Confirm';
-    return c.kind === 'delete' ? 'Delete' : 'Confirm';
+    return c.nextActive ? 'Activate' : 'Suspend';
   }
 
   get confirmDestructive(): boolean {
-    return (this.confirm() as ConfirmState | null)?.kind === 'delete';
+    const c = this.confirm();
+    return !!c && !c.nextActive;
+  }
+
+  roleClass(role: string): string {
+    return `role-${(role || 'User').toLowerCase()}`;
   }
 
   initialsOf(name?: string): string {
@@ -161,5 +199,11 @@ export class UsersComponent {
       .join('')
       .slice(0, 2)
       .toUpperCase();
+  }
+
+  private extractError(error: unknown, fallback: string): string {
+    const err = error as { error?: { message?: string; errors?: string[] } | string; message?: string };
+    if (typeof err?.error === 'string') return err.error;
+    return err?.error?.message ?? err?.error?.errors?.join(', ') ?? err?.message ?? fallback;
   }
 }

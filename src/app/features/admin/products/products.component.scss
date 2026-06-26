@@ -151,4 +151,17 @@ input[type="text"], input[type="number"], select {
   input[type="checkbox"] { height: 18px; width: 18px; accent-color: var(--primary); }
 }
 
+.flag-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;
+  @media (min-width: 520px) { grid-template-columns: repeat(3, 1fr); }
+}
+
+.flag-check {
+  display: flex; align-items: center; gap: 0.5rem;
+  min-height: 36px; padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--card); font-size: 0.8125rem; cursor: pointer;
+  input { accent-color: var(--primary); }
+}
+
 .modal-foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 0.5rem; }
