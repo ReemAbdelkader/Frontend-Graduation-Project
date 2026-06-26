@@ -9,49 +9,49 @@
   <section class="stats-grid">
     <article class="stat-card">
       <div class="stat-icon users"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <p class="stat-value">{{ stats.totalUsers.toLocaleString() }}</p>
+      <p class="stat-value">{{ stats().totalUsers.toLocaleString() }}</p>
       <p class="stat-label">Total users</p>
     </article>
 
     <article class="stat-card">
       <div class="stat-icon orders"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
-      <p class="stat-value">{{ stats.totalOrders.toLocaleString() }}</p>
+      <p class="stat-value">{{ stats().totalOrders.toLocaleString() }}</p>
       <p class="stat-label">Total orders</p>
     </article>
 
     <article class="stat-card">
       <div class="stat-icon revenue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-      <p class="stat-value">{{ formatCurrency(stats.totalRevenue) }}</p>
+      <p class="stat-value">{{ formatCurrency(stats().totalRevenue) }}</p>
       <p class="stat-label">Total revenue</p>
     </article>
 
     <article class="stat-card">
       <div class="stat-icon pending"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-      <p class="stat-value">{{ stats.pendingOrders }}</p>
+      <p class="stat-value">{{ stats().pendingOrders }}</p>
       <p class="stat-label">Pending orders</p>
     </article>
 
     <article class="stat-card">
       <div class="stat-icon products"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
-      <p class="stat-value">{{ stats.totalProducts }}</p>
+      <p class="stat-value">{{ stats().totalProducts }}</p>
       <p class="stat-label">Total products</p>
     </article>
 
     <article class="stat-card">
       <div class="stat-icon templates"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16V9"/><path d="M11 16V5"/><path d="M15 16v-3"/></svg></div>
-      <p class="stat-value">{{ stats.totalTemplates }}</p>
+      <p class="stat-value">{{ stats().totalTemplates }}</p>
       <p class="stat-label">Total templates</p>
     </article>
 
     <article class="stat-card">
       <div class="stat-icon public"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
-      <p class="stat-value">{{ stats.publicTemplates }}</p>
+      <p class="stat-value">{{ stats().publicTemplates }}</p>
       <p class="stat-label">Public templates</p>
     </article>
 
     <article class="stat-card">
       <div class="stat-icon moderation"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-      <p class="stat-value">{{ stats.pendingModerationReports }}</p>
+      <p class="stat-value">{{ stats().pendingModerationReports }}</p>
       <p class="stat-label">Pending moderation</p>
     </article>
   </section>
@@ -107,7 +107,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (o of recentOrders; track o.id) {
+          @for (o of recentOrders(); track o.id) {
             <tr>
               <td class="mono">{{ o.orderNumber }}</td>
               <td>{{ o.customerName }}</td>
@@ -115,6 +115,9 @@
               <td><span class="status-pill" [class]="statusClass(o.status)">{{ o.status }}</span></td>
               <td class="muted">{{ o.createdAt | date:'MMM d, y' }}</td>
             </tr>
+          }
+          @if (recentOrders().length === 0) {
+            <tr><td colspan="5" class="muted">No recent orders found.</td></tr>
           }
         </tbody>
       </table>

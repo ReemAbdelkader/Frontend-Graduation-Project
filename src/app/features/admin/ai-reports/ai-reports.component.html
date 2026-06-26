@@ -8,13 +8,12 @@
   </header>
 
   <div class="grid-layout">
-    <!-- LEFT: categories + suggested prompts -->
     <aside class="side-panel">
       <div class="side-section">
         <p class="side-label">Overall reports</p>
         <div class="cat-list">
           @for (c of categories; track c.key) {
-            <button class="cat-item" (click)="sendCategoryReport(c.key)">
+            <button class="cat-item" (click)="sendCategoryReport(c.key)" [disabled]="thinking()">
               <span class="cat-icon">
                 @switch (c.icon) {
                   @case ('bar') {
@@ -47,13 +46,12 @@
         <p class="side-label">Suggested prompts</p>
         <div class="prompt-list">
           @for (s of suggestions; track s) {
-            <button class="prompt-chip" (click)="sendSuggestion(s)">{{ s }}</button>
+            <button class="prompt-chip" (click)="sendSuggestion(s)" [disabled]="thinking()">{{ s }}</button>
           }
         </div>
       </div>
     </aside>
 
-    <!-- RIGHT: chat -->
     <section class="chat-card">
       <div #scrollRef class="messages">
         @for (m of messages(); track m.id) {
@@ -67,64 +65,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
               </div>
               <div class="ai-content">
-                @if (m.text) {
-                  <div class="bubble ai-bubble">{{ m.text }}</div>
-                }
-                @if (m.reportTitle) {
-                  <article class="report-card">
-                    <div class="report-head">
-                      <p class="report-tag">Generated report</p>
-                      <h3 class="report-title">{{ m.reportTitle }}</h3>
-                      <p class="report-summary">{{ m.reportSummary }}</p>
-                    </div>
-                    @if (m.reportMetrics) {
-                      <div class="report-metrics">
-                        @for (mt of m.reportMetrics; track mt.label) {
-                          <div class="metric-cell">
-                            <p class="metric-label">{{ mt.label }}</p>
-                            <p class="metric-value">{{ mt.value }}</p>
-                            @if (mt.delta) {
-                              <p class="metric-delta" [class.up]="mt.trend === 'up'" [class.down]="mt.trend === 'down'">
-                                @if (mt.trend === 'up') {
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-                                } @else if (mt.trend === 'down') {
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
-                                }
-                                {{ mt.delta }}
-                              </p>
-                            }
-                          </div>
-                        }
-                      </div>
-                    }
-                    @if (m.reportInsights) {
-                      <div class="report-section">
-                        <p class="report-section-label">Key insights</p>
-                        <ul class="insight-list">
-                          @for (i of m.reportInsights; track $index) {
-                            <li class="insight-item" [class.positive]="i.kind === 'positive'" [class.negative]="i.kind === 'negative'">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                              <span>{{ i.text }}</span>
-                            </li>
-                          }
-                        </ul>
-                      </div>
-                    }
-                    @if (m.reportRecommendations) {
-                      <div class="report-section">
-                        <p class="report-section-label">Recommendations</p>
-                        <ul class="rec-list">
-                          @for (r of m.reportRecommendations; track $index) {
-                            <li class="rec-item">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
-                              <span>{{ r }}</span>
-                            </li>
-                          }
-                        </ul>
-                      </div>
-                    }
-                  </article>
-                }
+                <div class="bubble ai-bubble">{{ m.text }}</div>
               </div>
             </div>
           }
@@ -152,10 +93,10 @@
           [ngModel]="input()"
           (ngModelChange)="setInput($event)"
           name="text"
-          [disabled]="thinking()"
+          [disabled]="thinking() || !sessionId()"
           autocomplete="off"
         />
-        <button type="submit" class="send-btn" [disabled]="thinking() || !input().trim()">
+        <button type="submit" class="send-btn" [disabled]="thinking() || !input().trim() || !sessionId()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
           Send
         </button>

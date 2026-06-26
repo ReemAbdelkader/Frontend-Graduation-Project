@@ -1,7 +1,14 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { mockOrders, MockOrder } from '../../../core/data/admin-mock-data';
+import { ToastService } from '../../../core/services/toast.service';
+import {
+  AdminApiService,
+  OrderStatus,
+  RecentOrderDto,
+} from '../../../core/services/admin-api.service';
+
+type StatusFilter = OrderStatus | 'All';
 
 @Component({
   selector: 'app-admin-orders',
@@ -10,34 +17,89 @@ import { mockOrders, MockOrder } from '../../../core/data/admin-mock-data';
   templateUrl: './orders.component.html',
   styleUrl: './orders.component.scss',
 })
-export class OrdersComponent {
-  readonly orders = signal<MockOrder[]>(mockOrders);
-  readonly query = signal('');
-  readonly statusFilter = signal<string>('All');
+export class OrdersComponent implements OnInit {
+  private toast = inject(ToastService);
+  private adminApi = inject(AdminApiService);
 
-  readonly statuses = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
+  readonly orders = signal<RecentOrderDto[]>([]);
+  readonly query = signal('');
+  readonly statusFilter = signal<StatusFilter>('All');
+  readonly loading = signal(true);
+  readonly savingId = signal<string | null>(null);
+  readonly error = signal<string | null>(null);
+
+  readonly statuses: StatusFilter[] = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
+  readonly updatableStatuses: OrderStatus[] = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
 
   readonly filtered = computed(() => {
     const q = this.query().toLowerCase().trim();
-    const sf = this.statusFilter();
-    return this.orders().filter((o) => {
-      const matchesQ = !q || `${o.orderNumber} ${o.customerName}`.toLowerCase().includes(q);
-      const matchesStatus = sf === 'All' || o.status === sf;
-      return matchesQ && matchesStatus;
-    });
+    const list = this.orders();
+    if (!q) return list;
+    return list.filter((o) =>
+      `${o.orderNumber} ${o.customerName} ${o.status}`.toLowerCase().includes(q),
+    );
   });
 
-  setQuery(v: string): void { this.query.set(v); }
-  setStatusFilter(v: string): void { this.statusFilter.set(v); }
+  ngOnInit(): void {
+    this.loadOrders();
+  }
 
-  /** Inline status dropdown change — updates local list. */
-  onStatusChange(order: MockOrder, newStatus: MockOrder['status']): void {
-    this.orders.update((s) =>
-      s.map((o) => (o.id === order.id ? { ...o, status: newStatus } : o)),
-    );
+  loadOrders(): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    const status = this.statusFilter();
+    this.adminApi.getAllOrders(1, 100, status === 'All' ? undefined : status, this.query() || undefined).subscribe({
+      next: (result) => {
+        this.orders.set(result.data ?? []);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(this.extractError(err, 'Unable to load orders.'));
+        this.loading.set(false);
+      },
+    });
+  }
+
+  setQuery(v: string): void {
+    this.query.set(v);
+  }
+
+  setStatusFilter(status: StatusFilter): void {
+    this.statusFilter.set(status);
+    this.loadOrders();
+  }
+
+  onStatusChange(order: RecentOrderDto, newStatus: OrderStatus): void {
+    if (newStatus === order.status) return;
+
+    this.savingId.set(order.id);
+    this.adminApi.updateOrderStatus(order.id, newStatus).subscribe({
+      next: () => {
+        this.orders.update((list) =>
+          list.map((o) => (o.id === order.id ? { ...o, status: newStatus } : o)),
+        );
+        this.toast.success(`Order ${order.orderNumber} updated to ${newStatus}`);
+        this.savingId.set(null);
+      },
+      error: (err) => {
+        this.toast.error(this.extractError(err, 'Status update failed.'));
+        this.savingId.set(null);
+      },
+    });
   }
 
   formatCurrency(n: number): string {
-    return '$' + (n ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    return '$' + (n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  statusClass(status: string): string {
+    return 'status-' + (status || 'pending').toLowerCase();
+  }
+
+  private extractError(error: unknown, fallback: string): string {
+    const err = error as { error?: { message?: string; errors?: string[] } | string; message?: string };
+    if (typeof err?.error === 'string') return err.error;
+    return err?.error?.message ?? err?.error?.errors?.join(', ') ?? err?.message ?? fallback;
   }
 }

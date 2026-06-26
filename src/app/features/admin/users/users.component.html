@@ -18,67 +18,85 @@
       </div>
     </div>
 
-    <div class="table-wrap">
-      <table class="users-table">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Role</th>
-            <th>Joined</th>
-            <th>Status</th>
-            <th class="right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (u of filtered(); track u.id) {
+    @if (loading()) {
+      <div class="table-empty">Loading users…</div>
+    } @else if (error()) {
+      <div class="table-empty">
+        <p>{{ error() }}</p>
+        <button class="ghost-btn" (click)="loadUsers()">Try again</button>
+      </div>
+    } @else {
+      <div class="table-wrap">
+        <table class="users-table">
+          <thead>
             <tr>
-              <td>
-                <div class="user-cell">
-                  <div class="user-avatar">{{ initialsOf(u.name) }}</div>
-                  <div>
-                    <p class="user-name">{{ u.name }}</p>
-                    <p class="user-email">{{ u.email }}</p>
-                  </div>
-                </div>
-              </td>
-              <td><span class="role-pill" [class]="'role-' + (u.role || 'User').toLowerCase()">{{ u.role }}</span></td>
-              <td class="muted">{{ u.joinedAt | date:'MMM d, y' }}</td>
-              <td>
-                <span class="status-pill" [class.active]="u.status === 'active'" [class.suspended]="u.status === 'suspended'">
-                  {{ u.status }}
-                </span>
-              </td>
-              <td class="right">
-                <div class="action-row">
-                  <button class="icon-action" (click)="askSuspend(u)" [title]="u.status === 'active' ? 'Suspend' : 'Activate'">
-                    @if (u.status === 'suspended') {
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1Z"/><path d="m9 12 2 2 4-4"/></svg>
-                    } @else {
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1Z"/><path d="m4.93 4.93 14.14 14.14"/></svg>
-                    }
-                  </button>
-                  <button class="icon-action danger" (click)="askDelete(u)" title="Delete">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  </button>
-                </div>
-              </td>
+              <th>User</th>
+              <th>Role</th>
+              <th>Joined</th>
+              <th>Status</th>
+              <th class="right">Actions</th>
             </tr>
-          }
-          @if (filtered().length === 0) {
-            <tr><td colspan="5" class="empty">No users match your search.</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            @for (u of filtered(); track u.id) {
+              <tr>
+                <td>
+                  <div class="user-cell">
+                    <div class="user-avatar">{{ initialsOf(u.name) }}</div>
+                    <div>
+                      <p class="user-name">{{ u.name }}</p>
+                      <p class="user-email">{{ u.email }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <select
+                    class="role-select"
+                    [class]="roleClass(u.role)"
+                    [ngModel]="u.role"
+                    (ngModelChange)="onRoleChange(u, $event)"
+                    [disabled]="changingRoleId() === u.id"
+                    name="role-{{ u.id }}"
+                  >
+                    @for (r of roles; track r) {
+                      <option [value]="r">{{ r }}</option>
+                    }
+                  </select>
+                </td>
+                <td class="muted">{{ u.joinedAt | date:'MMM d, y' }}</td>
+                <td>
+                  <span class="status-pill" [class.active]="u.isActive" [class.suspended]="!u.isActive">
+                    {{ u.isActive ? 'active' : 'suspended' }}
+                  </span>
+                </td>
+                <td class="right">
+                  <div class="action-row">
+                    <button class="icon-action" (click)="askSuspend(u)" [title]="u.isActive ? 'Suspend' : 'Activate'">
+                      @if (!u.isActive) {
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1Z"/><path d="m9 12 2 2 4-4"/></svg>
+                      } @else {
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1Z"/><path d="m4.93 4.93 14.14 14.14"/></svg>
+                      }
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+            @if (filtered().length === 0) {
+              <tr><td colspan="5" class="empty">No users match your search.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
   </div>
 </div>
 
-<!-- ADD USER MODAL -->
 @if (showAddModal()) {
   <div class="modal-overlay" (click)="closeAddModal()">
     <div class="modal-card" (click)="$event.stopPropagation()">
       <header class="modal-head">
-        <h2>Add new user</h2>
+        <h2>Invite new user</h2>
         <button class="modal-close" (click)="closeAddModal()" aria-label="Close">×</button>
       </header>
 
@@ -102,32 +120,11 @@
           <input type="email" [ngModel]="formEmail()" (ngModelChange)="formEmail.set($event)" name="email" required />
         </label>
 
-        <label class="field">
-          <span class="label">Password *</span>
-          <input type="password" [ngModel]="formPassword()" (ngModelChange)="formPassword.set($event)" name="password" required minlength="6" />
-        </label>
-
-        @if (showPrinterFields) {
-          <div class="printer-fields">
-            <p class="printer-title">Printer-specific details</p>
-            <label class="field">
-              <span class="label">Company name</span>
-              <input type="text" [ngModel]="formCompanyName()" (ngModelChange)="formCompanyName.set($event)" name="companyName" placeholder="e.g. Porto Print Co." />
-            </label>
-            <label class="field">
-              <span class="label">Location</span>
-              <input type="text" [ngModel]="formLocation()" (ngModelChange)="formLocation.set($event)" name="location" placeholder="e.g. Porto, Portugal" />
-            </label>
-            <label class="field">
-              <span class="label">Production capacity (units / month)</span>
-              <input type="text" [ngModel]="formCapacity()" (ngModelChange)="formCapacity.set($event)" name="capacity" placeholder="e.g. 2000" />
-            </label>
-          </div>
-        }
-
         <footer class="modal-foot">
           <button type="button" class="ghost-btn" (click)="closeAddModal()">Cancel</button>
-          <button type="submit" class="primary-btn">Create user</button>
+          <button type="submit" class="primary-btn" [disabled]="saving()">
+            {{ saving() ? 'Sending invite…' : 'Send invite' }}
+          </button>
         </footer>
       </form>
     </div>
