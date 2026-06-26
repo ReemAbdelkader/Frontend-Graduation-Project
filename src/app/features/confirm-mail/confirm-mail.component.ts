@@ -38,8 +38,8 @@ export class ConfirmMailComponent implements OnInit {
       console.log('Token from URL matches token sent from Angular?', token === token);
       this.confirmEmail(userId, token);
     } else {
-      this.status.set('idle');
-      this.message.set('');
+      this.status.set('success');
+      this.message.set('Thank you for registering. Check your email to confirm your account.');
     }
   }
 

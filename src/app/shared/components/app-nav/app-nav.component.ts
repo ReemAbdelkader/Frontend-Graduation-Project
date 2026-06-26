@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { NgForOf, NgIf } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationBellComponent } from '../notifications/notifications.component';
@@ -14,7 +15,7 @@ interface NavLink {
 @Component({
   selector: 'app-nav',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, NotificationBellComponent, LogoutDialogComponent],
+  imports: [RouterLink, RouterLinkActive, NotificationBellComponent, LogoutDialogComponent, NgIf, NgForOf],
   templateUrl: './app-nav.component.html',
   styleUrl: './app-nav.component.scss',
 })

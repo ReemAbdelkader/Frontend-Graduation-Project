@@ -301,7 +301,42 @@ input {
   transition: opacity 0.2s;
 
   &:hover { opacity: 0.95; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 }
+
+.auth-success {
+  margin-top: 2rem;
+  padding: 2rem;
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow: var(--shadow-soft);
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+.auth-success h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.5rem;
+}
+
+.auth-success p {
+  margin: 0 0 1.5rem;
+  color: var(--muted-foreground);
+}
+
+.success-btn {
+  width: 100%;
+  height: 48px;
+  border-radius: 10px;
+  border: none;
+  background: var(--gradient-primary);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.success-btn:hover { opacity: 0.95; }
 
 .terms {
   margin-top: 2rem;

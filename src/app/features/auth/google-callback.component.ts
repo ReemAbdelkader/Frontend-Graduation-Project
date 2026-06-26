@@ -46,6 +46,6 @@ export class GoogleCallbackComponent implements OnInit {
 
     this.auth.completeExternalLogin(state);
     this.toast.success('Signed in successfully with Google.');
-    this.router.navigateByUrl(this.auth.resolvePostLoginRoute());
+    this.router.navigateByUrl(this.auth.resolvePostLoginRoute(), { replaceUrl: true });
   }
 }
