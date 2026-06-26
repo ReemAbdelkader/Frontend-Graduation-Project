@@ -74,6 +74,10 @@ export class ShopComponent {
     this.openProduct.set(null);
   }
 
+  categoryTrackId(category: CategoryFilter): string {
+    return category.id ?? 'all';
+  }
+
   private loadCategories(): void {
     this.api
       .getCategories()

@@ -21,7 +21,7 @@
     <!-- FILTERS -->
     <section class="filters">
       <div class="filter-tabs">
-        @for (c of categories(); track c.id ?? 'all') {
+        @for (c of categories(); track categoryTrackId(c)) {
           <button
             class="filter-pill"
             [class.active]="selectedCat().id === c.id"
