@@ -12,8 +12,8 @@ import { ToastService } from '../../../core/services/toast.service';
 export class SettingsComponent {
   private toast = inject(ToastService);
 
-  readonly orgName = signal('Wearly AI');
-  readonly supportEmail = signal('hello@wearly.ai');
+  readonly orgName = signal('Atelier AI');
+  readonly supportEmail = signal('hello@atelier.ai');
   readonly allowSignups = signal(true);
   readonly maintenance = signal(false);
 

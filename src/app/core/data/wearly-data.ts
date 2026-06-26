@@ -195,7 +195,7 @@ export const templates: Template[] = [
     season: 'SS 2026',
     category: 'T-Shirts',
     image: garmentImages.templateBotanical,
-    author: 'Wearly AI',
+    author: 'Atelier AI',
   },
   {
     id: 't2',
@@ -204,7 +204,7 @@ export const templates: Template[] = [
     season: 'FW 2025',
     category: 'Hoodies',
     image: garmentImages.templateGeometric,
-    author: 'Wearly AI',
+    author: 'Atelier AI',
   },
   {
     id: 't3',
@@ -222,7 +222,7 @@ export const templates: Template[] = [
     season: 'FW 2025',
     category: 'Hoodies',
     image: garmentImages.hoodieCharcoal,
-    author: 'Wearly AI',
+    author: 'Atelier AI',
   },
   {
     id: 't5',
@@ -240,7 +240,7 @@ export const templates: Template[] = [
     season: 'FW 2025',
     category: 'Pants',
     image: garmentImages.pantsOlive,
-    author: 'Wearly AI',
+    author: 'Atelier AI',
   },
   {
     id: 't7',
@@ -258,7 +258,7 @@ export const templates: Template[] = [
     season: 'SS 2026',
     category: 'Hoodies',
     image: garmentImages.hoodieCream,
-    author: 'Wearly AI',
+    author: 'Atelier AI',
   },
 ];
 

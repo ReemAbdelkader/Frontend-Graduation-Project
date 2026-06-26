@@ -118,7 +118,7 @@ export class OnboardingComponent implements AfterViewChecked {
       case 2:
         return `Perfect. Last question — what occasions do you usually dress for? Work, weekends, nights out, gym, travel?`;
       case 3:
-        return `That's everything I need. I've saved your style profile — your dashboard and recommendations are now tuned to your taste. Welcome to Wearly.`;
+        return `That's everything I need. I've saved your style profile — your dashboard and recommendations are now tuned to your taste. Welcome to Atelier.`;
       default:
         return `You're all set! Click "Finish & continue" below to enter your dashboard.`;
     }
@@ -156,7 +156,7 @@ export class OnboardingComponent implements AfterViewChecked {
   /** Mark onboarding complete and navigate to /dashboard. */
   finish(): void {
     this.auth.markOnboardingComplete();
-    this.toast.success('Style profile saved — welcome to Wearly!');
+    this.toast.success('Style profile saved — welcome to Atelier!');
     this.router.navigate(['/dashboard']);
   }
 

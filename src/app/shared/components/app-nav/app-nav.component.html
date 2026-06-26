@@ -27,7 +27,14 @@
 
     <div class="actions">
       @if (isAdmin()) {
-        <a routerLink="/control-center" class="control-center-btn">Control Center</a>
+        <a
+          [routerLink]="targetForControl()"
+          routerLinkActive="active"
+          class="control-center-btn"
+          [attr.aria-pressed]="isControlCenterActive()"
+        >
+          {{ controlLabel() }}
+        </a>
       }
       <app-notification-bell />
 

@@ -155,7 +155,7 @@ export const mockTemplates: MockTemplate[] = [
   { id: 't3', name: 'Quiet Bone',         creatorName: 'Theo Wren',     categoryName: 'T-Shirts',  createdAt: '2026-04-29', isPublic: true,  status: 'Published',   imageUrl: 'assets/garment-tshirt-white.jpg', likesCount: 184 },
   { id: 't4', name: 'Onyx Studio',        creatorName: 'Marco Rivera',  categoryName: 'Hoodies',   createdAt: '2026-04-22', isPublic: true,  status: 'Published',   imageUrl: 'assets/garment-hoodie-charcoal.jpg', likesCount: 132 },
   { id: 't5', name: 'Coral Mark',         creatorName: 'Sana Bouchard', categoryName: 'Headwear',  createdAt: '2026-04-15', isPublic: true,  status: 'Published',   imageUrl: 'assets/garment-cap-black.jpg',    likesCount: 201 },
-  { id: 't6', name: 'Olive Drift',        creatorName: 'Wearly AI',     categoryName: 'Pants',     createdAt: '2026-04-10', isPublic: true,  status: 'Published',   imageUrl: 'assets/garment-pants-olive.jpg',  likesCount: 156 },
+  { id: 't6', name: 'Olive Drift',        creatorName: 'Atelier AI',     categoryName: 'Pants',     createdAt: '2026-04-10', isPublic: true,  status: 'Published',   imageUrl: 'assets/garment-pants-olive.jpg',  likesCount: 156 },
   { id: 't7', name: 'Court Violet',       creatorName: 'Lin Park',      categoryName: 'Footwear',  createdAt: '2026-04-02', isPublic: true,  status: 'Published',   imageUrl: 'assets/garment-sneakers.jpg',     likesCount: 412 },
   { id: 't8', name: 'Sand Atelier (draft)', creatorName: 'Aiko Tanaka', categoryName: 'Hoodies',   createdAt: '2026-03-28', isPublic: false, status: 'Draft',       imageUrl: 'assets/garment-hoodie-cream.jpg', likesCount: 0 },
 ];
