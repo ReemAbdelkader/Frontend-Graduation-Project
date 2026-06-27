@@ -412,19 +412,6 @@
           <span class="price-original">${{ originalPrice }}</span>
         </div>
 
-        <div class="section-block">
-          <p class="section-label">Color</p>
-          <div class="color-list">
-            @for (c of selected().colors; track c) {
-              <button
-                class="color-circle"
-                [style.background]="c"
-                [class.selected]="color() === c"
-                (click)="pickColor(c)"
-              ></button>
-            }
-          </div>
-        </div>
 
         <div class="section-block">
           <p class="section-label">Size</p>
@@ -441,28 +428,32 @@
           </div>
         </div>
 
-        <div class="specs-grid">
-          <div class="spec">
-            <p class="spec-label">Fabric</p>
-            <p class="spec-value">Heavyweight 400gsm</p>
-          </div>
-          <div class="spec">
-            <p class="spec-label">Print method</p>
-            <p class="spec-value">DTG · Eco-ink</p>
-          </div>
-          <div class="spec">
-            <p class="spec-label">Origin</p>
-            <p class="spec-value">Porto, Portugal</p>
-          </div>
-          <div class="spec">
-            <p class="spec-label">Shipping</p>
-            <p class="spec-value">3–5 days</p>
+        <!-- Fabric selector -->
+        <div class="section-block">
+          <p class="section-label">Fabric</p>
+          <div class="option-pill-list">
+            @for (f of fabricOptions; track f.value) {
+              <button
+                class="option-pill"
+                [class.selected]="selectedFabric() === f.value"
+                (click)="pickFabric(f.value)"
+              >{{ f.label }}</button>
+            }
           </div>
         </div>
 
-        <div class="dispatch-card">
-          <p class="dispatch-label">Estimated dispatch</p>
-          <p class="dispatch-value">Jun 4 — Jun 9, 2026</p>
+        <!-- Print Method selector -->
+        <div class="section-block">
+          <p class="section-label">Print Method</p>
+          <div class="option-pill-list">
+            @for (m of printMethodOptions; track m.value) {
+              <button
+                class="option-pill"
+                [class.selected]="selectedPrintMethod() === m.value"
+                (click)="pickPrintMethod(m.value)"
+              >{{ m.label }}</button>
+            }
+          </div>
         </div>
       </div>
 

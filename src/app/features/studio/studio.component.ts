@@ -99,6 +99,26 @@ export class StudioComponent {
   }
   readonly color = signal<string>("#1A1A2E");
   readonly size = signal<string>("L");
+  readonly selectedFabric = signal<number | null>(null);
+  readonly selectedPrintMethod = signal<number | null>(null);
+
+  /** Fabric options mapped to backend FabricType enum values */
+  readonly fabricOptions: { label: string; value: number }[] = [
+    { label: 'Cotton', value: 1 },
+    { label: 'Polyester', value: 2 },
+    { label: 'Wool', value: 4 },
+    { label: 'Silk', value: 8 },
+    { label: 'Linen', value: 16 },
+  ];
+
+  /** Print method options mapped to backend PrintMethodType enum values */
+  readonly printMethodOptions: { label: string; value: number }[] = [
+    { label: 'Direct to Garment', value: 1 },
+    { label: 'Screen Printing', value: 2 },
+    { label: 'Heat Transfer', value: 4 },
+    { label: 'Sublimation', value: 8 },
+    { label: 'Embroidery', value: 16 },
+  ];
   readonly canvasOpen = signal(false);
   readonly payOpen = signal(false);
 
@@ -156,13 +176,7 @@ export class StudioComponent {
     "#556B2F",
   ];
 
-  readonly fabricOptions = [
-    "French Terry 380gsm",
-    "Heavyweight 400gsm",
-    "Organic Cotton 220gsm",
-  ];
-
-  readonly sizes = ["XS", "S", "M", "L", "XL", "XXL"];
+  readonly sizes = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
 
   readonly quickPrompts = [
     "Make it cream",
@@ -372,6 +386,14 @@ export class StudioComponent {
     this.size.set(s);
   }
 
+  pickFabric(value: number): void {
+    this.selectedFabric.set(this.selectedFabric() === value ? null : value);
+  }
+
+  pickPrintMethod(value: number): void {
+    this.selectedPrintMethod.set(this.selectedPrintMethod() === value ? null : value);
+  }
+
   openCanvas(): void {
     this.canvasOpen.set(true);
   }
@@ -517,8 +539,8 @@ export class StudioComponent {
           base64Front,
           base64Back,
           selectedSize: this.mapSizeToEnum(this.size()),
-          selectedFabric: null,
-          selectedPrintMethod: null,
+          selectedFabric: this.selectedFabric(),
+          selectedPrintMethod: this.selectedPrintMethod(),
           selectedColor: this.color(),
         })
         .subscribe({
@@ -699,9 +721,11 @@ export class StudioComponent {
           return;
         }
 
-        // Pre-set colors and size from design
+        // Pre-set colors, size, fabric and print method from design
         this.color.set(design.selectedColor ?? product.colors[0]);
         this.size.set(this.mapStoredSize(design.selectedSize));
+        this.selectedFabric.set(this.mapStoredFabric(design.selectedFabric));
+        this.selectedPrintMethod.set(this.mapStoredPrintMethod(design.selectedPrintMethod));
 
         // Fetch full product images and printable zones before canvas restoration
         this.productService.getProductImages(design.productId).subscribe({
@@ -786,12 +810,13 @@ export class StudioComponent {
       return null;
     }
 
-    const candidate = zone as Partial<PrintableZoneBounds>;
+    const candidate = zone as Record<string, unknown>;
 
-    const left = Number(candidate.left);
-    const top = Number(candidate.top);
-    const width = Number(candidate.width);
-    const height = Number(candidate.height);
+    // Support both {left,top} (canvas format) and {x,y} (admin JSON format)
+    const left = Number(candidate['left'] ?? candidate['x']);
+    const top = Number(candidate['top'] ?? candidate['y']);
+    const width = Number(candidate['width']);
+    const height = Number(candidate['height']);
 
     if ([left, top, width, height].some((value) => !Number.isFinite(value))) {
       return null;
@@ -824,6 +849,20 @@ export class StudioComponent {
       default:
         return null;
     }
+  }
+
+  private mapStoredFabric(value: string | number | null | undefined): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const num = Number(value);
+    const validValues = [1, 2, 4, 8, 16];
+    return validValues.includes(num) ? num : null;
+  }
+
+  private mapStoredPrintMethod(value: string | number | null | undefined): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const num = Number(value);
+    const validValues = [1, 2, 4, 8, 16];
+    return validValues.includes(num) ? num : null;
   }
 
   private mapStoredSize(sizeValue: string | null | undefined): string {
