@@ -1,12 +1,13 @@
-import { Component, inject, signal, computed, ViewChild } from "@angular/core";
+import { Component, inject, signal, computed, ViewChild, effect, untracked } from "@angular/core";
 import { Router, RouterLink } from "@angular/router";
 import { FormsModule } from "@angular/forms";
+import { forkJoin, catchError, of } from "rxjs";
 import { CheckoutPayModalComponent } from "../../shared/components/checkout-pay-modal/checkout-pay-modal.component";
 import { DesignCanvasComponent } from "../../shared/components/design-canvas/design-canvas.component";
 import { ConfirmDialogComponent } from "../../shared/components/confirm-dialog/confirm-dialog.component";
 import { ProductService } from "../../core/services/product.service";
 import { AuthService } from "../../core/services/auth.service";
-import { AiImageService } from "../../core/services/ai-image.service";
+import { AiImageService, GraphicAssetDto } from "../../core/services/ai-image.service";
 import { ToastService } from "../../core/services/toast.service";
 import { resolveApiUrl } from "../../core/services/api-config";
 import {
@@ -91,6 +92,13 @@ export class StudioComponent {
 
   readonly tab = signal<StudioTab>("products");
   readonly tabOptions: StudioTab[] = ["products", "custom", "ai"];
+
+  // Graphics tab state
+  readonly userAssets = signal<GraphicAssetDto[]>([]);
+  readonly adminAssets = signal<GraphicAssetDto[]>([]);
+  readonly assetsLoading = signal(false);
+  readonly graphicsSubTab = signal<'mine' | 'gallery'>('mine');
+  private assetsLoaded = false;
   readonly selected = signal<StudioProduct>(this.createDefaultProduct());
   activeViewAngle: ViewAngle = ViewAngle.Front;
 
@@ -99,8 +107,31 @@ export class StudioComponent {
   }
   readonly color = signal<string>("#1A1A2E");
   readonly size = signal<string>("L");
+  readonly selectedFabric = signal<number | null>(null);
+  readonly selectedPrintMethod = signal<number | null>(null);
+
+  /** Fabric options mapped to backend FabricType enum values */
+  readonly fabricOptions: { label: string; value: number }[] = [
+    { label: 'Cotton', value: 1 },
+    { label: 'Polyester', value: 2 },
+    { label: 'Wool', value: 4 },
+    { label: 'Silk', value: 8 },
+    { label: 'Linen', value: 16 },
+  ];
+
+  /** Print method options mapped to backend PrintMethodType enum values */
+  readonly printMethodOptions: { label: string; value: number }[] = [
+    { label: 'Direct to Garment', value: 1 },
+    { label: 'Screen Printing', value: 2 },
+    { label: 'Heat Transfer', value: 4 },
+    { label: 'Sublimation', value: 8 },
+    { label: 'Embroidery', value: 16 },
+  ];
   readonly canvasOpen = signal(false);
   readonly payOpen = signal(false);
+
+  readonly dynamicPrice = signal<number | null>(null);
+  readonly priceLoading = signal<boolean>(false);
 
   readonly chatInput = signal("");
   readonly messages = signal<ChatMsg[]>([
@@ -156,13 +187,7 @@ export class StudioComponent {
     "#556B2F",
   ];
 
-  readonly fabricOptions = [
-    "French Terry 380gsm",
-    "Heavyweight 400gsm",
-    "Organic Cotton 220gsm",
-  ];
-
-  readonly sizes = ["XS", "S", "M", "L", "XL", "XXL"];
+  readonly sizes = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
 
   readonly quickPrompts = [
     "Make it cream",
@@ -205,6 +230,38 @@ export class StudioComponent {
   constructor() {
     this.loadCategories();
     this.loadProducts();
+
+    effect(() => {
+      const product = this.selected();
+      const currentSize = this.size();
+      const currentFabric = this.selectedFabric();
+      const currentPrintMethod = this.selectedPrintMethod();
+
+      if (!product || !product.id) {
+        return;
+      }
+
+      const sizeEnumVal = this.mapSizeToEnum(currentSize);
+
+      untracked(() => {
+        this.priceLoading.set(true);
+        this.aiImageService.calculatePrice(
+          product.id,
+          currentFabric,
+          currentPrintMethod,
+          sizeEnumVal
+        ).subscribe({
+          next: (price) => {
+            this.dynamicPrice.set(price);
+            this.priceLoading.set(false);
+          },
+          error: (err) => {
+            console.error('[Studio] Error calculating price dynamically', err);
+            this.priceLoading.set(false);
+          }
+        });
+      });
+    });
   }
 
   private createDefaultProduct(): StudioProduct {
@@ -293,10 +350,59 @@ export class StudioComponent {
 
   setTab(t: StudioTab): void {
     this.tab.set(t);
+    if (t === 'custom') {
+      this.loadGraphicAssets();
+    }
   }
 
   setSelectedCategory(categoryName: string): void {
     this.selectedCategory.set(categoryName);
+  }
+
+  setGraphicsSubTab(sub: 'mine' | 'gallery'): void {
+    this.graphicsSubTab.set(sub);
+  }
+
+  private loadGraphicAssets(): void {
+    this.assetsLoading.set(true);
+    forkJoin({
+      user: this.aiImageService.getUserGraphicAssets().pipe(catchError(() => of([]))),
+      admin: this.aiImageService.getAdminGraphicAssets().pipe(catchError(() => of([]))),
+    }).subscribe(({ user, admin }) => {
+      this.userAssets.set(user);
+      this.adminAssets.set(admin);
+      this.assetsLoading.set(false);
+      this.assetsLoaded = true;
+    });
+  }
+
+  /** Called from the Graphics tab to add a gallery asset onto the canvas. */
+  addAssetToCanvas(asset: GraphicAssetDto): void {
+    if (!this.designCanvas) {
+      this.toastService.error('Open the Canvas Editor first to add graphics.');
+      return;
+    }
+    const url = this.resolveAssetImageUrl(asset.imageUrl);
+    this.designCanvas.addGraphicAsset(url, asset.id);
+  }
+
+  resolveAssetImageUrl(url: string): string {
+    if (!url) return this.logo;
+    return resolveApiUrl(url) || url;
+  }
+
+  /** Delegates to the canvas toolbar's hidden file input. */
+  triggerImageUpload(): void {
+    if (!this.designCanvas) {
+      this.toastService.error('Open the Canvas Editor first to upload images.');
+      return;
+    }
+    this.designCanvas.triggerImageUpload();
+  }
+
+  /** Delegates delete of the selected canvas object. */
+  deleteSelected(): void {
+    this.designCanvas?.deleteSelectedObject();
   }
 
   toggleViewAngle(): void {
@@ -370,6 +476,14 @@ export class StudioComponent {
 
   pickSize(s: string): void {
     this.size.set(s);
+  }
+
+  pickFabric(value: number): void {
+    this.selectedFabric.set(this.selectedFabric() === value ? null : value);
+  }
+
+  pickPrintMethod(value: number): void {
+    this.selectedPrintMethod.set(this.selectedPrintMethod() === value ? null : value);
   }
 
   openCanvas(): void {
@@ -517,8 +631,8 @@ export class StudioComponent {
           base64Front,
           base64Back,
           selectedSize: this.mapSizeToEnum(this.size()),
-          selectedFabric: null,
-          selectedPrintMethod: null,
+          selectedFabric: this.selectedFabric(),
+          selectedPrintMethod: this.selectedPrintMethod(),
           selectedColor: this.color(),
         })
         .subscribe({
@@ -699,9 +813,11 @@ export class StudioComponent {
           return;
         }
 
-        // Pre-set colors and size from design
+        // Pre-set colors, size, fabric and print method from design
         this.color.set(design.selectedColor ?? product.colors[0]);
         this.size.set(this.mapStoredSize(design.selectedSize));
+        this.selectedFabric.set(this.mapStoredFabric(design.selectedFabric));
+        this.selectedPrintMethod.set(this.mapStoredPrintMethod(design.selectedPrintMethod));
 
         // Fetch full product images and printable zones before canvas restoration
         this.productService.getProductImages(design.productId).subscribe({
@@ -765,7 +881,8 @@ export class StudioComponent {
   }
 
   get originalPrice(): number {
-    return this.selected().basePrice + 32;
+    const base = this.dynamicPrice() !== null ? this.dynamicPrice()! : (this.selected().basePrice || 0);
+    return base + 32;
   }
 
   private parsePrintableZone(zone: unknown): PrintableZoneBounds | null {
@@ -786,12 +903,13 @@ export class StudioComponent {
       return null;
     }
 
-    const candidate = zone as Partial<PrintableZoneBounds>;
+    const candidate = zone as Record<string, unknown>;
 
-    const left = Number(candidate.left);
-    const top = Number(candidate.top);
-    const width = Number(candidate.width);
-    const height = Number(candidate.height);
+    // Support both {left,top} (canvas format) and {x,y} (admin JSON format)
+    const left = Number(candidate['left'] ?? candidate['x']);
+    const top = Number(candidate['top'] ?? candidate['y']);
+    const width = Number(candidate['width']);
+    const height = Number(candidate['height']);
 
     if ([left, top, width, height].some((value) => !Number.isFinite(value))) {
       return null;
@@ -824,6 +942,20 @@ export class StudioComponent {
       default:
         return null;
     }
+  }
+
+  private mapStoredFabric(value: string | number | null | undefined): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const num = Number(value);
+    const validValues = [1, 2, 4, 8, 16];
+    return validValues.includes(num) ? num : null;
+  }
+
+  private mapStoredPrintMethod(value: string | number | null | undefined): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const num = Number(value);
+    const validValues = [1, 2, 4, 8, 16];
+    return validValues.includes(num) ? num : null;
   }
 
   private mapStoredSize(sizeValue: string | null | undefined): string {

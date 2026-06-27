@@ -92,10 +92,97 @@
           </label>
         }
 
-        <label class="field">
-          <span class="label">Image URL</span>
-          <input type="text" [ngModel]="formImage()" (ngModelChange)="formImage.set($event)" name="img" placeholder="assets/..." />
-        </label>
+        <!-- Images Upload Section -->
+        <div class="field-group">
+          <span class="section-label">Product Images & Views</span>
+          
+          <div class="views-row">
+            <!-- Front View -->
+            <div class="view-uploader">
+              <span class="label">Front View Image *</span>
+              <div class="uploader-box" [class.has-preview]="frontImagePreview()">
+                @if (frontImagePreview()) {
+                  <img [src]="frontImagePreview()" alt="Front preview" class="view-thumb" />
+                  <label class="change-btn">
+                    Change
+                    <input type="file" (change)="onFrontImageSelected($event)" accept="image/*" class="file-input" />
+                  </label>
+                } @else {
+                  <label class="upload-label">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Upload Front Image</span>
+                    <input type="file" (change)="onFrontImageSelected($event)" accept="image/*" class="file-input" required />
+                  </label>
+                }
+              </div>
+              <label class="field sub-field">
+                <span class="label">Display Order</span>
+                <input type="number" [ngModel]="frontDisplayOrder()" (ngModelChange)="frontDisplayOrder.set(+$event)" name="frontOrder" />
+              </label>
+              <label class="field sub-field">
+                <span class="label">Printable Zone (JSON)</span>
+                <textarea
+                  rows="3"
+                  placeholder='{"x":280,"y":300,"width":440,"height":290}'
+                  [ngModel]="frontPrintableZone()"
+                  (ngModelChange)="frontPrintableZone.set($event)"
+                  name="frontPrintableZone"
+                  class="zone-textarea"
+                ></textarea>
+              </label>
+            </div>
+
+            <!-- Back View -->
+            <div class="view-uploader">
+              <span class="label">Back View Image</span>
+              <div class="uploader-box" [class.has-preview]="backImagePreview()">
+                @if (backImagePreview()) {
+                  <img [src]="backImagePreview()" alt="Back preview" class="view-thumb" />
+                  <label class="change-btn">
+                    Change
+                    <input type="file" (change)="onBackImageSelected($event)" accept="image/*" class="file-input" />
+                  </label>
+                } @else {
+                  <label class="upload-label">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Upload Back Image</span>
+                    <input type="file" (change)="onBackImageSelected($event)" accept="image/*" class="file-input" />
+                  </label>
+                }
+              </div>
+              <label class="field sub-field">
+                <span class="label">Display Order</span>
+                <input type="number" [ngModel]="backDisplayOrder()" (ngModelChange)="backDisplayOrder.set(+$event)" name="backOrder" />
+              </label>
+              <label class="field sub-field">
+                <span class="label">Printable Zone (JSON)</span>
+                <textarea
+                  rows="3"
+                  placeholder='{"x":280,"y":300,"width":440,"height":290}'
+                  [ngModel]="backPrintableZone()"
+                  (ngModelChange)="backPrintableZone.set($event)"
+                  name="backPrintableZone"
+                  class="zone-textarea"
+                ></textarea>
+              </label>
+            </div>
+          </div>
+
+          <!-- Primary view selector -->
+          <div class="primary-selector">
+            <span class="label">Primary Preview View</span>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" value="front" name="primaryView" [ngModel]="primaryView()" (ngModelChange)="primaryView.set($event)" />
+                <span>Front View is Primary</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" value="back" name="primaryView" [ngModel]="primaryView()" (ngModelChange)="primaryView.set($event)" />
+                <span>Back View is Primary</span>
+              </label>
+            </div>
+          </div>
+        </div>
 
         <div class="field">
           <span class="label">Available colors {{ editingId() ? '' : '*' }}</span>

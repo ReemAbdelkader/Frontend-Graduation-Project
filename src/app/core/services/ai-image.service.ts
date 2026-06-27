@@ -8,14 +8,48 @@ export interface GenerateAiImageResult {
   imageUrl: string;
 }
 
+export interface GraphicAssetDto {
+  id: string;
+  imageUrl: string;
+  title?: string;
+  name?: string;
+}
+
 @Injectable({
   providedIn: "root",
 })
 export class AiImageService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/api/DesignStudio/generate-image`;
+  private readonly apiUrl = `${environment.apiUrl}/api/DesignStudio`;
 
   generateAiImage(prompt: string): Observable<GenerateAiImageResult> {
-    return this.http.post<GenerateAiImageResult>(this.apiUrl, { prompt });
+    return this.http.post<GenerateAiImageResult>(`${this.apiUrl}/generate-image`, { prompt });
+  }
+
+  getUserGraphicAssets(): Observable<GraphicAssetDto[]> {
+    return this.http.get<GraphicAssetDto[]>(`${this.apiUrl}/graphic-assets`);
+  }
+
+  getAdminGraphicAssets(): Observable<GraphicAssetDto[]> {
+    return this.http.get<GraphicAssetDto[]>(`${this.apiUrl}/graphic-assets/admin`);
+  }
+
+  calculatePrice(
+    productId: string,
+    fabric: number | null,
+    printMethod: number | null,
+    size: number | null
+  ): Observable<number> {
+    const params: any = { productId };
+    if (fabric !== null) {
+      params.fabric = fabric.toString();
+    }
+    if (printMethod !== null) {
+      params.printMethod = printMethod.toString();
+    }
+    if (size !== null) {
+      params.size = size.toString();
+    }
+    return this.http.get<number>(`${this.apiUrl}/calculate-price`, { params });
   }
 }

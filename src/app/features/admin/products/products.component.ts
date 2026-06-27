@@ -1,6 +1,6 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { Observable, forkJoin } from 'rxjs';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import {
@@ -9,6 +9,7 @@ import {
   CreateProductRequest,
   ProductDto,
   UpdateProductRequest,
+  extractAdminApiError,
 } from '../../../core/services/admin-api.service';
 
 interface ColorOption {
@@ -59,10 +60,22 @@ export class ProductsComponent implements OnInit {
   readonly formName = signal('');
   readonly formPrice = signal(0);
   readonly formCategoryId = signal('');
-  readonly formImage = signal('');
   readonly formAvailable = signal(true);
-  readonly formAvailableColors = signal(0);
+  readonly formAvailableColors = signal(31); // Common default (Red+Blue+Green+Yellow+Black)
   readonly formStockStatus = signal('');
+
+  // Image files & view settings
+  frontImageFile: File | null = null;
+  readonly frontImagePreview = signal<string | null>(null);
+  readonly frontDisplayOrder = signal(1);
+  readonly frontPrintableZone = signal('{"x":280,"y":300,"width":440,"height":290}');
+
+  backImageFile: File | null = null;
+  readonly backImagePreview = signal<string | null>(null);
+  readonly backDisplayOrder = signal(2);
+  readonly backPrintableZone = signal('{"x":280,"y":300,"width":440,"height":290}');
+
+  readonly primaryView = signal<'front' | 'back'>('front');
 
   readonly deleteTarget = signal<ProductDto | null>(null);
 
@@ -101,10 +114,21 @@ export class ProductsComponent implements OnInit {
     this.formName.set('');
     this.formPrice.set(0);
     this.formCategoryId.set(this.categories()[0]?.id ?? '');
-    this.formImage.set('');
     this.formAvailable.set(true);
-    this.formAvailableColors.set(0);
-    this.formStockStatus.set(this.stockStatuses[0] ?? '');
+    this.formAvailableColors.set(31);
+    this.formStockStatus.set(this.stockStatuses[0] ?? 'InStock');
+
+    this.frontImageFile = null;
+    this.frontImagePreview.set(null);
+    this.frontDisplayOrder.set(1);
+    this.frontPrintableZone.set('{"x":280,"y":300,"width":440,"height":290}');
+
+    this.backImageFile = null;
+    this.backImagePreview.set(null);
+    this.backDisplayOrder.set(2);
+    this.backPrintableZone.set('{"x":280,"y":300,"width":440,"height":290}');
+
+    this.primaryView.set('front');
     this.showModal.set(true);
   }
 
@@ -113,10 +137,43 @@ export class ProductsComponent implements OnInit {
     this.formName.set(p.name);
     this.formPrice.set(p.basePrice);
     this.formCategoryId.set('');
-    this.formImage.set(p.previewImageUrl);
     this.formAvailable.set(p.isAvailable);
-    this.formAvailableColors.set(0);
-    this.formStockStatus.set('');
+    this.formAvailableColors.set(31);
+    this.formStockStatus.set('InStock');
+
+    this.frontImageFile = null;
+    this.frontImagePreview.set(p.previewImageUrl ? this.adminApi.resolveAssetUrl(p.previewImageUrl) : null);
+    this.frontDisplayOrder.set(1);
+    this.frontPrintableZone.set('{"x":280,"y":300,"width":440,"height":290}');
+
+    this.backImageFile = null;
+    this.backImagePreview.set(null);
+    this.backDisplayOrder.set(2);
+    this.backPrintableZone.set('{"x":280,"y":300,"width":440,"height":290}');
+    this.primaryView.set('front');
+
+    // Fetch product images to display existing front/back details
+    this.adminApi.getProductImages(p.id).subscribe({
+      next: (images) => {
+        const front = images.find((img) => img.viewAngle === 1 || img.viewAngle === 'Front');
+        const back = images.find((img) => img.viewAngle === 2 || img.viewAngle === 'Back');
+
+        if (front) {
+          this.frontImagePreview.set(this.adminApi.resolveAssetUrl(front.imageUrl));
+          this.frontDisplayOrder.set(front.displayOrder);
+          this.frontPrintableZone.set(front.printableZoneJson || '{"x":280,"y":300,"width":440,"height":290}');
+          if (front.isPrimary) this.primaryView.set('front');
+        }
+
+        if (back) {
+          this.backImagePreview.set(this.adminApi.resolveAssetUrl(back.imageUrl));
+          this.backDisplayOrder.set(back.displayOrder);
+          this.backPrintableZone.set(back.printableZoneJson || '{"x":280,"y":300,"width":440,"height":290}');
+          if (back.isPrimary) this.primaryView.set('back');
+        }
+      },
+    });
+
     this.showModal.set(true);
   }
 
@@ -125,27 +182,53 @@ export class ProductsComponent implements OnInit {
   }
 
   toggleColor(value: number, checked: boolean): void {
-    this.formAvailableColors.update((current) => checked ? current | value : current & ~value);
+    this.formAvailableColors.update((current) => (checked ? current | value : current & ~value));
   }
 
   hasColor(value: number): boolean {
     return (this.formAvailableColors() & value) === value;
   }
 
+  onFrontImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.frontImageFile = input.files[0];
+      const reader = new FileReader();
+      reader.onload = () => this.frontImagePreview.set(reader.result as string);
+      reader.readAsDataURL(this.frontImageFile);
+    }
+  }
+
+  onBackImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.backImageFile = input.files[0];
+      const reader = new FileReader();
+      reader.onload = () => this.backImagePreview.set(reader.result as string);
+      reader.readAsDataURL(this.backImageFile);
+    }
+  }
+
   submit(): void {
     const name = this.formName().trim();
-    const previewImageURL = this.formImage().trim();
-    if (!name) { this.toast.error('Product name is required.'); return; }
-    if (this.formPrice() < 0) { this.toast.error('Base price cannot be negative.'); return; }
+    if (!name) {
+      this.toast.error('Product name is required.');
+      return;
+    }
+    if (this.formPrice() < 0) {
+      this.toast.error('Base price cannot be negative.');
+      return;
+    }
 
     const id = this.editingId();
     this.saving.set(true);
 
     if (id) {
+      // EDIT EXISTING PRODUCT
       const payload: UpdateProductRequest = {
         name,
         basePrice: this.formPrice(),
-        previewImageURL: previewImageURL || null,
+        previewImageURL: null,
         isAvailable: this.formAvailable(),
         availableColors: this.formAvailableColors() > 0 ? this.formAvailableColors() : null,
         stockStatus: this.formStockStatus().trim() || null,
@@ -153,19 +236,65 @@ export class ProductsComponent implements OnInit {
 
       this.adminApi.updateProduct(id, payload).subscribe({
         next: () => {
-          this.toast.success('Product updated.');
-          this.closeModal();
-          this.saving.set(false);
-          this.refreshProducts();
+          const uploadObs: Observable<string>[] = [];
+
+          if (this.frontImageFile) {
+            uploadObs.push(
+              this.adminApi.uploadProductImage({
+                productId: id,
+                imageFile: this.frontImageFile,
+                viewAngle: 1, // Front
+                isPrimary: this.primaryView() === 'front',
+                displayOrder: this.frontDisplayOrder(),
+                printableZoneJson: this.frontPrintableZone(),
+              })
+            );
+          }
+
+          if (this.backImageFile) {
+            uploadObs.push(
+              this.adminApi.uploadProductImage({
+                productId: id,
+                imageFile: this.backImageFile,
+                viewAngle: 2, // Back
+                isPrimary: this.primaryView() === 'back',
+                displayOrder: this.backDisplayOrder(),
+                printableZoneJson: this.backPrintableZone(),
+              })
+            );
+          }
+
+          if (uploadObs.length > 0) {
+            forkJoin(uploadObs).subscribe({
+              next: () => {
+                this.toast.success('Product and images updated successfully.');
+                this.closeModal();
+                this.saving.set(false);
+                this.refreshProducts();
+              },
+              error: (err) => {
+                this.toast.error(extractAdminApiError(err, 'Product updated, but image upload failed.'));
+                this.closeModal();
+                this.saving.set(false);
+                this.refreshProducts();
+              },
+            });
+          } else {
+            this.toast.success('Product updated successfully.');
+            this.closeModal();
+            this.saving.set(false);
+            this.refreshProducts();
+          }
         },
-        error: () => {
-          this.toast.error('Product update failed.');
+        error: (err) => {
+          this.toast.error(extractAdminApiError(err, 'Product update failed.'));
           this.saving.set(false);
         },
       });
       return;
     }
 
+    // CREATE NEW PRODUCT
     if (!this.formCategoryId()) {
       this.toast.error('Please select a category.');
       this.saving.set(false);
@@ -176,8 +305,8 @@ export class ProductsComponent implements OnInit {
       this.saving.set(false);
       return;
     }
-    if (!this.formStockStatus().trim()) {
-      this.toast.error('Stock status is required.');
+    if (!this.frontImageFile) {
+      this.toast.error('Please select a Front view image file.');
       this.saving.set(false);
       return;
     }
@@ -187,27 +316,78 @@ export class ProductsComponent implements OnInit {
       name,
       basePrice: this.formPrice(),
       availableColors: this.formAvailableColors(),
-      previewImageURL: previewImageURL || '',
+      previewImageURL: '', // Handled by primary image upload
       isAvailable: this.formAvailable(),
-      stockStatus: this.formStockStatus().trim(),
+      stockStatus: this.formStockStatus().trim() || 'InStock',
     };
 
     this.adminApi.createProduct(payload).subscribe({
-      next: () => {
-        this.toast.success('Product created.');
-        this.closeModal();
-        this.saving.set(false);
-        this.refreshProducts();
+      next: (product) => {
+        const productId = product.id;
+        const uploadObs: Observable<string>[] = [];
+
+        if (this.frontImageFile) {
+          uploadObs.push(
+            this.adminApi.uploadProductImage({
+              productId,
+              imageFile: this.frontImageFile,
+              viewAngle: 1, // Front
+              isPrimary: this.primaryView() === 'front',
+              displayOrder: this.frontDisplayOrder(),
+              printableZoneJson: this.frontPrintableZone(),
+            })
+          );
+        }
+
+        if (this.backImageFile) {
+          uploadObs.push(
+            this.adminApi.uploadProductImage({
+              productId,
+              imageFile: this.backImageFile,
+              viewAngle: 2, // Back
+              isPrimary: this.primaryView() === 'back',
+              displayOrder: this.backDisplayOrder(),
+              printableZoneJson: this.backPrintableZone(),
+            })
+          );
+        }
+
+        if (uploadObs.length > 0) {
+          forkJoin(uploadObs).subscribe({
+            next: () => {
+              this.toast.success('Product created with images uploaded.');
+              this.closeModal();
+              this.saving.set(false);
+              this.refreshProducts();
+            },
+            error: (err) => {
+              this.toast.error(extractAdminApiError(err, 'Product created, but image uploads failed.'));
+              this.closeModal();
+              this.saving.set(false);
+              this.refreshProducts();
+            },
+          });
+        } else {
+          this.toast.success('Product created successfully.');
+          this.closeModal();
+          this.saving.set(false);
+          this.refreshProducts();
+        }
       },
-      error: () => {
-        this.toast.error('Product creation failed.');
+      error: (err) => {
+        this.toast.error(extractAdminApiError(err, 'Product creation failed.'));
         this.saving.set(false);
       },
     });
   }
 
-  askDelete(p: ProductDto): void { this.deleteTarget.set(p); }
-  cancelDelete(): void { this.deleteTarget.set(null); }
+  askDelete(p: ProductDto): void {
+    this.deleteTarget.set(p);
+  }
+
+  cancelDelete(): void {
+    this.deleteTarget.set(null);
+  }
 
   confirmDelete(): void {
     const target = this.deleteTarget();
@@ -218,8 +398,8 @@ export class ProductsComponent implements OnInit {
         this.deleteTarget.set(null);
         this.refreshProducts();
       },
-      error: () => {
-        this.toast.error('Product deletion failed.');
+      error: (err) => {
+        this.toast.error(extractAdminApiError(err, 'Product deletion failed.'));
         this.deleteTarget.set(null);
       },
     });

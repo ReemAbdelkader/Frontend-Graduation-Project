@@ -33,38 +33,34 @@
           <h1 class="display-name">{{ displayUser.name || "Your Name" }}</h1>
           <p class="bio">{{ displayUser.bio || "No bio added yet." }}</p>
 
-          <div class="meta-row">
-            <span class="meta-item">
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-                <path d="M16 2v4M8 2v4M3 10h18" />
-              </svg>
-              Joined January 2026
-            </span>
-          </div>
+          @if (displayUser.dateJoined) {
+            <div class="meta-row">
+              <span class="meta-item">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                  <path d="M16 2v4M8 2v4M3 10h18" />
+                </svg>
+                Joined {{ joinedDateLabel() }}
+              </span>
+            </div>
+          }
         </div>
 
-        <div class="header-stats">
-          <div class="h-stat">
-            <p class="h-stat-value">{{ displayUser.followers }}</p>
-            <p class="h-stat-label">FOLLOWERS</p>
+        @if (displayUser.templatesCreated !== null) {
+          <div class="header-stats">
+            <div class="h-stat">
+              <p class="h-stat-value">{{ displayUser.templatesCreated }}</p>
+              <p class="h-stat-label">DESIGNS</p>
+            </div>
           </div>
-          <div class="h-stat">
-            <p class="h-stat-value">{{ displayUser.following }}</p>
-            <p class="h-stat-label">FOLLOWING</p>
-          </div>
-          <div class="h-stat">
-            <p class="h-stat-value">{{ displayUser.templatesCreated }}</p>
-            <p class="h-stat-label">DESIGNS</p>
-          </div>
-        </div>
+        }
       </div>
     </div>
 
@@ -96,7 +92,11 @@
               </p>
             </div>
           </div>
-          <button class="change-photo" (click)="fileInput.click()">
+          <button
+            class="change-photo"
+            [disabled]="profileLoading() || !displayUser.email"
+            (click)="fileInput.click()"
+          >
             Change photo
           </button>
           <input
@@ -113,6 +113,9 @@
 
         <div class="settings-form">
           <h2 class="form-title">Account settings</h2>
+          @if (profileError()) {
+            <p class="form-status error" role="alert">{{ profileError() }}</p>
+          }
           <div class="form-grid">
             <div class="field" style="grid-column: span 2">
               <label class="label" for="fullName">Full name</label>
@@ -122,6 +125,7 @@
                 name="fullName"
                 [(ngModel)]="editForm.name"
                 placeholder="Full name"
+                [disabled]="profileLoading() || !displayUser.email"
               />
             </div>
             <div class="field" style="grid-column: span 2">
@@ -146,26 +150,37 @@
                 name="userBio"
                 [(ngModel)]="editForm.bio"
                 placeholder="Write something about yourself..."
+                [disabled]="profileLoading() || !displayUser.email"
+                required
               ></textarea>
             </div>
           </div>
           <div class="form-actions">
-            <button class="save-btn" (click)="saveChanges()">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
-                />
-                <polyline points="17 21 17 13 7 13 7 21" />
-                <polyline points="7 3 7 8 15 8" />
-              </svg>
-              Save changes
+            <button
+              class="save-btn"
+              [disabled]="profileLoading() || profileSaving() || !!profileError() && !displayUser.email"
+              (click)="saveChanges()"
+            >
+              @if (profileSaving()) {
+                <span class="prefs-spinner-sm"></span>
+                Saving...
+              } @else {
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                  />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                  <polyline points="7 3 7 8 15 8" />
+                </svg>
+                Save changes
+              }
             </button>
           </div>
         </div>
@@ -184,6 +199,9 @@
               <span>Loading preferences...</span>
             </div>
           } @else {
+            @if (prefsError()) {
+              <p class="form-status error" role="alert">{{ prefsError() }}</p>
+            }
             <div class="pref-section">
               <label class="pref-label">
                 <svg

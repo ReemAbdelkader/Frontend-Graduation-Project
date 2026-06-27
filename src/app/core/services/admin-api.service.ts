@@ -49,6 +49,26 @@ export interface ProductDto {
   reviewCount: number;
 }
 
+export interface ProductImageDto {
+  id: string;
+  productId: string;
+  imageUrl: string;
+  viewAngle: number | string | null;
+  printableZoneJson: string | null;
+  isPrimary: boolean;
+  displayOrder: number;
+}
+
+export interface CreateProductImageRequest {
+  productId: string;
+  imageFile: File;
+  color?: number | null;
+  viewAngle?: number | null;
+  printableZoneJson?: string | null;
+  isPrimary: boolean;
+  displayOrder: number;
+}
+
 export interface TemplateDto {
   id: string;
   name: string;
@@ -262,16 +282,47 @@ export class AdminApiService {
       .pipe(map((response) => this.unwrap(response)));
   }
 
-  createProduct(payload: CreateProductRequest): Observable<ApiEnvelope<ProductDto>> {
-    return this.http.post<ApiEnvelope<ProductDto>>(`${API_BASE_URL}/products`, payload);
+  createProduct(payload: CreateProductRequest): Observable<ProductDto> {
+    return this.http
+      .post<ApiEnvelope<ProductDto>>(`${API_BASE_URL}/products`, payload)
+      .pipe(map((response) => this.unwrap(response)));
   }
 
-  updateProduct(id: string, payload: UpdateProductRequest): Observable<ApiEnvelope<ProductDto>> {
-    return this.http.put<ApiEnvelope<ProductDto>>(`${API_BASE_URL}/products/${id}`, payload);
+  updateProduct(id: string, payload: UpdateProductRequest): Observable<ProductDto> {
+    return this.http
+      .put<ApiEnvelope<ProductDto>>(`${API_BASE_URL}/products/${id}`, payload)
+      .pipe(map((response) => this.unwrap(response)));
   }
 
-  deleteProduct(id: string): Observable<ApiEnvelope<string>> {
-    return this.http.delete<ApiEnvelope<string>>(`${API_BASE_URL}/products/${id}`);
+  deleteProduct(id: string): Observable<string> {
+    return this.http
+      .delete<ApiEnvelope<string>>(`${API_BASE_URL}/products/${id}`)
+      .pipe(map((response) => this.unwrap(response)));
+  }
+
+  getProductImages(productId: string): Observable<ProductImageDto[]> {
+    return this.http
+      .get<ApiEnvelope<ProductImageDto[]>>(`${API_BASE_URL}/products/${productId}/images`)
+      .pipe(map((response) => this.unwrap(response) ?? []));
+  }
+
+  uploadProductImage(request: CreateProductImageRequest): Observable<string> {
+    const formData = new FormData();
+    formData.append('ProductId', request.productId);
+    formData.append('ImageFile', request.imageFile);
+    if (request.color !== undefined && request.color !== null) {
+      formData.append('Color', request.color.toString());
+    }
+    if (request.viewAngle !== undefined && request.viewAngle !== null) {
+      formData.append('ViewAngle', request.viewAngle.toString());
+    }
+    if (request.printableZoneJson) {
+      formData.append('PrintableZoneJson', request.printableZoneJson);
+    }
+    formData.append('IsPrimary', request.isPrimary.toString());
+    formData.append('DisplayOrder', request.displayOrder.toString());
+
+    return this.http.post<string>(`${API_BASE_URL}/products/product-images`, formData);
   }
 
   getTemplates(pageNumber = 1, pageSize = 100): Observable<PaginatedResult<TemplateDto>> {

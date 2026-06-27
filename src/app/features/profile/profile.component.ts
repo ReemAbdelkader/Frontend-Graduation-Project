@@ -5,8 +5,9 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { OnboardingApiService, UserPreferencesResponse } from '../../core/services/onboarding-api.service';
-import { ProfileService } from '../../core/services/profile.service'; 
+import { ProfileDto, ProfileService } from '../../core/services/profile.service';
 import { environment } from '../../../environments/environment';
+import { finalize, switchMap, throwError } from 'rxjs';
 
 export interface UserProfileDto {
   name: string;
@@ -14,8 +15,7 @@ export interface UserProfileDto {
   email: string;
   bio: string;
   photoUrl: string;
-  followers: number | null;
-  following: number | null;
+  dateJoined: string | null;
   templatesCreated: number | null;
   isTopProfile: boolean;
 }
@@ -63,13 +63,9 @@ export class ProfileComponent implements OnInit {
   private readonly profileService = inject(ProfileService); 
 
   readonly user = this.authService.user();
-
-  // Editable form fields
-  readonly formName = signal(this.user?.name ?? '');
-  readonly formUsername = signal((this.user?.email ?? '').split('@')[0]);
-  readonly formEmail = signal(this.user?.email ?? '');
-  readonly formBio = signal("Designing quiet, sculptural pieces from Lisbon. SS '26 atelier drop now live.");
-  readonly formNewPassword = signal('');
+  readonly profileLoading = signal(true);
+  readonly profileSaving = signal(false);
+  readonly profileError = signal('');
 
   readonly askLogout = signal(false);
   readonly showLogoutModal = signal<boolean>(false);
@@ -81,6 +77,7 @@ export class ProfileComponent implements OnInit {
   readonly selectedDesign = signal<string[]>([]);
   readonly prefsLoading = signal(true);
   readonly prefsSaving = signal(false);
+  readonly prefsError = signal('');
 
   readonly colorOptions = COLOR_OPTIONS;
   readonly interestOptions = INTEREST_OPTIONS;
@@ -90,7 +87,7 @@ export class ProfileComponent implements OnInit {
 
   displayUser: UserProfileDto = {
     name: '', username: '', email: '', bio: '', photoUrl: '',
-    followers: null, following: null, templatesCreated: null,
+    dateJoined: null, templatesCreated: null,
     isTopProfile: false
   };
 
@@ -98,40 +95,64 @@ export class ProfileComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadPreferences();
+    this.loadProfile();
+  }
 
+  private loadProfile(): void {
     const currentUser = this.authService.user();
-    console.log('1. Current user retrieved from AuthService:', currentUser);
+    this.profileError.set('');
 
-    if (currentUser && currentUser.email) {
-      this.profileService.getProfile(currentUser.email).subscribe({
-        next: (response: any) => {
-          console.log('2. Raw API response received:', response);
-          const profile = response?.data ? response.data : response;
-
-          if (profile) {
-            this.displayUser = {
-              name: profile.name || '',
-              username: profile.userName || profile.username || '',
-              email: profile.email || '',
-              bio: profile.bio || '',
-              photoUrl: profile.profilePictureUrl ? `${environment.apiUrl}${profile.profilePictureUrl}` : '',
-              followers: profile.followersCount || 0,
-              following: profile.followingCount || 0,
-              templatesCreated: profile.templatesCreatedCount || 0, 
-              isTopProfile: profile.isTopProfile || false
-            };
-            
-            this.syncEditForm();
-            console.log('3. displayUser object successfully populated:', this.displayUser);
-          }
-        },
-        error: (err) => {
-          console.error('X Error fetching profile data from API:', err);
-        }
-      });
-    } else {
-      console.warn('! AuthService could not find a valid email for the current user.');
+    if (!currentUser?.email) {
+      this.profileLoading.set(false);
+      this.profileError.set('Your profile could not be loaded because your account email is unavailable.');
+      return;
     }
+
+    this.profileLoading.set(true);
+    this.profileService.getProfile().pipe(
+      finalize(() => this.profileLoading.set(false)),
+    ).subscribe({
+      next: (profile) => this.applyProfile(profile),
+      error: (error) => {
+        const message = error?.status === 404
+          ? 'A profile record was not found for this account.'
+          : this.getErrorMessage(error, 'Your profile could not be loaded. Please try again.');
+        this.profileError.set(message);
+      },
+    });
+  }
+
+  private applyProfile(profile: ProfileDto): void {
+    this.displayUser = {
+      name: profile.name || '',
+      username: profile.userName || '',
+      email: profile.email || '',
+      bio: profile.bio || '',
+      photoUrl: this.resolveProfileImageUrl(profile.profilePictureUrl),
+      dateJoined: this.isUsableDate(profile.dateJoined) ? profile.dateJoined : null,
+      templatesCreated: profile.templatesCreatedCount ?? 0,
+      isTopProfile: profile.isTopProfile ?? false,
+    };
+    this.selectedFile = null;
+    this.syncEditForm();
+  }
+
+  private resolveProfileImageUrl(path: string | null): string {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path) || path.startsWith('data:')) return path;
+    return `${environment.apiUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+  }
+
+  private isUsableDate(value: string | null | undefined): value is string {
+    if (!value) return false;
+    const date = new Date(value);
+    return !Number.isNaN(date.getTime()) && date.getUTCFullYear() > 1;
+  }
+
+  joinedDateLabel(): string {
+    if (!this.displayUser.dateJoined) return '';
+    return new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' })
+      .format(new Date(this.displayUser.dateJoined));
   }
 
   private parseCsv(value: string): string[] {
@@ -141,6 +162,7 @@ export class ProfileComponent implements OnInit {
 
   private loadPreferences(): void {
     this.prefsLoading.set(true);
+    this.prefsError.set('');
     this.onboardingApi.getPreferences().subscribe({
       next: (data: UserPreferencesResponse) => {
         this.selectedColors.set(this.parseCsv(data.favoriteColors));
@@ -148,8 +170,9 @@ export class ProfileComponent implements OnInit {
         this.selectedDesign.set(this.parseCsv(data.designPreference));
         this.prefsLoading.set(false);
       },
-      error: () => {
+      error: (error) => {
         this.prefsLoading.set(false);
+        this.prefsError.set(this.getErrorMessage(error, 'Style preferences could not be loaded.'));
       },
     });
   }
@@ -184,6 +207,7 @@ export class ProfileComponent implements OnInit {
 
   savePreferences(): void {
     this.prefsSaving.set(true);
+    this.prefsError.set('');
     this.onboardingApi
       .saveOnboarding({
         favoriteColors: this.selectedColors().join(', '),
@@ -201,6 +225,7 @@ export class ProfileComponent implements OnInit {
         },
         error: () => {
           this.prefsSaving.set(false);
+          this.prefsError.set('Style preferences could not be updated.');
           this.toast.error('Failed to save preferences.');
         },
       });
@@ -231,35 +256,62 @@ export class ProfileComponent implements OnInit {
   }
 
   saveChanges(): void {
+    if (this.profileLoading() || this.profileSaving()) return;
+
+    const name = this.editForm.name.trim();
+    if (!name) {
+      this.profileError.set('Full name is required.');
+      return;
+    }
+
+    const bio = this.editForm.bio.trim();
+    if (!bio) {
+      this.profileError.set('Bio is required by the current profile API.');
+      return;
+    }
+
+    if (!this.displayUser.email || !this.displayUser.username) {
+      this.profileError.set('Your account details are incomplete, so this profile cannot be updated yet.');
+      return;
+    }
+
     const formData = new FormData();
-    
-    formData.append('Name', this.editForm.name || '');
-    formData.append('Bio', this.editForm.bio || '');
-    formData.append('Email', this.displayUser.email || '');
-    formData.append('UserName', this.displayUser.username || '');
-    
+    formData.append('Name', name);
+    formData.append('Bio', bio);
+    formData.append('Email', this.displayUser.email);
+    formData.append('UserName', this.displayUser.username);
+
     if (this.selectedFile) {
       formData.append('ProfileImage', this.selectedFile);
     }
 
-    this.profileService.updateProfile(formData).subscribe({
-      next: (response) => {
-        if (response && response.succeeded) {
-          this.displayUser = {
-            ...this.displayUser,
-            name: this.editForm.name,
-            bio: this.editForm.bio
-          };
-          alert('Changes saved successfully to database!');
-        } else {
-          alert('Error: ' + (response?.message || 'Validation failed'));
+    this.profileSaving.set(true);
+    this.profileError.set('');
+    this.profileService.updateProfile(formData).pipe(
+      switchMap((response) => {
+        if (!response.succeeded) {
+          return throwError(() => new Error(response.message || 'Profile update failed.'));
         }
+
+        return this.profileService.getProfile();
+      }),
+      finalize(() => this.profileSaving.set(false)),
+    ).subscribe({
+      next: (profile) => {
+        this.applyProfile(profile);
+        this.toast.success('Profile updated successfully.');
       },
-      error: (err) => {
-        console.error('Full Error Object from server:', err);
-        alert('Failed to save changes. Please check the network tab.');
-      }
+      error: (error) => {
+        const message = this.getErrorMessage(error, 'Profile could not be updated. Please try again.');
+        this.profileError.set(message);
+        this.toast.error(message);
+      },
     });
+  }
+
+  private getErrorMessage(error: any, fallback: string): string {
+    const message = error?.error?.message ?? error?.error?.title ?? error?.message;
+    return typeof message === 'string' && message.trim() ? message : fallback;
   }
 
   toggleLogoutModal(value: boolean): void {
