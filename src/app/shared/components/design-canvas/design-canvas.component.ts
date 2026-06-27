@@ -514,20 +514,62 @@ export class DesignCanvasComponent
 
     this.syncCanvasSize();
     try {
-      const file = await this.fetchAsFile(imageUrl);
-      const imageLayer = await this.imageLayerService.createImageLayerFromFile(
-        this.fabricCanvas,
-        file,
-      );
+      // Resolve the proxy path so the browser can load it cross-origin,
+      // but keep the ORIGINAL relative server URL as the src stored in the
+      // canvas JSON.  This prevents CreateDesignCommandHandler from treating
+      // the image as a new base64 upload on every save and avoids the
+      // duplicate-GraphicAsset-record problem.
+      const proxyPath = this.resolveProxyPath(imageUrl);
 
-      if (imageLayer) {
-        this.applyGraphicAssetMetadata(imageLayer, {
-          graphicAssetId,
-          placement: "foreground",
-        });
-        this.schedulePrintableConstraint();
-        this.syncToolbarState();
+      const { FabricImage } = await import("fabric");
+      const fabricImg = await FabricImage.fromURL(proxyPath, {
+        crossOrigin: "anonymous",
+      });
+
+      if (!fabricImg) {
+        throw new Error("Failed to load image from URL.");
       }
+
+      // Scale to fit inside the 240×240 "comfortable" box.
+      const naturalW = fabricImg.width ?? 240;
+      const naturalH = fabricImg.height ?? 240;
+      const ratio = Math.min(240 / naturalW, 240 / naturalH, 1);
+      fabricImg.scaleToWidth(naturalW * ratio);
+      fabricImg.scaleToHeight(naturalH * ratio);
+
+      const center = this.fabricCanvas.getVpCenter();
+      fabricImg.set({
+        left: center.x,
+        top: center.y,
+        originX: "center",
+        originY: "center",
+        selectable: true,
+        evented: true,
+        hasControls: true,
+        hasBorders: true,
+        cornerStyle: "circle",
+        cornerSize: 8,
+        transparentCorners: false,
+        borderColor: "#5b8def",
+        cornerColor: "#ffffff",
+      });
+
+      // Override the serialised src back to the canonical server-relative URL
+      // so the canvas JSON always stores the stable path (not the proxy path).
+      const canonicalSrc = this.canonicalUrl(imageUrl);
+      (fabricImg as any).src = canonicalSrc;
+      (fabricImg as any)._originalElement = fabricImg.getElement();
+
+      this.fabricCanvas.add(fabricImg);
+      this.fabricCanvas.setActiveObject(fabricImg);
+      this.fabricCanvas.requestRenderAll();
+
+      this.applyGraphicAssetMetadata(fabricImg as unknown as FabricObject, {
+        graphicAssetId,
+        placement: "foreground",
+      });
+      this.schedulePrintableConstraint();
+      this.syncToolbarState();
     } catch (err: any) {
       console.error(
         "[DesignCanvas] Failed to add graphic asset to canvas.",
@@ -536,6 +578,39 @@ export class DesignCanvasComponent
       this.toastService.error(
         `Failed to add image: ${err?.message || err || "Unknown error"}`,
       );
+    }
+  }
+
+  /**
+   * Maps a server-relative /GraphicAssets/... URL to the local dev-proxy path
+   * so the browser can fetch it without CORS issues.
+   */
+  private resolveProxyPath(imageUrl: string): string {
+    try {
+      const path = new URL(imageUrl).pathname;
+      return path.replace(
+        /^\/GraphicAssets\//,
+        "/api/DesignStudio/graphic-asset-file/",
+      );
+    } catch {
+      // Relative URL — try a simple string replace.
+      return imageUrl.replace(
+        /^\/GraphicAssets\//,
+        "/api/DesignStudio/graphic-asset-file/",
+      );
+    }
+  }
+
+  /**
+   * Returns the canonical server-relative URL that should be stored in the
+   * canvas JSON src field.  If the URL is already relative (starts with /),
+   * it is returned as-is; otherwise only the pathname is kept.
+   */
+  private canonicalUrl(imageUrl: string): string {
+    try {
+      return new URL(imageUrl).pathname;
+    } catch {
+      return imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`;
     }
   }
 
