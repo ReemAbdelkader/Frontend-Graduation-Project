@@ -1,4 +1,5 @@
 import { Component, Input, Output, EventEmitter, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { Product } from '../../../core/data/wearly-data';
 import { CartService } from '../../../core/services/cart.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -15,6 +16,7 @@ export class ProductDetailModalComponent {
 
   private readonly cartService = inject(CartService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
 
   readonly selectedImage = signal<string>('');
   readonly selectedColor = signal<string>('');
@@ -67,6 +69,11 @@ export class ProductDetailModalComponent {
         this.addingToCart.set(false);
       },
     });
+  }
+
+  onCustomize(): void {
+    this.close.emit();
+    this.router.navigate(['/studio'], { queryParams: { productId: this.product.id } });
   }
 
   private syncSelection(): void {
