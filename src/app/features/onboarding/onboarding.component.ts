@@ -246,7 +246,7 @@ export class OnboardingComponent {
           if (res.ok) {
             this.auth.markOnboardingComplete();
             this.toast.success('Preferences saved! Generating your personalized designs…');
-            this.router.navigate(['/templates'], { queryParams: { tab: 'my-templates' } });
+            this.router.navigate(['/templates'], { queryParams: { tab: 'my-templates', generate: 'true' } });
           } else {
             this.toast.error(res.message);
             this.saving.set(false);
@@ -256,7 +256,7 @@ export class OnboardingComponent {
           // Still mark locally so the user isn't stuck
           this.auth.markOnboardingComplete();
           this.toast.success('Welcome to Atelier!');
-          this.router.navigate(['/templates'], { queryParams: { tab: 'my-templates' } });
+          this.router.navigate(['/templates'], { queryParams: { tab: 'my-templates', generate: 'true' } });
         },
       });
   }

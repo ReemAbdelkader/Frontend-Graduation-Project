@@ -1,6 +1,6 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, map, of, catchError, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppNavComponent } from '../../shared/components/app-nav/app-nav.component';
@@ -10,7 +10,7 @@ import {
   TemplatesApiService,
 } from '../../core/services/templates-api.service';
 import { AuthService } from '../../core/services/auth.service';
-import { AiImageService, GenerateAiImageResult } from '../../core/services/ai-image.service';
+import { AiImageService, GenerateAiImageResult, GraphicAssetDto } from '../../core/services/ai-image.service';
 import { OnboardingApiService, UserPreferencesResponse } from '../../core/services/onboarding-api.service';
 import { resolveApiUrl } from '../../core/services/api-config';
 
@@ -30,6 +30,7 @@ export class TemplatesComponent implements OnInit {
   private readonly aiImageService = inject(AiImageService);
   private readonly onboardingApi = inject(OnboardingApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly templates = signal<TemplateDto[]>([]);
   readonly loading = signal(false);
@@ -45,11 +46,11 @@ export class TemplatesComponent implements OnInit {
   readonly detailError = signal<string | null>(null);
   readonly activeTab = signal<TabType>('public');
 
-  // ── My Templates (onboarding AI generation) ────────────────────────────
-  readonly myImages = signal<GenerateAiImageResult[]>([]);
+  // ── My Templates (onboarding AI generation & user assets) ──────────────
+  readonly myImages = signal<GraphicAssetDto[]>([]);
   readonly generatingMyImages = signal(false);
   readonly generationError = signal<string | null>(null);
-  /** Tracks how many of the 6 images have finished (for a progress counter) */
+  /** Tracks how many of the 6 images have finished */
   readonly generationProgress = signal(0);
   private myImagesLoaded = false;
 
@@ -64,9 +65,26 @@ export class TemplatesComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Honour ?tab= query parameter (e.g. coming from onboarding)
-    const tab = this.route.snapshot.queryParamMap.get('tab') as TabType | null;
-    if (tab && ['public', 'mine', 'my-templates'].includes(tab)) {
+    const params = this.route.snapshot.queryParamMap;
+    const tab = params.get('tab') as TabType | null;
+    const generate = params.get('generate') === 'true';
+
+    if (tab === 'my-templates') {
+      this.activeTab.set('my-templates');
+      this.templates.set([]);
+      
+      if (generate) {
+        // Clear the generate param from the url so refreshes won't re-trigger it
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { generate: null },
+          queryParamsHandling: 'merge'
+        });
+        this.loadMyTemplateImages();
+      } else {
+        this.loadUserGraphicAssets();
+      }
+    } else if (tab && ['public', 'mine'].includes(tab)) {
       if (tab !== this.activeTab()) {
         this.switchTab(tab);
       }
@@ -78,11 +96,9 @@ export class TemplatesComponent implements OnInit {
     this.activeTab.set(tab);
 
     if (tab === 'my-templates') {
-      // Generation lives here — no paginated API call needed
       this.templates.set([]);
-      if (!this.myImagesLoaded && !this.generatingMyImages()) {
-        this.loadMyTemplateImages();
-      }
+      // When visiting this tab, load existing graphic assets. Do not trigger generation.
+      this.loadUserGraphicAssets();
       return;
     }
 
@@ -124,7 +140,29 @@ export class TemplatesComponent implements OnInit {
     });
   }
 
-  // ── My Templates generation ─────────────────────────────────────────────
+  // ── My Templates Loading & Generation ───────────────────────────────────
+
+  /** Loads the user's existing graphic assets sorted by date (most recent first) */
+  loadUserGraphicAssets(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.aiImageService
+      .getUserGraphicAssets()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (assets) => {
+          // The backend already sorts by CreatedAt descending.
+          this.myImages.set(assets);
+          this.myImagesLoaded = true;
+          this.loading.set(false);
+        },
+        error: () => {
+          this.myImages.set([]);
+          this.loading.set(false);
+          this.error.set('Failed to load your graphic assets. Please try again.');
+        },
+      });
+  }
 
   /** Fetches user preferences then fires 6 generate-image calls in parallel. */
   private loadMyTemplateImages(): void {
@@ -155,14 +193,17 @@ export class TemplatesComponent implements OnInit {
           const valid = results.filter(
             (r): r is GenerateAiImageResult => r !== null
           );
-          this.myImages.set(valid);
           this.generationProgress.set(valid.length);
           this.myImagesLoaded = true;
           this.generatingMyImages.set(false);
+          
           if (valid.length === 0) {
             this.generationError.set(
               'Image generation failed. Please try again — it may have been a temporary server issue.'
             );
+          } else {
+            // Load user assets which now contains the newly generated ones sorted at the top!
+            this.loadUserGraphicAssets();
           }
         },
         error: () => {
@@ -183,6 +224,10 @@ export class TemplatesComponent implements OnInit {
 
   resolveImageUrl(url: string): string {
     return resolveApiUrl(url);
+  }
+
+  useInStudio(): void {
+    this.router.navigate(['/studio']);
   }
 
   /**
