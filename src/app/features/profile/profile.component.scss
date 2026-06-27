@@ -214,6 +214,11 @@
   cursor: pointer;
 
   &:hover { background: var(--muted); }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
 }
 
 .side-note {
@@ -237,6 +242,16 @@
   font-family: "Playfair Display", serif;
   font-size: 1.25rem;
   font-weight: 600;
+}
+
+.form-status {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+
+  &.error {
+    color: #b42318;
+  }
 }
 
 .form-grid {
@@ -302,6 +317,11 @@ textarea { resize: vertical; }
   transition: opacity 0.2s;
 
   &:hover { opacity: 0.95; }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
 }
 
 /* ============ STYLE PREFERENCES ============ */
