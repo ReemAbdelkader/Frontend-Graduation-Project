@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 import { OnboardingApiService } from '../../core/services/onboarding-api.service';
+import { TemplatesApiService } from '../../core/services/templates-api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { logoImage } from '../../core/data/wearly-data';
 
@@ -82,6 +83,7 @@ const STEPS: OnboardingStep[] = [
 export class OnboardingComponent {
   private auth = inject(AuthService);
   private onboardingApi = inject(OnboardingApiService);
+  private templatesApi = inject(TemplatesApiService);
   private toast = inject(ToastService);
   private router = inject(Router);
 
@@ -93,6 +95,7 @@ export class OnboardingComponent {
   readonly selections = signal<Record<string, string[]>>({});
 
   readonly saving = signal(false);
+  readonly generating = signal(false);
 
   get currentStepData(): OnboardingStep {
     return this.steps[this.currentStep()];
@@ -160,8 +163,8 @@ export class OnboardingComponent {
         next: (res) => {
           if (res.ok) {
             this.auth.markOnboardingComplete();
-            this.toast.success('Style profile saved — welcome to Wearly!');
-            this.router.navigate(['/dashboard']);
+            // Now generate 3 AI templates in the background
+            this.generateTemplates();
           } else {
             this.toast.error(res.message);
             this.saving.set(false);
@@ -176,6 +179,36 @@ export class OnboardingComponent {
       });
   }
 
+  /**
+   * Calls the backend to generate 3 personalized AI templates
+   * based on the preferences we just saved. Runs in the background
+   * so the user doesn't wait — they go to dashboard immediately.
+   */
+  private generateTemplates(): void {
+    this.generating.set(true);
+    this.toast.info('Creating your personalized templates…');
+
+    this.templatesApi.generateOnboardingTemplates().subscribe({
+      next: (templates) => {
+        this.generating.set(false);
+        console.log('[Onboarding] Generated templates:', templates);
+        if (templates && templates.length > 0) {
+          this.toast.success(`${templates.length} personalized templates created!`);
+          this.router.navigate(['/templates'], { queryParams: { tab: 'mine' } });
+        } else {
+          this.toast.error('Templates returned empty. Check browser console (F12) for details.');
+          this.router.navigate(['/dashboard']);
+        }
+      },
+      error: (err) => {
+        this.generating.set(false);
+        const msg = err?.message ?? err?.error?.message ?? 'Unknown error';
+        console.error('[Onboarding] Template generation FAILED:', msg, err);
+        this.toast.error(`AI generation failed: ${msg}`);
+        this.router.navigate(['/dashboard']);
+      },
+    });
+  }
   skip(): void {
     this.auth.markOnboardingComplete();
     this.router.navigate(['/dashboard']);

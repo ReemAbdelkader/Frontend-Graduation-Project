@@ -1,3 +1,29 @@
+@if (generating()) {
+  <!-- Full-screen generating overlay -->
+  <div class="onboarding generating-overlay">
+    <div class="gen-card">
+      <div class="gen-spinner"></div>
+      <h2 class="gen-title">Creating your personalized templates</h2>
+      <p class="gen-sub">Our AI is crafting 3 unique designs based on your style preferences…</p>
+      <div class="gen-steps">
+        <div class="gen-step" [class.done]="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span>Saving preferences</span>
+        </div>
+        <div class="gen-step active">
+          <span class="pulse-dot"></span>
+          <span>Generating templates</span>
+        </div>
+        <div class="gen-step">
+          <span class="step-num">3</span>
+          <span>Almost done</span>
+        </div>
+      </div>
+    </div>
+  </div>
+} @else {
 <div class="onboarding">
   <!-- Left editorial panel -->
   <aside class="editorial">
@@ -142,7 +168,7 @@
           <span class="spinner"></span>
         }
         @if (isLastStep) {
-          Finish &amp; continue
+          Finish &amp; generate
         } @else {
           Continue
         }
@@ -159,3 +185,4 @@
     </div>
   </section>
 </div>
+}
