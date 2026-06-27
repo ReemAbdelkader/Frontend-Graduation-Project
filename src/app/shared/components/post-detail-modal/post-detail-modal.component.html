@@ -18,29 +18,84 @@
 
         <h2 class="title">{{ post.title }}</h2>
 
-        <div class="stats-row">
-          <div class="stat">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            <span>{{ post.rating }} ({{ post.ratings }})</span>
-          </div>
-          <div class="stat">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
-            <span>{{ post.ratings }} likes</span>
-          </div>
-          <div class="stat">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span>{{ post.comments }} comments</span>
-          </div>
+        <div class="detail-actions">
+          <app-community-interaction-row
+            [likesCount]="post.ratings"
+            [commentsCount]="post.comments"
+            [isLiked]="isLiked"
+            [isSaved]="isSaved"
+            [liking]="isLiking"
+            [saving]="isSaving"
+            (like)="like.emit()"
+            (save)="save.emit()"
+            (comment)="focusCommentInput()"
+            (report)="focusReportInput()"
+          ></app-community-interaction-row>
         </div>
 
         <p class="desc">
           A studio-grade remix from the Atelier community — printed on demand and shipped worldwide. Tap "Use Template" to start your own variation in the Design Studio.
         </p>
 
-        <button class="use-btn">
+        <button class="use-btn" type="button">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>
           Use Template
         </button>
+
+        <div class="comment-section">
+          <h3>Community comments</h3>
+          <div *ngIf="commentsLoading" class="comment-state">Loading comments…</div>
+          <div *ngIf="commentsError && !commentsLoading" class="comment-state error-state">{{ commentsError }}</div>
+          <textarea
+            #commentInput
+            class="comment-input"
+            [ngModel]="commentDraft"
+            (ngModelChange)="commentDraftChange.emit($event)"
+            placeholder="Write a comment…"
+            rows="3"
+            [disabled]="postingComment"
+          ></textarea>
+          <button class="use-btn" type="button" (click)="postComment.emit(commentDraft)" [disabled]="postingComment || !commentDraft.trim()">
+            <span *ngIf="postingComment" class="spinner"></span>
+            Post comment
+          </button>
+
+          <ul class="comment-list">
+            <li *ngFor="let comment of comments; trackBy: trackByComment" class="comment-item">
+              <div>
+                <strong>{{ comment.userName }}</strong>
+                <span class="comment-meta">{{ comment.createdAt | date:'medium' }}</span>
+                <p>{{ comment.content }}</p>
+              </div>
+              <button
+                *ngIf="comment.isOwner"
+                class="action-btn"
+                type="button"
+                (click)="deleteComment.emit(comment.id)"
+                [disabled]="deletingCommentId === comment.id"
+              >
+                Delete
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="report-section">
+          <h3>Report template</h3>
+          <textarea
+            #reportInput
+            class="comment-input"
+            [ngModel]="reportDraft"
+            (ngModelChange)="reportDraftChange.emit($event)"
+            placeholder="Describe why this template should be reviewed"
+            rows="3"
+            [disabled]="reportLoading"
+          ></textarea>
+          <button class="use-btn" type="button" (click)="report.emit(reportDraft)" [disabled]="reportLoading || !reportDraft.trim()">
+            <span *ngIf="reportLoading" class="spinner"></span>
+            Report
+          </button>
+        </div>
       </div>
     </div>
   </div>

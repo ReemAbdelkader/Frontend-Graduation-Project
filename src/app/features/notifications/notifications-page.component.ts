@@ -119,6 +119,7 @@ export class NotificationsPageComponent implements OnInit {
       }
 
       this.notifications = this.notifications.map((item) => (item.id === notification.id ? { ...item, unread: false, time: item.time } : item));
+      this.notificationService.refreshUnreadCount();
       this.toastService.success('Notification marked as read.');
     });
   }
@@ -135,11 +136,12 @@ export class NotificationsPageComponent implements OnInit {
       }
 
       this.notifications = this.notifications.map((item) => ({ ...item, unread: false }));
+      this.notificationService.refreshUnreadCount();
       this.toastService.success('All notifications marked as read.');
     });
   }
 
   get unreadCount(): number {
-    return this.notifications.filter((item) => item.unread).length;
+    return this.notificationService.unreadCount();
   }
 }

@@ -1,4 +1,5 @@
-import { Component, OnInit, effect, inject, signal } from '@angular/core';
+import { Component, effect, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 import { NotificationService, NotificationItem } from '../../../core/services/notification.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -11,7 +12,7 @@ import { AuthService } from '../../../core/services/auth.service';
   templateUrl: './notifications.component.html',
   styleUrl: './notifications.component.scss',
 })
-export class NotificationBellComponent implements OnInit {
+export class NotificationBellComponent implements OnInit, OnDestroy {
   private readonly notificationService = inject(NotificationService);
   private readonly toastService = inject(ToastService);
   private readonly authService = inject(AuthService);
@@ -22,6 +23,7 @@ export class NotificationBellComponent implements OnInit {
   notifications: NotificationItem[] = [];
   loading = false;
   errorMessage = '';
+  private notificationSubscription: Subscription | null = null;
 
   constructor() {
     effect(() => {
@@ -32,7 +34,18 @@ export class NotificationBellComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.notificationSubscription = this.notificationService.newNotification$.subscribe((notification) => {
+      this.notifications = [
+        { ...notification },
+        ...this.notifications.filter((item) => item.id !== notification.id),
+      ];
+    });
+
     this.loadNotifications();
+  }
+
+  ngOnDestroy(): void {
+    this.notificationSubscription?.unsubscribe();
   }
 
   toggle(): void {
@@ -69,7 +82,7 @@ export class NotificationBellComponent implements OnInit {
 
     this.loading = true;
     this.errorMessage = '';
-    this.notificationService.getUnread().subscribe({
+    this.notificationService.getAll().subscribe({
       next: (items) => {
         this.notifications = items;
         this.loading = false;
@@ -103,6 +116,7 @@ export class NotificationBellComponent implements OnInit {
       }
 
       this.notifications = this.notifications.map((item) => (item.id === notification.id ? { ...item, unread: false } : item));
+      this.notificationService.refreshUnreadCount();
       completeAction();
     });
   }
@@ -119,6 +133,7 @@ export class NotificationBellComponent implements OnInit {
       }
 
       this.notifications = this.notifications.map((item) => ({ ...item, unread: false }));
+      this.notificationService.refreshUnreadCount();
     });
   }
 
@@ -128,6 +143,6 @@ export class NotificationBellComponent implements OnInit {
   }
 
   get unreadCount(): number {
-    return this.notifications.filter((n) => n.unread).length;
+    return this.notificationService.unreadCount();
   }
 }

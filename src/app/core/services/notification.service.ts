@@ -1,6 +1,8 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http'; // ✨ التصليح هنا: رجعناها http بدل import
+import { Injectable, effect, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, of, Subject } from 'rxjs';
+import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
+import { AuthService } from './auth.service';
 import { environment } from '../../../environments/environment';
 
 export interface NotificationApiItem {
@@ -28,7 +30,7 @@ export interface NotificationApiItem {
 }
 
 export interface NotificationItem {
-  id: number;
+  id: string;
   title: string;
   message: string;
   createdAt?: string;
@@ -39,11 +41,44 @@ export interface NotificationItem {
 
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
+  private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/api/Notifications`;
+  private readonly hubUrl = `${environment.apiUrl.replace(/\/$/, '')}/hubs/notifications`;
+  private hubConnection: HubConnection | null = null;
+
+  private readonly unreadCountSignal = signal<number>(0);
+  readonly unreadCount = this.unreadCountSignal.asReadonly();
 
   private readonly newNotificationSource = new Subject<NotificationItem>();
   readonly newNotification$ = this.newNotificationSource.asObservable();
+
+  constructor() {
+    effect(() => {
+      if (this.auth.isLoggedIn()) {
+        this.startHubConnection();
+        this.refreshUnreadCount();
+      } else {
+        this.stopHubConnection();
+        this.unreadCountSignal.set(0);
+      }
+    });
+  }
+
+  refreshUnreadCount(): void {
+    if (!this.auth.isLoggedIn()) {
+      this.unreadCountSignal.set(0);
+      return;
+    }
+    this.getUnread().subscribe({
+      next: (items) => {
+        this.unreadCountSignal.set(items.length);
+      },
+      error: () => {
+        this.unreadCountSignal.set(0);
+      },
+    });
+  }
 
   pushNewNotification(item: NotificationApiItem): void {
     if (!item) return;
@@ -51,8 +86,8 @@ export class NotificationService {
     const normalizedArray = this.normalizeNotifications([item]);
     if (normalizedArray.length > 0) {
       const normalizedItem = normalizedArray[0];
-      
       this.newNotificationSource.next(normalizedItem);
+      this.refreshUnreadCount();
     }
   }
 
@@ -70,7 +105,7 @@ export class NotificationService {
     );
   }
 
-  markAsRead(id: number): Observable<boolean> {
+  markAsRead(id: string): Observable<boolean> {
     return this.http.put(`${this.baseUrl}/${id}/read`, {}).pipe(
       map(() => true),
       catchError(() => of(false)),
@@ -84,6 +119,77 @@ export class NotificationService {
     );
   }
 
+  private startHubConnection(): void {
+    if (this.hubConnection && this.hubConnection.state !== HubConnectionState.Disconnected) {
+      return;
+    }
+
+    this.hubConnection = new HubConnectionBuilder()
+      .withUrl(this.hubUrl, {
+        accessTokenFactory: () => this.auth.accessToken(),
+      })
+      .withAutomaticReconnect()
+      .configureLogging(LogLevel.Warning)
+      .build();
+
+    this.hubConnection.onclose((error) => {
+      if (error) {
+        console.error('Notification hub connection closed with error:', error);
+      }
+    });
+
+    const eventNames = ['ReceiveNotification', 'NewNotification', 'NotificationCreated'];
+    eventNames.forEach((eventName) => {
+      this.hubConnection?.on(eventName, (payload) => this.handleHubNotification(payload));
+    });
+
+    this.hubConnection
+      .start()
+      .then(() => {
+        if (this.hubConnection) {
+          console.info('Connected to notification hub.');
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to start notification hub:', error);
+      });
+  }
+
+  private stopHubConnection(): void {
+    if (!this.hubConnection) {
+      return;
+    }
+
+    this.hubConnection.stop().catch((error) => {
+      console.error('Failed to stop notification hub:', error);
+    });
+    this.hubConnection = null;
+  }
+
+  private handleHubNotification(payload: unknown): void {
+    if (!payload || typeof payload !== 'object') {
+      return;
+    }
+
+    const item = this.extractNotificationPayload(payload);
+    if (item) {
+      this.pushNewNotification(item);
+    }
+  }
+
+  private extractNotificationPayload(payload: unknown): NotificationApiItem | undefined {
+    if (!payload || typeof payload !== 'object') {
+      return undefined;
+    }
+
+    const maybePayload = payload as Record<string, unknown>;
+    if (maybePayload['data'] && typeof maybePayload['data'] === 'object') {
+      return maybePayload['data'] as NotificationApiItem;
+    }
+
+    return payload as NotificationApiItem;
+  }
+
   private extractItems(response: NotificationApiItem[] | { data: NotificationApiItem[] } | null | undefined): NotificationApiItem[] {
     if (Array.isArray(response)) {
       return response;
@@ -94,7 +200,7 @@ export class NotificationService {
 
   private normalizeNotifications(items: NotificationApiItem[]): NotificationItem[] {
     return items.map((item, index) => {
-      const id = Number(item.id ?? item.notificationId ?? index + 1) || index + 1;
+      const id = (item.id ?? item.notificationId ?? (index + 1).toString()).toString();
       const title = item.title?.trim() || 'Notification';
       const message = item.message?.trim() || item.body?.trim() || item.content?.trim() || 'You have a new update.';
       const createdAt = item.createdAt ?? item.createdOn ?? item.createdDate ?? item.date;

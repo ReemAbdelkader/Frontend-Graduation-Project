@@ -37,6 +37,9 @@ export interface TemplateDto {
 export interface TemplateDetailDto extends TemplateDto {
   averageRating: number;
   reviewCount: number;
+  likedByCurrentUser?: boolean;
+  savedByCurrentUser?: boolean;
+  commentCount?: number;
 }
 
 export interface CategoryDto {
