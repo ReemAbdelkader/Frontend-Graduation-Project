@@ -5,7 +5,7 @@
     <!-- GREETING -->
     <div class="greeting">
       <div>
-        <p class="eyebrow">{{ isAdmin() ? 'Atelier AI Control Center' : 'Your Atelier Dashboard' }} · {{ currentDate }}</p>
+        <p class="eyebrow">{{ isAdmin() ? 'Atelier AI Control Center' : 'Your Atelier Dashboard' }} &middot; {{ currentDate }}</p>
         <h1 class="title">
           {{ greeting }}, <span class="italic-light">{{ firstName }}</span>.<br />Pick up your next piece.
         </h1>
@@ -23,50 +23,62 @@
     <!-- CONTINUE WORK -->
     <section class="focus-grid">
       <article class="draft-card glass-strong">
-        <div class="draft-copy">
-          <p class="eyebrow">Continue designing</p>
-          <h2 class="focus-title">{{ featuredDraft.title }}</h2>
-          <p class="focus-sub">{{ featuredDraft.product }} &middot; {{ featuredDraft.updated }}</p>
+        @if (featuredDraft(); as draft) {
+          <div class="draft-copy">
+            <p class="eyebrow">Continue designing</p>
+            <h2 class="focus-title">{{ draft.title }}</h2>
+            <p class="focus-sub">{{ draft.product }} &middot; {{ draft.status }}</p>
 
-          <div class="progress-wrap" aria-label="Design progress">
-            <div class="progress-track">
-              <span class="progress-fill" [style.width.%]="featuredDraft.progress"></span>
+            @if (draft.startedFromTemplate) {
+              <p class="draft-source">Started from a template</p>
+            }
+
+            <div class="draft-actions">
+              <a routerLink="/studio" class="primary-action">Continue</a>
+              <a routerLink="/templates" class="secondary-action">Try another template</a>
             </div>
-            <span class="progress-label">{{ featuredDraft.progress }}% ready</span>
           </div>
 
-          <div class="draft-tags">
-            @for (tag of featuredDraft.tags; track tag) {
-              <span>{{ tag }}</span>
+          <div class="draft-preview">
+            @if (draft.image) {
+              <img [src]="draft.image" [alt]="draft.title" />
+            } @else {
+              <div class="empty-preview">No preview yet</div>
             }
           </div>
-
-          <div class="draft-actions">
-            <a routerLink="/studio" class="primary-action">Continue</a>
-            <a routerLink="/templates" class="secondary-action">Try another template</a>
+        } @else {
+          <div class="draft-copy empty-state">
+            <p class="eyebrow">Continue designing</p>
+            <h2 class="focus-title">No saved designs yet</h2>
+            <p class="focus-sub">Start a new piece in the studio when you are ready.</p>
+            <div class="draft-actions">
+              <a routerLink="/studio" class="primary-action">Open Studio</a>
+              <a routerLink="/templates" class="secondary-action">Browse templates</a>
+            </div>
           </div>
-        </div>
-
-        <div class="draft-preview">
-          <img [src]="featuredDraft.image" [alt]="featuredDraft.title" />
-        </div>
+        }
       </article>
 
       <article class="order-focus-card">
         <p class="eyebrow">Production</p>
         <h2 class="side-title">Active order</h2>
-        <p class="order-id">{{ activeOrder.id }}</p>
-        <div class="status-row">
-          <span class="status-pill">{{ activeOrder.status }}</span>
-          <span>{{ activeOrder.eta }}</span>
-        </div>
-        <a routerLink="/orders" class="story-link order-link">View order</a>
+        @if (activeOrder(); as order) {
+          <p class="order-id">{{ order.id }}</p>
+          <div class="status-row">
+            <span class="status-pill">{{ order.status }}</span>
+            <span>{{ order.eta }}</span>
+          </div>
+          <a routerLink="/orders" class="story-link order-link">View order</a>
+        } @else {
+          <p class="focus-sub">No active orders.</p>
+          <a routerLink="/shop" class="story-link order-link">Shop blanks</a>
+        }
       </article>
     </section>
 
     <!-- STATS -->
     <section class="stats-grid">
-      @for (s of stats; track s.label) {
+      @for (s of stats(); track s.label) {
         <div class="stat-card glass-strong">
           <div class="tint" [class]="s.tint"></div>
           <div class="stat-body">
@@ -87,7 +99,9 @@
               </span>
             </div>
             <p class="stat-value">{{ s.value }}</p>
-            <p class="stat-delta">{{ s.delta }}</p>
+            @if (s.delta) {
+              <p class="stat-delta">{{ s.delta }}</p>
+            }
           </div>
         </div>
       }
@@ -132,17 +146,18 @@
       <div class="recos">
         <div class="recos-head">
           <div>
-            <p class="eyebrow">Curated for you</p>
-            <h2 class="recos-title">Recommended blanks and styles</h2>
+            <p class="eyebrow">Product catalog</p>
+            <h2 class="recos-title">Available blanks and styles</h2>
           </div>
           <a routerLink="/shop" class="story-link browse">Browse all</a>
         </div>
         <div class="recos-grid">
-          @for (p of recos; track p.id) {
+          @for (p of recos(); track p.id) {
             <div class="reco-item">
               <app-product-card [product]="p" />
-              <p class="reco-reason">Recommended for your saved styles</p>
             </div>
+          } @empty {
+            <p class="empty-copy">No products are available yet.</p>
           }
         </div>
       </div>
@@ -151,33 +166,18 @@
         <div class="activity-card glass-strong">
           <p class="eyebrow">Recent activity</p>
           <ul class="activity-list">
-            @for (a of activity; track $index) {
+            @for (a of activity(); track $index) {
               <li class="activity-item">
-                <div class="time-dot">{{ a.time.split(' ')[0] }}</div>
+                <div class="time-dot">{{ a.time }}</div>
                 <div>
                   <p class="action">{{ a.action }}</p>
                   <p class="target">{{ a.target }}</p>
                 </div>
               </li>
+            } @empty {
+              <li class="empty-copy">No recent notifications.</li>
             }
           </ul>
-        </div>
-
-        <div class="tip-card">
-          <p class="tip-eyebrow">Design checklist</p>
-          <ul class="check-list">
-            @for (item of checklist; track item.label) {
-              <li [class.done]="item.complete">
-                <span class="check-dot">
-                  @if (item.complete) {
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  }
-                </span>
-                {{ item.label }}
-              </li>
-            }
-          </ul>
-          <a routerLink="/studio" class="story-link tip-link">Finish in studio</a>
         </div>
       </aside>
     </section>

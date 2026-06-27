@@ -140,6 +140,16 @@
   color: var(--muted-foreground);
 }
 
+.draft-source {
+  width: fit-content;
+  margin: 1rem 0 0;
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
 .progress-wrap {
   margin-top: 1.25rem;
   display: grid;
@@ -195,6 +205,19 @@
     height: 100%;
     object-fit: cover;
   }
+}
+
+.empty-preview {
+  height: 100%;
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.empty-state {
+  align-self: center;
 }
 
 .order-focus-card {
@@ -434,6 +457,12 @@
   margin: 0;
   font-size: 0.75rem;
   color: var(--muted-foreground);
+}
+
+.empty-copy {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
 }
 
 /* ============ SIDEBAR ============ */
