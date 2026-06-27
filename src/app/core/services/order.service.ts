@@ -1,45 +1,65 @@
-import { HttpClient } from "@angular/common/http";
-import { Injectable } from "@angular/core";
-import { catchError, map, Observable, of } from "rxjs";
-import { ApiResponse, OrderDto } from "../models/shop.models";
-import { environment } from "../../../environments/environment";
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { catchError, map, Observable, of } from 'rxjs';
+import { ApiResponse, OrderDto, OrderDetailItemDto } from '../models/shop.models';
+import { environment } from '../../../environments/environment';
 
-export interface OrderCreatePayload {
-  productName: string;
-  productImage: string;
-  amount: number;
-  cardHolderName: string;
-  cardNumber: string;
-  expiry: string;
-  cvc: string;
-}
-export interface OrderCreateResponse {
-  success: boolean;
-  order: OrderDto;
-  notification: any; 
+export interface CreateOrderItemPayload {
+  designId: string;
+  quantity: number;
+  printerProfileId?: string | null;
 }
 
-@Injectable({ providedIn: "root" })
+export interface CreateOrderPayload {
+  userId: string;
+  receiverName: string;
+  phoneNumber: string;
+  address: string;
+  city: string;
+  deliveryNotes?: string | null;
+  couponCode?: string | null;
+  orderItems: CreateOrderItemPayload[];
+}
+
+@Injectable({ providedIn: 'root' })
 export class OrderService {
-  private readonly apiUrl = `${environment.apiUrl}/api/orders`; 
+  private readonly apiUrl = `${environment.apiUrl}/api/Orders`;
 
   constructor(private readonly http: HttpClient) {}
 
-  createOrder(payload: OrderCreatePayload): Observable<OrderCreateResponse | null> {
+  createOrder(payload: CreateOrderPayload): Observable<string | null> {
     return this.http
-      .post<ApiResponse<OrderCreateResponse>>(this.apiUrl, payload)
+      .post<ApiResponse<string>>(`${this.apiUrl}/create`, payload)
       .pipe(
         map((response) => response.data ?? null),
-        catchError(() => of(null))
+        catchError((err) => {
+          console.error('[OrderService] createOrder error', err);
+          return of(null);
+        })
       );
   }
 
-  getUserOrders(): Observable<OrderDto[]> {
+  getUserOrders(userId: string): Observable<OrderDto[]> {
     return this.http
-      .get<ApiResponse<OrderDto[]>>(`${this.apiUrl}/my-orders`)
+      .get<ApiResponse<OrderDto[]>>(`${this.apiUrl}/user/${userId}`)
       .pipe(
         map((response) => response.data ?? []),
-        catchError(() => of([]))
+        catchError((err) => {
+          console.error('[OrderService] getUserOrders error', err);
+          return of([]);
+        })
+      );
+  }
+
+  cancelOrder(orderId: string): Observable<boolean> {
+    return this.http
+      .put<ApiResponse<boolean>>(`${this.apiUrl}/${orderId}/cancel`, {})
+      .pipe(
+        map((response) => response.data ?? false),
+        catchError((err) => {
+          console.error('[OrderService] cancelOrder error', err);
+          return of(false);
+        })
       );
   }
 }

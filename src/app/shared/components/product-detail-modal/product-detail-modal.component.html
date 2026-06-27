@@ -66,10 +66,9 @@
         }
 
         <div class="actions">
-          <button class="btn btn-primary" [disabled]="product.isAvailable === false" (click)="onAddToCart()">
-            {{ product.isAvailable === false ? 'Sold out' : 'Add to cart - $' + product.price }}
+          <button class="btn btn-primary" [disabled]="product.isAvailable === false || addingToCart()" (click)="onAddToCart()">
+            {{ addingToCart() ? 'Adding...' : (product.isAvailable === false ? 'Sold out' : 'Add to cart - $' + product.price) }}
           </button>
-          <button class="btn btn-ghost">Save for later</button>
         </div>
       </div>
     </div>

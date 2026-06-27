@@ -1,34 +1,52 @@
-<div class="card">
-  <div class="table-wrap">
-    <table class="orders-table">
-      <thead>
-        <tr>
-          <th>Order Number</th>
-          <th>Customer Name</th>
-          <th>Fabric</th>
-          <th>Print Method</th>
-          <th>Quantity</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (order of orders(); track order.id) {
-          <tr>
-            <td>{{ order.orderNumber }}</td>
-            <td>{{ order.customerName }}</td>
-            <td>{{ order.fabric }}</td>
-            <td>{{ order.printMethod }}</td>
-            <td>{{ order.quantity }}</td>
-            <td>
-              <select [ngModel]="order.status" (ngModelChange)="updateStatus(order.id, $event)">
-                @for (status of statusOptions; track status) {
-                  <option [value]="status">{{ status }}</option>
-                }
-              </select>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
+@if (loading()) {
+  <div class="card loading-state">
+    <div class="spinner"></div>
+    <p>Loading your assigned orders...</p>
   </div>
-</div>
+} @else if (orders().length === 0) {
+  <div class="card empty-state">
+    <p class="empty-title">No assigned orders yet</p>
+    <p class="empty-desc">Orders assigned to you by the admin will appear here.</p>
+  </div>
+} @else {
+  <div class="card">
+    <div class="table-wrap">
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>Preview</th>
+            <th>Order Number</th>
+            <th>Quantity</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of orders(); track order.id) {
+            <tr>
+              <td>
+                @if (order.designSnapshotUrl) {
+                  <img class="snapshot-img" [src]="resolveImg(order.designSnapshotUrl)" alt="Design" />
+                } @else {
+                  <span class="no-img">No image</span>
+                }
+              </td>
+              <td class="mono">{{ order.orderNumber }}</td>
+              <td>{{ order.quantity }}</td>
+              <td>
+                <select
+                  [ngModel]="order.status"
+                  (ngModelChange)="updateStatus(order.id, $event)"
+                  [disabled]="updatingId() === order.id"
+                >
+                  @for (status of statusOptions; track status) {
+                    <option [value]="status" [selected]="order.status === status">{{ status }}</option>
+                  }
+                </select>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

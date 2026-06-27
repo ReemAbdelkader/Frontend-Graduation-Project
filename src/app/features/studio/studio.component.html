@@ -586,6 +586,7 @@
       [productName]="selected().name"
       [productImage]="selected().image"
       [price]="selected().price"
+      [designId]="currentDesignId() ?? undefined"
       (close)="closePay()"
     />
   }

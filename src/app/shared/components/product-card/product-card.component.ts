@@ -22,8 +22,4 @@ export class ProductCardComponent {
   onCardClick(): void {
     this.cardClick.emit(this.product);
   }
-
-  onHeartClick(event: Event): void {
-    event.stopPropagation();
-  }
 }

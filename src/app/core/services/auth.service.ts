@@ -20,6 +20,7 @@ export interface AuthState {
   name: string;
   roles: string[];
   onboardingCompleted?: boolean;
+  userId?: string;
 }
 
 export interface AuthApiResult {
@@ -71,6 +72,7 @@ export class AuthService {
   readonly accessToken = computed(() => this._authState()?.accessToken ?? '');
   readonly refreshToken = computed(() => this._authState()?.refreshToken ?? '');
   readonly expiresAt = computed(() => this._authState()?.expiresAt ?? '');
+  readonly userId = computed(() => this._authState()?.userId ?? this.extractUserIdFromToken());
 
   constructor() {
     this.restore();
@@ -82,6 +84,9 @@ export class AuthService {
       if (!raw) return;
       const stored = JSON.parse(raw) as AuthState;
       if (stored?.accessToken && stored?.refreshToken && stored?.expiresAt && stored?.email && stored?.name && Array.isArray(stored.roles)) {
+        if (!stored.userId) {
+          stored.userId = this.extractUserIdFromToken(stored.accessToken);
+        }
         this._authState.set(stored);
       }
     } catch {
@@ -357,6 +362,7 @@ export class AuthService {
       }
 
       if (result.ok && result.accessToken && result.refreshToken && result.expiresAt && result.email && result.name && result.roles?.length) {
+        const userId = this.extractUserIdFromToken(result.accessToken);
         this.setAuthState({
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
@@ -365,6 +371,7 @@ export class AuthService {
           name: result.name,
           roles: result.roles,
           onboardingCompleted: result.onboardingCompleted,
+          userId,
         });
         result.user = {
           name: result.name,
@@ -400,6 +407,7 @@ export class AuthService {
 
       if (result.ok && result.accessToken && result.refreshToken && result.expiresAt && result.email && result.name && result.roles?.length) {
         const prevState = this._authState();
+        const userId = this.extractUserIdFromToken(result.accessToken);
         this.setAuthState({
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
@@ -408,6 +416,7 @@ export class AuthService {
           name: result.name,
           roles: result.roles,
           onboardingCompleted: result.onboardingCompleted ?? prevState?.onboardingCompleted,
+          userId: userId ?? prevState?.userId,
         });
         result.user = {
           name: result.name,
@@ -582,5 +591,21 @@ export class AuthService {
 
   private toStringOrUndefined(value: unknown): string | undefined {
     return typeof value === 'string' && value.trim() ? value : undefined;
+  }
+
+  private extractUserIdFromToken(token?: string): string | undefined {
+    const t = token ?? this._authState()?.accessToken;
+    if (!t) return undefined;
+    try {
+      const payloadB64 = t.split('.')[1];
+      if (!payloadB64) return undefined;
+      const payload = JSON.parse(atob(payloadB64));
+      return payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
+        ?? payload['nameid']
+        ?? payload['sub']
+        ?? undefined;
+    } catch {
+      return undefined;
+    }
   }
 }
