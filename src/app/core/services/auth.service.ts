@@ -333,6 +333,7 @@ export class AuthService {
   clearAuthState(): void {
     this._authState.set(null);
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(ONBOARDING_KEY);
     localStorage.removeItem('wearly.ai.sessionId');
     this.refreshInProgress = null;
   }
@@ -363,6 +364,12 @@ export class AuthService {
 
       if (result.ok && result.accessToken && result.refreshToken && result.expiresAt && result.email && result.name && result.roles?.length) {
         const userId = this.extractUserIdFromToken(result.accessToken);
+        // If the backend reports onboarding not complete, clear any stale localStorage
+        // flag from a previous user session so hasCompletedOnboarding() won't return a
+        // false positive and skip the onboarding flow.
+        if (!result.onboardingCompleted) {
+          localStorage.removeItem(ONBOARDING_KEY);
+        }
         this.setAuthState({
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,

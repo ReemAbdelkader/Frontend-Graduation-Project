@@ -5,12 +5,16 @@ import { API_BASE_URL } from './api-config';
 
 export interface SaveOnboardingRequest {
   favoriteColors: string;
+  bannedColors?: string;
+  styleType?: string;
   interests: string;
   designPreference: string;
 }
 
 export interface UserPreferencesResponse {
   favoriteColors: string;
+  bannedColors?: string;
+  styleType?: string;
   interests: string;
   designPreference: string;
 }

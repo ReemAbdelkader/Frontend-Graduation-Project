@@ -1,6 +1,7 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { forkJoin, map, of, catchError } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin, map, of, catchError, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppNavComponent } from '../../shared/components/app-nav/app-nav.component';
 import {
@@ -9,8 +10,11 @@ import {
   TemplatesApiService,
 } from '../../core/services/templates-api.service';
 import { AuthService } from '../../core/services/auth.service';
+import { AiImageService, GenerateAiImageResult, GraphicAssetDto } from '../../core/services/ai-image.service';
+import { OnboardingApiService, UserPreferencesResponse } from '../../core/services/onboarding-api.service';
+import { resolveApiUrl } from '../../core/services/api-config';
 
-type TabType = 'public' | 'mine';
+type TabType = 'public' | 'mine' | 'my-templates';
 
 @Component({
   selector: 'app-templates',
@@ -19,10 +23,14 @@ type TabType = 'public' | 'mine';
   templateUrl: './templates.component.html',
   styleUrl: './templates.component.scss',
 })
-export class TemplatesComponent {
+export class TemplatesComponent implements OnInit {
   private readonly api = inject(TemplatesApiService);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly aiImageService = inject(AiImageService);
+  private readonly onboardingApi = inject(OnboardingApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly templates = signal<TemplateDto[]>([]);
   readonly loading = signal(false);
@@ -38,6 +46,14 @@ export class TemplatesComponent {
   readonly detailError = signal<string | null>(null);
   readonly activeTab = signal<TabType>('public');
 
+  // ── My Templates (onboarding AI generation & user assets) ──────────────
+  readonly myImages = signal<GraphicAssetDto[]>([]);
+  readonly generatingMyImages = signal(false);
+  readonly generationError = signal<string | null>(null);
+  /** Tracks how many of the 6 images have finished */
+  readonly generationProgress = signal(0);
+  private myImagesLoaded = false;
+
   readonly isLoggedIn = this.auth.isLoggedIn;
 
   readonly hasPreviousPage = computed(() => this.pageNumber() > 1);
@@ -48,9 +64,44 @@ export class TemplatesComponent {
     this.loadPage(1);
   }
 
+  ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const tab = params.get('tab') as TabType | null;
+    const generate = params.get('generate') === 'true';
+
+    if (tab === 'my-templates') {
+      this.activeTab.set('my-templates');
+      this.templates.set([]);
+      
+      if (generate) {
+        // Clear the generate param from the url so refreshes won't re-trigger it
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { generate: null },
+          queryParamsHandling: 'merge'
+        });
+        this.loadMyTemplateImages();
+      } else {
+        this.loadUserGraphicAssets();
+      }
+    } else if (tab && ['public', 'mine'].includes(tab)) {
+      if (tab !== this.activeTab()) {
+        this.switchTab(tab);
+      }
+    }
+  }
+
   switchTab(tab: TabType): void {
     if (tab === this.activeTab()) return;
     this.activeTab.set(tab);
+
+    if (tab === 'my-templates') {
+      this.templates.set([]);
+      // When visiting this tab, load existing graphic assets. Do not trigger generation.
+      this.loadUserGraphicAssets();
+      return;
+    }
+
     this.pageNumber.set(1);
     this.totalPages.set(0);
     this.totalCount.set(0);
@@ -67,28 +118,152 @@ export class TemplatesComponent {
     this.loading.set(true);
     this.error.set(null);
 
-    const fetch$ = this.activeTab() === 'mine'
-      ? this.api.getMyTemplates(pageNumber, this.pageSize)
-      : this.api.getPublicTemplates(pageNumber, this.pageSize);
+    const fetch$ =
+      this.activeTab() === 'mine'
+        ? this.api.getMyTemplates(pageNumber, this.pageSize)
+        : this.api.getPublicTemplates(pageNumber, this.pageSize);
 
-    fetch$
+    fetch$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (result) => {
+        this.templates.set(result.data);
+        this.pageNumber.set(result.currentPage);
+        this.totalPages.set(result.totalPages);
+        this.totalCount.set(result.totalCount);
+        this.loading.set(false);
+        this.loadCreatorNames(result.data);
+      },
+      error: () => {
+        this.templates.set([]);
+        this.loading.set(false);
+        this.error.set('Templates are unavailable right now.');
+      },
+    });
+  }
+
+  // ── My Templates Loading & Generation ───────────────────────────────────
+
+  /** Loads the user's existing graphic assets sorted by date (most recent first) */
+  loadUserGraphicAssets(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.aiImageService
+      .getUserGraphicAssets()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (result) => {
-          this.templates.set(result.data);
-          this.pageNumber.set(result.currentPage);
-          this.totalPages.set(result.totalPages);
-          this.totalCount.set(result.totalCount);
+        next: (assets) => {
+          // The backend already sorts by CreatedAt descending.
+          this.myImages.set(assets);
+          this.myImagesLoaded = true;
           this.loading.set(false);
-          this.loadCreatorNames(result.data);
         },
         error: () => {
-          this.templates.set([]);
+          this.myImages.set([]);
           this.loading.set(false);
-          this.error.set('Templates are unavailable right now.');
+          this.error.set('Failed to load your graphic assets. Please try again.');
         },
       });
   }
+
+  /** Fetches user preferences then fires 6 generate-image calls in parallel. */
+  private loadMyTemplateImages(): void {
+    this.generatingMyImages.set(true);
+    this.generationError.set(null);
+    this.generationProgress.set(0);
+    this.myImages.set([]);
+
+    this.onboardingApi
+      .getPreferences()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        switchMap((prefs) => {
+          const prompts = this.buildOnboardingPrompts(prefs);
+          // Fire all 6 requests simultaneously; individual failures return null
+          return forkJoin(
+            prompts.map((prompt) =>
+              this.aiImageService.generateAiImage(prompt).pipe(
+                catchError(() => of(null as GenerateAiImageResult | null))
+              )
+            )
+          );
+        }),
+        catchError(() => of([] as (GenerateAiImageResult | null)[]))
+      )
+      .subscribe({
+        next: (results) => {
+          const valid = results.filter(
+            (r): r is GenerateAiImageResult => r !== null
+          );
+          this.generationProgress.set(valid.length);
+          this.myImagesLoaded = true;
+          this.generatingMyImages.set(false);
+          
+          if (valid.length === 0) {
+            this.generationError.set(
+              'Image generation failed. Please try again — it may have been a temporary server issue.'
+            );
+          } else {
+            // Load user assets which now contains the newly generated ones sorted at the top!
+            this.loadUserGraphicAssets();
+          }
+        },
+        error: () => {
+          this.generatingMyImages.set(false);
+          this.generationError.set(
+            'Could not reach the AI service. Check your connection and try again.'
+          );
+        },
+      });
+  }
+
+  retryGeneration(): void {
+    this.myImagesLoaded = false;
+    this.myImages.set([]);
+    this.generationError.set(null);
+    this.loadMyTemplateImages();
+  }
+
+  resolveImageUrl(url: string): string {
+    return resolveApiUrl(url);
+  }
+
+  useInStudio(): void {
+    this.router.navigate(['/studio']);
+  }
+
+  /**
+   * Builds 6 distinct preference-aware prompts.
+   * Every prompt enforces a transparent / no-background requirement
+   * so the generated graphic is ready to be placed directly on clothing.
+   */
+  private buildOnboardingPrompts(prefs: UserPreferencesResponse): string[] {
+    const style = prefs.styleType || 'Streetwear';
+    const colors = prefs.favoriteColors || 'Black, White';
+    const avoid = prefs.bannedColors
+      ? `Strictly avoid these colors: ${prefs.bannedColors}.`
+      : '';
+    const interests = prefs.interests || 'Art, Music';
+    const designType = prefs.designPreference || 'Bold Prints';
+
+    const themes = [
+      `${interests} inspired emblem artwork`,
+      `${style} culture graphic motif`,
+      `Abstract composition using ${colors} palette`,
+      `${interests} conceptual illustration`,
+      `${style} aesthetic statement graphic`,
+      `${colors} geometric pattern with ${designType} energy`,
+    ];
+
+    return themes.map(
+      (theme, i) =>
+        `Isolated vector graphic for direct-to-garment clothing print. ` +
+        `CRITICAL: fully transparent background, no white fill, no background elements, cutout PNG style, alpha channel. ` +
+        `Theme: ${theme}. Style aesthetic: ${style}. Color palette: ${colors}. ${avoid} ` +
+        `Design mood: ${designType}. High-contrast, ultra-detailed, print-ready art. ` +
+        `No photographic backgrounds, no gradients behind the subject. Variation ${i + 1} of 6.`
+    );
+  }
+
+  // ── Shared helpers ──────────────────────────────────────────────────────
 
   openTemplate(id: string): void {
     this.selectedTemplate.set(null);
@@ -137,8 +312,7 @@ export class TemplatesComponent {
   }
 
   bgClass(i: number): string {
-    const idx = i % 4;
-    return `bg-${idx}`;
+    return `bg-${i % 4}`;
   }
 
   private loadCategories(): void {
@@ -148,8 +322,8 @@ export class TemplatesComponent {
       .subscribe({
         next: (categories) => {
           this.categoryNames.set(
-            categories.reduce<Record<string, string>>((acc, category) => {
-              acc[category.id] = category.name;
+            categories.reduce<Record<string, string>>((acc, cat) => {
+              acc[cat.id] = cat.name;
               return acc;
             }, {})
           );
@@ -160,8 +334,9 @@ export class TemplatesComponent {
 
   private loadCreatorNames(templates: TemplateDto[]): void {
     const knownCreators = this.creatorNames();
-    const creatorIds = Array.from(new Set(templates.map((template) => template.creatorUserId)))
-      .filter((id) => id && knownCreators[id] === undefined);
+    const creatorIds = Array.from(
+      new Set(templates.map((t) => t.creatorUserId))
+    ).filter((id) => id && knownCreators[id] === undefined);
 
     if (creatorIds.length === 0) return;
 
@@ -177,9 +352,7 @@ export class TemplatesComponent {
       .subscribe((entries) => {
         this.creatorNames.update((current) => {
           const next = { ...current };
-          for (const [id, name] of entries) {
-            next[id] = name;
-          }
+          for (const [id, name] of entries) next[id] = name;
           return next;
         });
       });
