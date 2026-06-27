@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 import { OnboardingApiService } from '../../core/services/onboarding-api.service';
-import { TemplatesApiService } from '../../core/services/templates-api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { logoImage } from '../../core/data/wearly-data';
 
@@ -13,7 +12,7 @@ export interface OnboardingStep {
   question: string;
   subtitle: string;
   options: OnboardingOption[];
-  field: 'favoriteColors' | 'interests' | 'designPreference';
+  field: 'favoriteColors' | 'interests' | 'designPreference' | 'bannedColors' | 'styleType';
   icon: string;
 }
 
@@ -44,6 +43,40 @@ const STEPS: OnboardingStep[] = [
   },
   {
     id: 2,
+    question: 'Which colors do you absolutely want to avoid?',
+    subtitle: 'Choose any colors you don\'t want to see in your designs.',
+    field: 'bannedColors',
+    icon: 'ban',
+    options: [
+      { label: 'Black', value: 'Black', colorPreview: '#1A1A2E' },
+      { label: 'White', value: 'White', colorPreview: '#F5F5F5' },
+      { label: 'Red', value: 'Red', colorPreview: '#E74C3C' },
+      { label: 'Blue', value: 'Blue', colorPreview: '#2C6BED' },
+      { label: 'Green', value: 'Green', colorPreview: '#27AE60' },
+      { label: 'Earth Tones', value: 'Earth Tones', colorPreview: '#A0826D' },
+      { label: 'Pastels', value: 'Pastels', colorPreview: '#B8D4E3' },
+      { label: 'Neutral', value: 'Neutral', colorPreview: '#95A5A6' },
+    ],
+  },
+  {
+    id: 3,
+    question: 'What style describes you best?',
+    subtitle: 'Select your preferred fashion style type.',
+    field: 'styleType',
+    icon: 'shirt',
+    options: [
+      { label: 'Streetwear', value: 'Streetwear', emoji: '🛹' },
+      { label: 'Minimalist', value: 'Minimalist', emoji: '🥛' },
+      { label: 'Vintage', value: 'Vintage', emoji: '📻' },
+      { label: 'Techwear', value: 'Techwear', emoji: '🥷' },
+      { label: 'Casual', value: 'Casual', emoji: '👕' },
+      { label: 'Cyberpunk', value: 'Cyberpunk', emoji: '🪐' },
+      { label: 'Grunge', value: 'Grunge', emoji: '🎸' },
+      { label: 'Preppy', value: 'Preppy', emoji: '🎓' },
+    ],
+  },
+  {
+    id: 4,
     question: 'What are your interests or hobbies?',
     subtitle: 'Help us tailor content to what you love.',
     field: 'interests',
@@ -60,7 +93,7 @@ const STEPS: OnboardingStep[] = [
     ],
   },
   {
-    id: 3,
+    id: 5,
     question: 'Do you prefer bold or minimal designs?',
     subtitle: 'This shapes your template and product recommendations.',
     field: 'designPreference',
@@ -83,7 +116,6 @@ const STEPS: OnboardingStep[] = [
 export class OnboardingComponent {
   private auth = inject(AuthService);
   private onboardingApi = inject(OnboardingApiService);
-  private templatesApi = inject(TemplatesApiService);
   private toast = inject(ToastService);
   private router = inject(Router);
 
@@ -93,6 +125,11 @@ export class OnboardingComponent {
 
   readonly currentStep = signal(0);
   readonly selections = signal<Record<string, string[]>>({});
+
+  // Tracks whether the "Other" chip is expanded per field
+  readonly otherActive = signal<Record<string, boolean>>({});
+  // Tracks the typed custom value per field
+  readonly otherText = signal<Record<string, string>>({});
 
   readonly saving = signal(false);
   readonly generating = signal(false);
@@ -115,7 +152,10 @@ export class OnboardingComponent {
 
   get canProceed(): boolean {
     const field = this.currentStepData.field;
-    return (this.selections()[field]?.length ?? 0) > 0;
+    const hasPick = (this.selections()[field]?.length ?? 0) > 0;
+    const otherIsActiveWithText =
+      this.otherActive()[field] && (this.otherText()[field] ?? '').trim().length > 0;
+    return hasPick || otherIsActiveWithText;
   }
 
   toggleOption(field: string, value: string): void {
@@ -131,6 +171,46 @@ export class OnboardingComponent {
 
   isSelected(field: string, value: string): boolean {
     return this.selections()[field]?.includes(value) ?? false;
+  }
+
+  isOtherActive(field: string): boolean {
+    return this.otherActive()[field] ?? false;
+  }
+
+  getOtherText(field: string): string {
+    return this.otherText()[field] ?? '';
+  }
+
+  toggleOther(field: string): void {
+    const wasActive = this.otherActive()[field] ?? false;
+    if (wasActive) {
+      // Deselect: remove any custom value from selections and clear the text
+      const customVal = this.otherText()[field]?.trim();
+      if (customVal) {
+        this.selections.update((s) => ({
+          ...s,
+          [field]: (s[field] ?? []).filter((v) => v !== customVal),
+        }));
+      }
+      this.otherActive.update((o) => ({ ...o, [field]: false }));
+      this.otherText.update((t) => ({ ...t, [field]: '' }));
+    } else {
+      this.otherActive.update((o) => ({ ...o, [field]: true }));
+    }
+  }
+
+  commitOtherText(field: string, text: string): void {
+    const trimmed = text.trim();
+    // Remove any previous custom value for this field
+    const prevCustom = this.otherText()[field]?.trim();
+    this.otherText.update((t) => ({ ...t, [field]: trimmed }));
+    if (!trimmed) return;
+    this.selections.update((s) => {
+      const current = (s[field] ?? []).filter((v) => v !== prevCustom);
+      // Add only if not already a predefined option
+      if (!current.includes(trimmed)) current.push(trimmed);
+      return { ...s, [field]: current };
+    });
   }
 
   nextStep(): void {
@@ -156,6 +236,8 @@ export class OnboardingComponent {
     this.onboardingApi
       .saveOnboarding({
         favoriteColors: (sel['favoriteColors'] ?? []).join(', '),
+        bannedColors: (sel['bannedColors'] ?? []).join(', '),
+        styleType: (sel['styleType'] ?? []).join(', '),
         interests: (sel['interests'] ?? []).join(', '),
         designPreference: (sel['designPreference'] ?? []).join(', '),
       })
@@ -163,52 +245,22 @@ export class OnboardingComponent {
         next: (res) => {
           if (res.ok) {
             this.auth.markOnboardingComplete();
-            // Now generate 3 AI templates in the background
-            this.generateTemplates();
+            this.toast.success('Preferences saved! Generating your personalized designs…');
+            this.router.navigate(['/templates'], { queryParams: { tab: 'my-templates' } });
           } else {
             this.toast.error(res.message);
             this.saving.set(false);
           }
         },
         error: () => {
-          // Still mark locally so user isn't stuck
+          // Still mark locally so the user isn't stuck
           this.auth.markOnboardingComplete();
-          this.toast.success('Welcome to Wearly!');
-          this.router.navigate(['/dashboard']);
+          this.toast.success('Welcome to Atelier!');
+          this.router.navigate(['/templates'], { queryParams: { tab: 'my-templates' } });
         },
       });
   }
 
-  /**
-   * Calls the backend to generate 3 personalized AI templates
-   * based on the preferences we just saved. Runs in the background
-   * so the user doesn't wait — they go to dashboard immediately.
-   */
-  private generateTemplates(): void {
-    this.generating.set(true);
-    this.toast.info('Creating your personalized templates…');
-
-    this.templatesApi.generateOnboardingTemplates().subscribe({
-      next: (templates) => {
-        this.generating.set(false);
-        console.log('[Onboarding] Generated templates:', templates);
-        if (templates && templates.length > 0) {
-          this.toast.success(`${templates.length} personalized templates created!`);
-          this.router.navigate(['/templates'], { queryParams: { tab: 'mine' } });
-        } else {
-          this.toast.error('Templates returned empty. Check browser console (F12) for details.');
-          this.router.navigate(['/dashboard']);
-        }
-      },
-      error: (err) => {
-        this.generating.set(false);
-        const msg = err?.message ?? err?.error?.message ?? 'Unknown error';
-        console.error('[Onboarding] Template generation FAILED:', msg, err);
-        this.toast.error(`AI generation failed: ${msg}`);
-        this.router.navigate(['/dashboard']);
-      },
-    });
-  }
   skip(): void {
     this.auth.markOnboardingComplete();
     this.router.navigate(['/dashboard']);
