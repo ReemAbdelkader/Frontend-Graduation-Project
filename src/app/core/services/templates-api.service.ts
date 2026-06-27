@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
 import { API_BASE_URL, resolveApiUrl } from './api-config';
+import { map, Observable, tap } from 'rxjs';
 
 export interface ApiEnvelope<T> {
   statusCode: number;
@@ -115,6 +115,37 @@ export class TemplatesApiService {
   generateTemplate(productId: string): Observable<TemplateDto> {
     return this.http
       .post<ApiEnvelope<TemplateDto>>(`${API_BASE_URL}/templates/generate`, { productId })
+      .pipe(map((response) => response.data));
+  }
+
+  /**
+   * Generates 3 personalized AI templates based on the user's
+   * onboarding preferences. Called right after onboarding completes.
+   */
+ generateOnboardingTemplates(): Observable<TemplateDto[]> {
+    return this.http
+      .post<ApiEnvelope<TemplateDto[]>>(`${API_BASE_URL}/templates/generate-onboarding`, {})
+      .pipe(
+        tap((response) => console.log('[generateOnboardingTemplates] raw response:', response)),
+        map((response) => {
+          if (!response.succeeded) {
+            throw new Error(response.message ?? 'Template generation failed on the server');
+          }
+          return response.data;
+        })
+      );
+  }
+
+  /**
+   * Gets the current user's own templates (including AI-generated ones).
+   */
+  getMyTemplates(pageNumber = 1, pageSize = 20): Observable<PaginatedResult<TemplateDto>> {
+    const params = new HttpParams()
+      .set('pageNumber', pageNumber)
+      .set('pageSize', pageSize);
+
+    return this.http
+      .get<ApiEnvelope<PaginatedResult<TemplateDto>>>(`${API_BASE_URL}/templates/mine`, { params })
       .pipe(map((response) => response.data));
   }
 

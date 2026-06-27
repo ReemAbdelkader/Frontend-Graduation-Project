@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
-import { catchError, map, Observable, of } from "rxjs";
+import { catchError, map, Observable, of, throwError } from "rxjs";
 import {
   ApiResponse,
   CategoryDto,
@@ -11,11 +11,14 @@ import {
 import { environment } from "../../../environments/environment";
 
 interface DesignCreatePayload {
-  userId: string;
+  id?: string | null;
+  userId?: string | null;
   productId: string;
   templateId?: string | null;
   canvasStateJSON: string;
-  snapshotImageURL: string;
+  base64Snapshot?: string | null;
+  base64Front?: string | null;
+  base64Back?: string | null;
   selectedSize?: number | null;
   selectedFabric?: number | null;
   selectedPrintMethod?: number | null;
@@ -131,12 +134,13 @@ export class ProductService {
 
   createDesign(payload: DesignCreatePayload): Observable<string | null> {
     return this.http
-      .post(`${this.apiUrl}/designstudio`, payload, {
-        responseType: "text",
-      })
+      .post<string>(`${this.apiUrl}/designstudio`, payload)
       .pipe(
-        map((response) => (response ? response : null)),
-        catchError(() => of(null)),
+        map((response) => (response ? String(response) : null)),
+        catchError((err) => {
+          console.error('[ProductService] createDesign failed', err);
+          return throwError(() => err);
+        }),
       );
   }
 

@@ -8,7 +8,7 @@ import {
   SimpleChanges,
   ViewChild,
 } from "@angular/core";
-import { Canvas as FabricCanvas, Textbox } from "fabric";
+import { Canvas as FabricCanvas, Textbox, FabricObject } from "fabric";
 import { firstValueFrom } from "rxjs";
 import { ProductService } from "../../../core/services/product.service";
 import { FabricDesignStateService } from "./services/fabric-design-state.service";
@@ -213,6 +213,148 @@ export class DesignCanvasComponent
     return firstValueFrom(this.productService.uploadDesignSnapshot(file));
   }
 
+  /**
+   * Captures a composite screenshot of the current live view:
+   * the live product background image overlaid with the current Fabric canvas objects.
+   * This is the canonical way to generate a SnapshotImageURL-ready base64 PNG.
+   */
+  async captureCompositeSnapshot(): Promise<string | null> {
+    if (!this.fabricCanvas) {
+      return null;
+    }
+    this.syncCanvasSize();
+    const imageEl = this.previewImageRef?.nativeElement as HTMLImageElement | undefined;
+    return this.compositeWithBackground(imageEl?.src ?? '');
+  }
+
+  /**
+   * Programmatically switch to targetView, fully render it, and return a
+   * composite base64 PNG (product background + Fabric objects).
+   *
+   * The current view state is saved first. The caller is responsible for
+   * restoring the original view via restoreViewSnapshot() when all captures are done.
+   */
+  async captureViewSnapshot(
+    targetView: 'front' | 'back',
+    bgImageUrl: string,
+  ): Promise<string | null> {
+    if (!this.fabricCanvas) {
+      return null;
+    }
+
+    // Persist current editing state before switching
+    this.saveCurrentViewState(this.viewAngle);
+
+    // Switch internal view
+    const state = this.stateService.getState(targetView);
+    this.fabricCanvas.discardActiveObject();
+    this.fabricCanvas.clear();
+    this.viewAngle = targetView;
+
+    if (state) {
+      try {
+        await this.loadFromJSONAsync(state);
+      } catch (err) {
+        console.error('[DesignCanvas] captureViewSnapshot – loadFromJSON failed', err);
+      }
+    }
+
+    this.syncCanvasSize();
+    this.fabricCanvas.renderAll();
+
+    return this.compositeWithBackground(bgImageUrl);
+  }
+
+  /**
+   * Restore the canvas to the given view's saved state.
+   * Call this after all captureViewSnapshot() calls to bring the editor
+   * back to the side the user was editing.
+   */
+  async restoreViewSnapshot(view: 'front' | 'back'): Promise<void> {
+    if (!this.fabricCanvas) {
+      return;
+    }
+
+    const state = this.stateService.getState(view);
+    this.fabricCanvas.discardActiveObject();
+    this.fabricCanvas.clear();
+    this.viewAngle = view;
+
+    if (state) {
+      try {
+        await this.loadFromJSONAsync(state);
+      } catch (err) {
+        console.error('[DesignCanvas] restoreViewSnapshot – loadFromJSON failed', err);
+        this.fabricCanvas.clear();
+      }
+    }
+
+    this.syncCanvasSize();
+    this.fabricCanvas.renderAll();
+    this.schedulePrintableConstraint();
+    this.syncToolbarState();
+  }
+
+  /**
+   * Generates an offscreen composite snapshot for a given canvas state + background URL.
+   * Used to generate front/back preview images from stored Fabric JSON states.
+   */
+  async generateSnapshotForStateAndImage(
+    canvasState: unknown,
+    imageUrl: string,
+  ): Promise<string | null> {
+    if (!this.fabricCanvas) {
+      return null;
+    }
+
+    const w = this.fabricCanvas.getWidth() || 800;
+    const h = this.fabricCanvas.getHeight() || 800;
+
+    try {
+      // 1. Load background product image
+      const bgImg = await this.loadImageAsync(imageUrl);
+
+      // 2. Create offscreen composite canvas
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = w;
+      tempCanvas.height = h;
+      const ctx = tempCanvas.getContext('2d');
+      if (!ctx) return null;
+
+      if (bgImg) {
+        ctx.drawImage(bgImg, 0, 0, w, h);
+      }
+
+      if (!canvasState) {
+        return tempCanvas.toDataURL('image/png');
+      }
+
+      // 3. Create offscreen Fabric canvas
+      const fCanvasEl = document.createElement('canvas');
+      fCanvasEl.width = w;
+      fCanvasEl.height = h;
+
+      const fCanvas = new FabricCanvas(fCanvasEl, {
+        backgroundColor: 'transparent',
+        enableRetinaScaling: false,
+      });
+      fCanvas.setDimensions({ width: w, height: h });
+
+      // 4. Load JSON (Fabric v6 returns a Promise — await it properly)
+      await this.loadFromJSONOnCanvas(fCanvas, canvasState);
+
+      // 5. Render and composite
+      fCanvas.renderAll();
+      ctx.drawImage(fCanvasEl, 0, 0, w, h);
+      fCanvas.dispose();
+
+      return tempCanvas.toDataURL('image/png');
+    } catch (error) {
+      console.error('[DesignCanvas] generateSnapshotForStateAndImage error:', error);
+      return null;
+    }
+  }
+
   saveCurrentViewState(viewAngle: "front" | "back" = this.viewAngle): void {
     if (!this.fabricCanvas) {
       return;
@@ -267,15 +409,22 @@ export class DesignCanvasComponent
       console.log(`[Fabric] calling loadFromJSON for ${viewAngle}`, {
         targetState: state,
       });
-      this.fabricCanvas.loadFromJSON(state as any, () => {
-        this.fabricCanvas?.requestRenderAll();
-        this.schedulePrintableConstraint();
-        this.syncToolbarState();
-        console.log(`[Fabric] loadFromJSON callback complete`, {
-          targetSide: viewAngle,
-          objectCountAfterLoad: this.fabricCanvas?.getObjects().length ?? 0,
+      // Fabric v6: loadFromJSON returns a Promise. Await it, then render.
+      this.loadFromJSONAsync(state)
+        .then(() => {
+          this.fabricCanvas?.requestRenderAll();
+          this.schedulePrintableConstraint();
+          this.syncToolbarState();
+          console.log(`[Fabric] loadFromJSON complete`, {
+            targetSide: viewAngle,
+            objectCountAfterLoad: this.fabricCanvas?.getObjects().length ?? 0,
+          });
+        })
+        .catch((error: unknown) => {
+          console.error(`[Fabric] loadFromJSON failed for ${viewAngle}`, error);
+          this.fabricCanvas?.clear();
+          this.fabricCanvas?.requestRenderAll();
         });
-      });
     } catch (error) {
       console.error(`[Fabric] Failed to restore state for ${viewAngle}`, error);
       this.fabricCanvas.clear();
@@ -514,7 +663,7 @@ export class DesignCanvasComponent
       this.schedulePrintableConstraint();
     });
 
-    this.fabricCanvas.on("object:moving", (event) => {
+    this.fabricCanvas.on("object:moving", (event: any) => {
       const target = event.target;
       if (!target) {
         return;
@@ -526,7 +675,7 @@ export class DesignCanvasComponent
       );
     });
 
-    this.fabricCanvas.on("object:scaling", (event) => {
+    this.fabricCanvas.on("object:scaling", (event: any) => {
       const target = event.target;
       if (!target) {
         return;
@@ -538,7 +687,7 @@ export class DesignCanvasComponent
       );
     });
 
-    this.fabricCanvas.on("object:rotating", (event) => {
+    this.fabricCanvas.on("object:rotating", (event: any) => {
       const target = event.target;
       if (!target) {
         return;
@@ -678,6 +827,105 @@ export class DesignCanvasComponent
         this.printableZone,
       );
       this.pendingConstraintFrame = 0;
+    });
+  }
+
+  /**
+   * Fabric v6 async loadFromJSON wrapper.
+   * Awaits the Promise returned by loadFromJSON, then waits for all
+   * FabricImage elements inside the canvas to finish loading their sources.
+   */
+  private async loadFromJSONAsync(state: unknown): Promise<void> {
+    if (!this.fabricCanvas) return;
+
+    // Fabric v6: loadFromJSON(json, reviver?) returns Promise<Canvas>
+    await (this.fabricCanvas.loadFromJSON(state as any) as unknown as Promise<unknown>);
+
+    // Wait for any embedded FabricImage src URLs to finish loading
+    const imageObjects = this.fabricCanvas.getObjects().filter(
+      (o: any) => o.type === 'image',
+    );
+    await Promise.all(
+      imageObjects.map((obj: any) => {
+        const el: HTMLImageElement | null = obj._element ?? null;
+        if (!el || (el.complete && el.naturalWidth > 0)) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          el.onload = () => resolve();
+          el.onerror = () => resolve();
+        });
+      }),
+    );
+  }
+
+  /**
+   * Same as loadFromJSONAsync but operates on a caller-provided FabricCanvas
+   * (used for offscreen snapshot generation).
+   */
+  private async loadFromJSONOnCanvas(
+    fCanvas: FabricCanvas,
+    state: unknown,
+  ): Promise<void> {
+    await (fCanvas.loadFromJSON(state as any) as unknown as Promise<unknown>);
+
+    const imageObjects = fCanvas.getObjects().filter((o: any) => o.type === 'image');
+    await Promise.all(
+      imageObjects.map((obj: any) => {
+        const el: HTMLImageElement | null = obj._element ?? null;
+        if (!el || (el.complete && el.naturalWidth > 0)) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          el.onload = () => resolve();
+          el.onerror = () => resolve();
+        });
+      }),
+    );
+  }
+
+  /**
+   * Composites the current Fabric canvas on top of a background image URL
+   * and returns a base64 PNG data URL.
+   */
+  private async compositeWithBackground(bgImageUrl: string): Promise<string | null> {
+    if (!this.fabricCanvas) return null;
+
+    const width = this.fabricCanvas.getWidth() || 800;
+    const height = this.fabricCanvas.getHeight() || 800;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const ctx = tempCanvas.getContext('2d');
+    if (!ctx) return null;
+
+    // 1. Draw product background image
+    if (bgImageUrl) {
+      const bg = await this.loadImageAsync(bgImageUrl);
+      if (bg) {
+        try { ctx.drawImage(bg, 0, 0, width, height); } catch { /* tainted */ }
+      }
+    }
+
+    // 2. Overlay live Fabric canvas
+    this.fabricCanvas.renderAll();
+    const fabricEl = this.fabricCanvasRef?.nativeElement;
+    if (fabricEl) {
+      try { ctx.drawImage(fabricEl, 0, 0, width, height); } catch { /* tainted */ }
+    }
+
+    return tempCanvas.toDataURL('image/png');
+  }
+
+  /**
+   * Loads an image from a URL and returns the HTMLImageElement,
+   * or null if the URL is empty or the load fails.
+   */
+  private loadImageAsync(src: string): Promise<HTMLImageElement | null> {
+    return new Promise((resolve) => {
+      if (!src) { resolve(null); return; }
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
     });
   }
 

@@ -23,6 +23,7 @@ export class GoogleCallbackComponent implements OnInit {
     const expiresAt = params.get('expiresAt')?.trim() ?? '';
     const name = params.get('name')?.trim() ?? email ?? '';
     const rolesParam = params.get('roles')?.trim() ?? 'user';
+    const onboardingCompleted = params.get('onboardingCompleted')?.trim() === 'true';
 
     if (!accessToken || !refreshToken) {
       this.toast.error('Google sign-in could not be completed. Please try again.');
@@ -42,10 +43,11 @@ export class GoogleCallbackComponent implements OnInit {
       email: email ?? '',
       name: name || email || 'Google User',
       roles: roles.length ? roles : ['user'],
+      onboardingCompleted,
     };
 
     this.auth.completeExternalLogin(state);
     this.toast.success('Signed in successfully with Google.');
-    this.router.navigate(['/dashboard']);
+    this.router.navigate([this.auth.resolvePostLoginRoute()]);
   }
 }

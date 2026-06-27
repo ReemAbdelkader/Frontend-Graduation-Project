@@ -7,19 +7,29 @@
       <h1 class="title">
         Curated designs <span class="italic-light">ready for your garment,</span> <br />or share your own.
       </h1>
-      <p class="sub">A living library of editorial-grade prints published through Wearly.</p>
+      <p class="sub">A living library of editorial-grade prints published through Atelier.</p>
     </header>
 
     <div class="toolbar">
       <div class="tab-switcher">
-        <button class="tab-btn active">
+        <button
+          class="tab-btn"
+          [class.active]="activeTab() === 'public'"
+          (click)="switchTab('public')"
+        >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg>
           Public Templates
         </button>
-        <button class="tab-btn disabled" disabled title="The API does not expose an AI-generated flag yet.">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
-          AI Assistant Creations
-        </button>
+        @if (isLoggedIn()) {
+          <button
+            class="tab-btn"
+            [class.active]="activeTab() === 'mine'"
+            (click)="switchTab('mine')"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+            My AI Creations
+          </button>
+        }
       </div>
 
       <button class="filter-btn" disabled>
@@ -33,7 +43,13 @@
     } @else if (error()) {
       <div class="state-panel error">{{ error() }}</div>
     } @else if (templates().length === 0) {
-      <div class="state-panel">No public templates are available yet.</div>
+      <div class="state-panel">
+        @if (activeTab() === 'mine') {
+          No AI-generated templates yet. Complete onboarding to get your personalized designs!
+        } @else {
+          No public templates are available yet.
+        }
+      </div>
     } @else {
       <section class="grid">
         @for (t of templates(); track t.id; let i = $index) {
@@ -58,8 +74,12 @@
                 <span>{{ t.likesCount }} likes</span>
                 <span>{{ t.remixesCount }} remixes</span>
               </div>
-              @if (creatorName(t.creatorUserId); as author) {
-                <p class="author">by <span class="author-name">{{ author }}</span></p>
+              @if (activeTab() === 'public') {
+                @if (creatorName(t.creatorUserId); as author) {
+                  <p class="author">by <span class="author-name">{{ author }}</span></p>
+                }
+              } @else {
+                <p class="author"><span class="category-pill" style="font-size: 0.65rem;">Private</span></p>
               }
             </div>
           </article>

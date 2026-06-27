@@ -1,10 +1,23 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router'; 
 import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/services/toast.service';
+import { OnboardingApiService, UserPreferencesResponse } from '../../core/services/onboarding-api.service';
+import { AppNavComponent } from '../../shared/components/app-nav/app-nav.component';
+import { LogoutDialogComponent } from '../../shared/components/logout-dialog/logout-dialog.component';
 import { ProfileService } from '../../core/services/profile.service'; 
 import { environment } from '../../../environments/environment';
+
+type ProfileTab = 'community' | 'templates' | 'rewards' | 'orders' | 'settings';
+
+interface Metric {
+  icon: 'shopping' | 'store' | 'dollar' | 'layers' | 'star' | 'crown';
+  label: string;
+  value: string;
+  sub?: string;
+}
 
 export interface UserProfileDto {
   name: string;
@@ -22,6 +35,34 @@ export interface UserProfileDto {
   isTopProfile: boolean;
 }
 
+const COLOR_OPTIONS = [
+  { label: 'Black', value: 'Black', colorPreview: '#1A1A2E' },
+  { label: 'White', value: 'White', colorPreview: '#F5F5F5' },
+  { label: 'Red', value: 'Red', colorPreview: '#E74C3C' },
+  { label: 'Blue', value: 'Blue', colorPreview: '#2C6BED' },
+  { label: 'Green', value: 'Green', colorPreview: '#27AE60' },
+  { label: 'Earth Tones', value: 'Earth Tones', colorPreview: '#A0826D' },
+  { label: 'Pastels', value: 'Pastels', colorPreview: '#B8D4E3' },
+  { label: 'Neutral', value: 'Neutral', colorPreview: '#95A5A6' },
+];
+
+const INTEREST_OPTIONS = [
+  { label: 'Music', value: 'Music', emoji: '🎵' },
+  { label: 'Travel', value: 'Travel', emoji: '✈️' },
+  { label: 'Sports', value: 'Sports', emoji: '⚽' },
+  { label: 'Art', value: 'Art', emoji: '🎨' },
+  { label: 'Gaming', value: 'Gaming', emoji: '🎮' },
+  { label: 'Photography', value: 'Photography', emoji: '📸' },
+  { label: 'Tech', value: 'Tech', emoji: '💻' },
+  { label: 'Fashion', value: 'Fashion', emoji: '👗' },
+];
+
+const DESIGN_OPTIONS = [
+  { label: 'Bold Prints', value: 'Bold Prints', emoji: '🔥' },
+  { label: 'Clean & Simple', value: 'Clean & Simple', emoji: '✨' },
+  { label: 'Mixed', value: 'Mixed', emoji: '🎭' },
+];
+
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -33,12 +74,36 @@ export class ProfileComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router); 
   private readonly authService = inject(AuthService);
+  private readonly toast = inject(ToastService);
+  private readonly onboardingApi = inject(OnboardingApiService);
   private readonly profileService = inject(ProfileService); 
 
+  readonly user = this.authService.user();
+  readonly tab = signal<ProfileTab>('settings');
   readonly activeTab = signal<string>('settings');
+
+  // Editable form fields
+  readonly formName = signal(this.user?.name ?? '');
+  readonly formUsername = signal((this.user?.email ?? '').split('@')[0]);
+  readonly formEmail = signal(this.user?.email ?? '');
+  readonly formBio = signal("Designing quiet, sculptural pieces from Lisbon. SS '26 atelier drop now live.");
+  readonly formNewPassword = signal('');
+
+  readonly askLogout = signal(false);
   readonly showLogoutModal = signal<boolean>(false);
   readonly isLoggingOut = signal<boolean>(false);
-  
+
+  // Preferences
+  readonly selectedColors = signal<string[]>([]);
+  readonly selectedInterests = signal<string[]>([]);
+  readonly selectedDesign = signal<string[]>([]);
+  readonly prefsLoading = signal(true);
+  readonly prefsSaving = signal(false);
+
+  readonly colorOptions = COLOR_OPTIONS;
+  readonly interestOptions = INTEREST_OPTIONS;
+  readonly designOptions = DESIGN_OPTIONS;
+
   selectedFile: File | null = null; 
 
   displayUser: UserProfileDto = {
@@ -54,44 +119,30 @@ export class ProfileComponent implements OnInit {
   readonly userRewards = signal<any[]>([]);
   readonly userTemplates = signal<any[]>([]);
 
-  // ngOnInit(): void {
-  //   this.route.queryParams.subscribe(params => {
-  //     if (params['tab']) { 
-  //       this.activeTab.set(params['tab']); 
-  //     }
-  //   });
+  readonly metrics: Metric[] = [
+    { icon: 'shopping', label: 'Items purchased', value: '38', sub: 'from 12 sellers' },
+    { icon: 'store', label: 'Total orders', value: '24' },
+    { icon: 'dollar', label: 'Total spent', value: '$4,218' },
+    { icon: 'layers', label: 'Templates created', value: '9' },
+    { icon: 'star', label: 'Avg. template rating', value: '4.82', sub: 'from other users' },
+    { icon: 'crown', label: 'Top profile', value: 'Yes', sub: 'High-rated templates' },
+  ];
 
-  //   const currentUser = this.authService.user();
-  //   if (currentUser && currentUser.email) {
-  //     this.profileService.getProfile(currentUser.email).subscribe({
-  //       next: (profile) => {
-  //         if (profile) {
-  //           this.displayUser = {
-  //             name: profile.name,
-  //             username: profile.userName,
-  //             email: profile.email,
-  //             bio: profile.bio || '',
-  //             photoUrl: profile.profilePictureUrl ? `${environment.apiUrl}${profile.profilePictureUrl}` : '',
-  //             followers: profile.followersCount,
-  //             following: profile.followingCount,
-  //             itemsPurchased: profile.itemsPurchasedCount,
-  //             totalOrders: profile.totalOrdersCount,
-  //             totalSpent: profile.totalSpent,
-  //             templatesCreated: profile.templatesCreatedCount, 
-  //             avgRating: profile.avgTemplateRating,
-  //             isTopProfile: profile.isTopProfile || false
-  //           };
-  //           this.syncEditForm();
-  //         }
-  //       },
-  //       error: (err) => console.error(err)
-  //     });
-  //   }
-  // }
+  readonly tabs: Array<{ key: ProfileTab; label: string; hasIcon: boolean }> = [
+    { key: 'community', label: 'Community posts', hasIcon: false },
+    { key: 'templates', label: 'Design studio templates', hasIcon: false },
+    { key: 'rewards', label: 'Rewards', hasIcon: false },
+    { key: 'orders', label: 'My Orders', hasIcon: false },
+    { key: 'settings', label: 'Settings', hasIcon: true },
+  ];
+
   ngOnInit(): void {
+    this.loadPreferences();
+
     this.route.queryParams.subscribe(params => {
       if (params['tab']) { 
         this.activeTab.set(params['tab']); 
+        this.tab.set(params['tab'] as ProfileTab);
       }
     });
 
@@ -102,8 +153,6 @@ export class ProfileComponent implements OnInit {
       this.profileService.getProfile(currentUser.email).subscribe({
         next: (response: any) => {
           console.log('2. Raw API response received:', response);
-
-          // Dynamically handles both wrapped (response.data) and direct responses, as well as casing inconsistencies
           const profile = response?.data ? response.data : response;
 
           if (profile) {
@@ -134,6 +183,83 @@ export class ProfileComponent implements OnInit {
     } else {
       console.warn('! AuthService could not find a valid email for the current user.');
     }
+  }
+
+  private parseCsv(value: string): string[] {
+    if (!value) return [];
+    return value.split(',').map((s) => s.trim()).filter(Boolean);
+  }
+
+  private loadPreferences(): void {
+    this.prefsLoading.set(true);
+    this.onboardingApi.getPreferences().subscribe({
+      next: (data: UserPreferencesResponse) => {
+        this.selectedColors.set(this.parseCsv(data.favoriteColors));
+        this.selectedInterests.set(this.parseCsv(data.interests));
+        this.selectedDesign.set(this.parseCsv(data.designPreference));
+        this.prefsLoading.set(false);
+      },
+      error: () => {
+        this.prefsLoading.set(false);
+      },
+    });
+  }
+
+  toggleSelection(field: 'colors' | 'interests' | 'design', value: string): void {
+    if (field === 'colors') {
+      const current = [...this.selectedColors()];
+      const idx = current.indexOf(value);
+      if (idx > -1) current.splice(idx, 1);
+      else current.push(value);
+      this.selectedColors.set(current);
+    } else if (field === 'interests') {
+      const current = [...this.selectedInterests()];
+      const idx = current.indexOf(value);
+      if (idx > -1) current.splice(idx, 1);
+      else current.push(value);
+      this.selectedInterests.set(current);
+    } else {
+      const current = [...this.selectedDesign()];
+      const idx = current.indexOf(value);
+      if (idx > -1) current.splice(idx, 1);
+      else current.push(value);
+      this.selectedDesign.set(current);
+    }
+  }
+
+  isSelected(field: 'colors' | 'interests' | 'design', value: string): boolean {
+    if (field === 'colors') return this.selectedColors().includes(value);
+    if (field === 'interests') return this.selectedInterests().includes(value);
+    return this.selectedDesign().includes(value);
+  }
+
+  savePreferences(): void {
+    this.prefsSaving.set(true);
+    this.onboardingApi
+      .saveOnboarding({
+        favoriteColors: this.selectedColors().join(', '),
+        interests: this.selectedInterests().join(', '),
+        designPreference: this.selectedDesign().join(', '),
+      })
+      .subscribe({
+        next: (res) => {
+          this.prefsSaving.set(false);
+          if (res.ok) {
+            this.toast.success('Style preferences updated!');
+          } else {
+            this.toast.error(res.message);
+          }
+        },
+        error: () => {
+          this.prefsSaving.set(false);
+          this.toast.error('Failed to save preferences.');
+        },
+      });
+  }
+
+  setTab(t: ProfileTab): void {
+    this.tab.set(t);
+    this.activeTab.set(t);
   }
 
   syncEditForm(): void {
@@ -194,6 +320,10 @@ export class ProfileComponent implements OnInit {
 
   toggleLogoutModal(value: boolean): void {
     this.showLogoutModal.set(value);
+  }
+
+  closeLogout(): void {
+    this.askLogout.set(false);
   }
 
   confirmLogout(): void {

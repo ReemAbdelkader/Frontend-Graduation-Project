@@ -83,7 +83,7 @@ export class FabricPrintableZoneConstraintService {
       return;
     }
 
-    canvas.getObjects().forEach((object) => {
+    canvas.getObjects().forEach((object: any) => {
       this.constrainObject(canvas, object, zone);
     });
   }

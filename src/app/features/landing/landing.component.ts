@@ -50,7 +50,7 @@ export class LandingComponent {
     },
     {
       title: 'A Real Community',
-      body: 'Publish your designs to the Wearly feed, get rated, and let other creators remix your work.',
+      body: 'Publish your designs to the Atelier feed, get rated, and let other creators remix your work.',
       icon: 'users',
     },
     {
@@ -60,7 +60,7 @@ export class LandingComponent {
     },
     {
       title: 'Your Style Profile',
-      body: 'Wearly learns your taste from day one and only shows you things you\'d actually wear.',
+      body: 'Atelier learns your taste from day one and only shows you things you\'d actually wear.',
       icon: 'sparkles',
     },
   ];
@@ -69,7 +69,7 @@ export class LandingComponent {
     {
       name: 'Maya Okafor',
       role: 'Independent designer · Lagos',
-      body: 'I launched a 6-piece capsule from my couch. Wearly handled production, payments and shipping — I just designed.',
+      body: 'I launched a 6-piece capsule from my couch. Atelier handled production, payments and shipping — I just designed.',
     },
     {
       name: 'Theo Wren',
@@ -79,7 +79,7 @@ export class LandingComponent {
     {
       name: 'Aiko Tanaka',
       role: 'Creator · Tokyo',
-      body: 'Wearly\'s community is the first place online I\'ve felt seen as a designer, not just a customer.',
+      body: 'Atelier\'s community is the first place online I\'ve felt seen as a designer, not just a customer.',
     },
   ];
 

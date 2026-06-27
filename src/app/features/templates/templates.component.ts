@@ -8,6 +8,9 @@ import {
   TemplateDto,
   TemplatesApiService,
 } from '../../core/services/templates-api.service';
+import { AuthService } from '../../core/services/auth.service';
+
+type TabType = 'public' | 'mine';
 
 @Component({
   selector: 'app-templates',
@@ -18,6 +21,7 @@ import {
 })
 export class TemplatesComponent {
   private readonly api = inject(TemplatesApiService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly templates = signal<TemplateDto[]>([]);
@@ -32,12 +36,25 @@ export class TemplatesComponent {
   readonly selectedTemplate = signal<TemplateDetailDto | null>(null);
   readonly detailLoading = signal(false);
   readonly detailError = signal<string | null>(null);
+  readonly activeTab = signal<TabType>('public');
+
+  readonly isLoggedIn = this.auth.isLoggedIn;
 
   readonly hasPreviousPage = computed(() => this.pageNumber() > 1);
   readonly hasNextPage = computed(() => this.pageNumber() < this.totalPages());
 
   constructor() {
     this.loadCategories();
+    this.loadPage(1);
+  }
+
+  switchTab(tab: TabType): void {
+    if (tab === this.activeTab()) return;
+    this.activeTab.set(tab);
+    this.pageNumber.set(1);
+    this.totalPages.set(0);
+    this.totalCount.set(0);
+    this.templates.set([]);
     this.loadPage(1);
   }
 
@@ -50,8 +67,11 @@ export class TemplatesComponent {
     this.loading.set(true);
     this.error.set(null);
 
-    this.api
-      .getPublicTemplates(pageNumber, this.pageSize)
+    const fetch$ = this.activeTab() === 'mine'
+      ? this.api.getMyTemplates(pageNumber, this.pageSize)
+      : this.api.getPublicTemplates(pageNumber, this.pageSize);
+
+    fetch$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {

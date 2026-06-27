@@ -27,12 +27,19 @@ export class AuthComponent {
   readonly password = signal('');
   readonly confirmPassword = signal('');
   readonly registrationMessage = signal('');
-  readonly registrationSuccess = signal(false);
+  readonly registrationCompleted = signal(false);
+  readonly isSubmitting = signal(false);
 
   setTab(t: 'signin' | 'signup'): void {
     this.tab.set(t);
     this.registrationMessage.set('');
-    this.registrationSuccess.set(false);
+    this.registrationCompleted.set(false);
+  }
+
+  backToLogin(): void {
+    this.tab.set('signin');
+    this.registrationMessage.set('');
+    this.registrationCompleted.set(false);
   }
 
   googleSignIn(): void {
@@ -60,39 +67,60 @@ export class AuthComponent {
         return;
       }
 
-      this.auth.register(nameVal, emailVal, passVal).subscribe((result) => {
-        console.log('Registration API result', result);
+      this.isSubmitting.set(true);
+      this.auth.register(nameVal, emailVal, passVal).subscribe({
+        next: (result) => {
+          this.isSubmitting.set(false);
+          console.log('Registration API result', result);
 
-        if (!result.ok) {
-          const errorMessage = result.message ?? result.error ?? 'Registration failed.';
+          if (!result.ok) {
+            const errorMessage = result.message ?? result.error ?? 'Registration failed.';
+            this.toastService.error(errorMessage);
+            this.registrationMessage.set(errorMessage);
+            return;
+          }
+
+          const successMessage = 'We\'ve sent a confirmation email to your email address. Please check your inbox and click the confirmation link before signing in.';
+          this.toastService.success('Registration successful. Check your email to confirm your account.');
+          this.registrationMessage.set(successMessage);
+          this.registrationCompleted.set(true);
+          this.name.set('');
+          this.email.set('');
+          this.password.set('');
+          this.confirmPassword.set('');
+        },
+        error: (error) => {
+          this.isSubmitting.set(false);
+          const errorMessage = typeof error?.error === 'string' ? error.error : error?.message ?? 'Registration failed.';
           this.toastService.error(errorMessage);
           this.registrationMessage.set(errorMessage);
-          return;
-        }
-
-        const successMessage = result.message ?? 'Registration successful. Please check your email to confirm your account.';
-        this.registrationMessage.set(successMessage);
-        this.registrationSuccess.set(true);
-        this.name.set('');
-        this.email.set('');
-        this.password.set('');
-        this.confirmPassword.set('');
+        },
       });
       return;
     }
 
-    this.auth.login(emailVal, passVal).subscribe((result) => {
-      console.log('Login API result', result);
+    this.isSubmitting.set(true);
+    this.auth.login(emailVal, passVal).subscribe({
+      next: (result) => {
+        this.isSubmitting.set(false);
+        console.log('Login API result', result);
 
-      if (!result.ok) {
-        const errorMessage = result.message ?? result.error ?? `Login request failed with status ${result.error ?? 'unknown'}`;
+        if (!result.ok) {
+          const errorMessage = result.message ?? result.error ?? `Login request failed with status ${result.error ?? 'unknown'}`;
+          this.toastService.error(errorMessage);
+          return;
+        }
+
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl')?.trim();
+        const targetRoute = returnUrl || this.auth.resolvePostLoginRoute();
+        this.toastService.success(result.message ?? 'Login successful.');
+        this.router.navigateByUrl(targetRoute, { replaceUrl: true });
+      },
+      error: (error) => {
+        this.isSubmitting.set(false);
+        const errorMessage = typeof error?.error === 'string' ? error.error : error?.message ?? 'Login request failed.';
         this.toastService.error(errorMessage);
-        return;
-      }
-
-      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl')?.trim();
-      this.toastService.success(result.message ?? 'Login successful.');
-      this.router.navigateByUrl(returnUrl || this.auth.resolvePostLoginRoute());
+      },
     });
   }
 }
