@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationBellComponent } from '../notifications/notifications.component';
 import { LogoutDialogComponent } from '../logout-dialog/logout-dialog.component';
+import { CartDropdownComponent } from '../cart-dropdown/cart-dropdown.component';
 import { logoImage } from '../../../core/data/wearly-data';
 
 interface NavLink {
@@ -16,7 +17,7 @@ interface NavLink {
 @Component({
   selector: 'app-nav',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, NotificationBellComponent, LogoutDialogComponent, NgIf, NgForOf],
+  imports: [RouterLink, RouterLinkActive, NotificationBellComponent, LogoutDialogComponent, CartDropdownComponent, NgIf, NgForOf],
   templateUrl: './app-nav.component.html',
   styleUrl: './app-nav.component.scss',
 })

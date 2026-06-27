@@ -2,34 +2,11 @@ import { HttpClient, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { catchError, map, Observable, of, throwError } from "rxjs";
 
-export interface AddToCartPayload {
-  productId: string;
-  designId?: string | null;
-  quantity: number;
-}
-
-export interface CartItemDto {
-  cartItemId: string;
-  productId: string;
-  productName: string;
-  productImage: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  designId?: string | null;
-  designSnapshotImageUrl?: string | null;
-}
-
-export interface CartDto {
-  id: string;
-  userId: string;
-  items: CartItemDto[];
-  totalCost: number;
-  itemCount: number;
-}
-
 import {
+  AddToCartPayload,
   ApiResponse,
+  CartDto,
+  CartItemDto,
   CategoryDto,
   PaginatedResult,
   ProductDto,

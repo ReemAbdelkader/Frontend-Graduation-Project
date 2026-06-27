@@ -87,3 +87,29 @@ export interface OrderDto {
   status?: string;
   eta?: string;
 }
+
+export interface AddToCartPayload {
+  productId: string;
+  designId?: string | null;
+  quantity: number;
+}
+
+export interface CartItemDto {
+  cartItemId: string;
+  productId: string;
+  productName: string;
+  productImage: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  designId?: string | null;
+  designSnapshotImageUrl?: string | null;
+}
+
+export interface CartDto {
+  id: string;
+  userId: string;
+  items: CartItemDto[];
+  totalCost: number;
+  itemCount: number;
+}

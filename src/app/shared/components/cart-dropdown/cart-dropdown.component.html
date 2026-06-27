@@ -1,0 +1,126 @@
+<div class="cart-wrap">
+  <button class="icon-btn cart-btn" (click)="toggle()" aria-label="Shopping Cart">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+      <path d="M3 6h18"/>
+      <path d="M16 10a4 4 0 0 1-8 0"/>
+    </svg>
+    @if (cartService.itemCount() > 0) {
+      <span class="cart-badge">{{ cartService.itemCount() }}</span>
+    }
+  </button>
+
+  @if (open()) {
+    <div class="overlay" (click)="close()"></div>
+    <div class="dropdown glass-strong" [class.closing]="closing()" (click)="$event.stopPropagation()">
+      
+      <!-- HEADER -->
+      <div class="dropdown-header">
+        <div class="header-title-wrap">
+          <p class="title">Shopping Cart</p>
+          <span class="header-count">{{ cartService.itemCount() }} {{ cartService.itemCount() === 1 ? 'item' : 'items' }}</span>
+        </div>
+        <div class="header-actions">
+          @if (cartService.items().length > 0) {
+            <button class="clear-btn" type="button" (click)="clearAll()" [disabled]="cartService.loading()">Clear All</button>
+          }
+          <button class="close-btn" (click)="close()" aria-label="Close">×</button>
+        </div>
+      </div>
+
+      <!-- BODY / CONTENT -->
+      @if (cartService.loading() && cartService.items().length === 0) {
+        <div class="state-card loading-state">
+          <div class="spinner"></div>
+          <p>Loading your cart…</p>
+        </div>
+      } @else if (cartService.items().length === 0) {
+        <!-- EMPTY CART STATE -->
+        <div class="state-card empty-state">
+          <div class="empty-icon-wrapper" aria-hidden="true">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <path d="M3 6h18"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+              <line x1="9" y1="13" x2="15" y2="13" />
+            </svg>
+          </div>
+          <p class="empty-title">Your cart is empty</p>
+          <span class="empty-sub">Start creating amazing designs.</span>
+          <a routerLink="/studio" class="btn-start-design" (click)="close()">Explore Studio</a>
+        </div>
+      } @else {
+        <!-- CART ITEMS LIST -->
+        <div class="items-scroll-area">
+          <ul class="cart-items-list">
+            @for (item of cartService.items(); track item.cartItemId) {
+              <li class="cart-item" [class.updating]="cartService.updatingItemId() === item.cartItemId">
+                
+                <!-- THUMBNAIL -->
+                <div class="item-thumb-wrap">
+                  <img [src]="getThumbnailUrl(item)" [alt]="item.productName" class="item-thumb" />
+                  @if (item.designId) {
+                    <span class="custom-badge" title="Customized Design">Custom</span>
+                  }
+                </div>
+
+                <!-- ITEM DETAILS -->
+                <div class="item-info">
+                  <div class="item-head">
+                    <h4 class="product-name" [title]="item.productName">{{ item.productName }}</h4>
+                    <button class="remove-btn" type="button" (click)="removeItem(item)" [disabled]="cartService.updatingItemId() === item.cartItemId" title="Remove item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div class="item-price-row">
+                    <span class="unit-price">${{ item.unitPrice.toFixed(2) }}</span>
+                    <span class="total-price">${{ item.totalPrice.toFixed(2) }}</span>
+                  </div>
+
+                  <!-- QUANTITY CONTROLS -->
+                  <div class="qty-controls">
+                    <button class="qty-btn" type="button" (click)="decreaseQuantity(item)" [disabled]="cartService.updatingItemId() === item.cartItemId" aria-label="Decrease quantity">-</button>
+                    <span class="qty-val">{{ item.quantity }}</span>
+                    <button class="qty-btn" type="button" (click)="increaseQuantity(item)" [disabled]="cartService.updatingItemId() === item.cartItemId" aria-label="Increase quantity">+</button>
+                  </div>
+                </div>
+
+              </li>
+            }
+          </ul>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="dropdown-footer">
+          <div class="summary-rows">
+            <div class="summary-row">
+              <span>Subtotal</span>
+              <span class="summary-val">${{ cartService.totalCost().toFixed(2) }}</span>
+            </div>
+            <div class="summary-row">
+              <span>Shipping</span>
+              <span class="summary-val shipping-free">Free</span>
+            </div>
+            <div class="summary-row total-row">
+              <span>Total</span>
+              <span class="total-val">${{ cartService.totalCost().toFixed(2) }}</span>
+            </div>
+          </div>
+
+          <button class="checkout-btn" type="button" (click)="goToCheckout()">
+            <span>Checkout</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
+        </div>
+      }
+
+    </div>
+  }
+</div>

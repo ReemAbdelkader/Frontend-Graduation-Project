@@ -43,6 +43,8 @@ type StudioProduct = ProductDto & {
   price: number;
 };
 
+import { CartService } from "../../core/services/cart.service";
+
 @Component({
   selector: "app-studio",
   standalone: true,
@@ -58,6 +60,7 @@ type StudioProduct = ProductDto & {
 })
 export class StudioComponent {
   private readonly productService = inject(ProductService);
+  private readonly cartService = inject(CartService);
   private readonly authService = inject(AuthService);
   private readonly aiImageService = inject(AiImageService);
   private readonly router = inject(Router);
@@ -622,12 +625,8 @@ export class StudioComponent {
 
       console.log("[Studio] addToCart: calling cart API", { productId: selectedProduct.id, designId });
 
-      this.productService
-        .addToCart({
-          productId: selectedProduct.id,
-          designId,
-          quantity: 1,
-        })
+      this.cartService
+        .addToCart(selectedProduct.id, designId, 1)
         .subscribe({
           next: () => {
             console.log("[Studio] addToCart: success");
