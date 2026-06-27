@@ -1,6 +1,33 @@
 import { HttpClient, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { catchError, map, Observable, of, throwError } from "rxjs";
+
+export interface AddToCartPayload {
+  productId: string;
+  designId?: string | null;
+  quantity: number;
+}
+
+export interface CartItemDto {
+  cartItemId: string;
+  productId: string;
+  productName: string;
+  productImage: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  designId?: string | null;
+  designSnapshotImageUrl?: string | null;
+}
+
+export interface CartDto {
+  id: string;
+  userId: string;
+  items: CartItemDto[];
+  totalCost: number;
+  itemCount: number;
+}
+
 import {
   ApiResponse,
   CategoryDto,
@@ -152,4 +179,16 @@ export class ProductService {
         catchError(() => of(null)),
       );
   }
-}
+
+  addToCart(payload: AddToCartPayload): Observable<CartDto> {
+    return this.http
+      .post<{ data: CartDto }>(`${this.apiUrl}/cart/items`, payload)
+      .pipe(
+        map((response) => response.data),
+        catchError((err) => {
+          console.error('[ProductService] addToCart failed', err);
+          return throwError(() => err);
+        }),
+      );
+  }
+}

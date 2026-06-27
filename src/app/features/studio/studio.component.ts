@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, ViewChild } from "@angular/core";
-import { RouterLink } from "@angular/router";
+import { Router, RouterLink } from "@angular/router";
 import { FormsModule } from "@angular/forms";
 import { CheckoutPayModalComponent } from "../../shared/components/checkout-pay-modal/checkout-pay-modal.component";
 import { DesignCanvasComponent } from "../../shared/components/design-canvas/design-canvas.component";
@@ -60,13 +60,18 @@ export class StudioComponent {
   private readonly productService = inject(ProductService);
   private readonly authService = inject(AuthService);
   private readonly aiImageService = inject(AiImageService);
+  private readonly router = inject(Router);
   readonly toastService = inject(ToastService);
   private readonly lastDraftStorageKey = "atelier-last-design-id";
 
   readonly aiLoading = signal(false);
   readonly isSaving = signal(false);
+  readonly isAddingToCart = signal(false);
   readonly saveSuccessOpen = signal(false);
   readonly saveSuccessPreviewUrl = signal("");
+  readonly cartSuccessOpen = signal(false);
+  /** Tracks the designId of the currently saved design so Add to Cart can skip re-saving. */
+  readonly currentDesignId = signal<string | null>(null);
 
   @ViewChild(DesignCanvasComponent)
   private readonly designCanvas?: DesignCanvasComponent;
@@ -455,51 +460,50 @@ export class StudioComponent {
     return resolveApiUrl(imageUrl) || this.logo;
   }
 
-  async saveToDrafts(): Promise<void> {
+  /**
+   * Captures front/back snapshots and persists the design via the API.
+   * Returns the saved designId, or null on failure.
+   * Used by both saveToDrafts() and addToCart().
+   */
+  private async executeSave(): Promise<string | null> {
     const selectedProduct = this.selected();
 
     if (!selectedProduct?.id || !this.designCanvas) {
       this.toastService.error("Please select a product before saving.");
-      return;
+      return null;
     }
-
-    if (this.isSaving()) {
-      return;
-    }
-
-    this.isSaving.set(true);
 
     const originalViewAngle = this.activeViewAngle;
     const originalCanvasView: "front" | "back" =
       originalViewAngle === ViewAngle.Front ? "front" : "back";
 
-    try {
-      // 1. Persist the current editing state so both sides are saved in stateService
-      this.designCanvas.saveCurrentViewState(originalCanvasView);
+    // 1. Persist the current editing state so both sides are saved in stateService
+    this.designCanvas.saveCurrentViewState(originalCanvasView);
 
-      const frontUrl = this.getProductImageUrlForAngle(ViewAngle.Front);
-      const backUrl = this.getProductImageUrlForAngle(ViewAngle.Back);
+    const frontUrl = this.getProductImageUrlForAngle(ViewAngle.Front);
+    const backUrl = this.getProductImageUrlForAngle(ViewAngle.Back);
 
-      // 2. Sequentially capture front and back composite previews
-      const base64Front = await this.designCanvas.captureViewSnapshot(
-        "front",
-        frontUrl,
-      );
-      const base64Back = await this.designCanvas.captureViewSnapshot(
-        "back",
-        backUrl,
-      );
+    // 2. Sequentially capture front and back composite previews
+    const base64Front = await this.designCanvas.captureViewSnapshot(
+      "front",
+      frontUrl,
+    );
+    const base64Back = await this.designCanvas.captureViewSnapshot(
+      "back",
+      backUrl,
+    );
 
-      // 3. Restore the view the user was editing
-      await this.designCanvas.restoreViewSnapshot(originalCanvasView);
+    // 3. Restore the view the user was editing
+    await this.designCanvas.restoreViewSnapshot(originalCanvasView);
 
-      // 4. The SnapshotImageURL represents the side being actively edited
-      const base64Snapshot =
-        originalCanvasView === "front" ? base64Front : base64Back;
+    // 4. The SnapshotImageURL represents the side being actively edited
+    const base64Snapshot =
+      originalCanvasView === "front" ? base64Front : base64Back;
 
-      // 5. Build canvas state JSON (both sides are now saved in stateService)
-      const canvasState = this.designCanvas.getCurrentCanvasState();
+    // 5. Build canvas state JSON (both sides are now saved in stateService)
+    const canvasState = this.designCanvas.getCurrentCanvasState();
 
+    return new Promise<string | null>((resolve, reject) => {
       this.productService
         .createDesign({
           id: null,
@@ -518,43 +522,139 @@ export class StudioComponent {
           next: (designId) => {
             if (designId) {
               localStorage.setItem(this.lastDraftStorageKey, designId);
-
-              // Load design details to retrieve the generated SnapshotImageURL
-              this.productService.getDesignById(designId).subscribe({
-                next: (design) => {
-                  if (design && design.snapshotImageURL) {
-                    this.saveSuccessPreviewUrl.set(
-                      resolveApiUrl(design.snapshotImageURL) || "",
-                    );
-                    this.saveSuccessOpen.set(true);
-                  } else {
-                    this.toastService.success("Design saved successfully!");
-                  }
-                },
-                error: () => {
-                  this.toastService.success("Design saved successfully!");
-                },
-              });
+              this.currentDesignId.set(designId);
             }
             console.log("[Studio] design saved", { designId });
+            resolve(designId);
           },
           error: (error) => {
             console.error("[Studio] failed to save design", error);
-            const msg =
-              error?.error?.Message ||
-              error?.error?.message ||
-              error?.message ||
-              "Failed to save design.";
-            this.toastService.error(msg);
+            reject(error);
           },
         });
+    });
+  }
+
+  async saveToDrafts(): Promise<void> {
+    if (this.isSaving()) {
+      return;
+    }
+
+    this.isSaving.set(true);
+
+    try {
+      const designId = await this.executeSave();
+
+      if (designId) {
+        // Load design details to retrieve the generated SnapshotImageURL
+        this.productService.getDesignById(designId).subscribe({
+          next: (design) => {
+            if (design && design.snapshotImageURL) {
+              this.saveSuccessPreviewUrl.set(
+                resolveApiUrl(design.snapshotImageURL) || "",
+              );
+              this.saveSuccessOpen.set(true);
+            } else {
+              this.toastService.success("Design saved successfully!");
+            }
+          },
+          error: () => {
+            this.toastService.success("Design saved successfully!");
+          },
+        });
+      }
     } catch (err: any) {
       console.error("[Studio] saveToDrafts error", err);
-      const msg = err?.message || err || "Failed to save design.";
-      this.toastService.error(`Failed to save design: ${msg}`);
+      const msg =
+        err?.error?.Message ||
+        err?.error?.message ||
+        err?.message ||
+        "Failed to save design.";
+      this.toastService.error(msg);
     } finally {
       this.isSaving.set(false);
     }
+  }
+
+  /**
+   * Add to Cart flow:
+   * 1. If design has never been saved, execute Save first (auto-save is invisible to the user).
+   * 2. Call Add to Cart API with ProductId + DesignId.
+   * 3. Show success dialog.
+   */
+  async addToCart(): Promise<void> {
+    const selectedProduct = this.selected();
+
+    if (!selectedProduct?.id) {
+      this.toastService.error("Please select a product before adding to cart.");
+      return;
+    }
+
+    if (this.isAddingToCart() || this.isSaving()) {
+      return;
+    }
+
+    this.isAddingToCart.set(true);
+
+    try {
+      let designId = this.currentDesignId();
+
+      // Auto-save the design first if it hasn't been saved yet
+      if (!designId) {
+        console.log("[Studio] addToCart: design not saved, saving first…");
+        try {
+          designId = await this.executeSave();
+        } catch (saveErr: any) {
+          const msg =
+            saveErr?.error?.Message ||
+            saveErr?.error?.message ||
+            saveErr?.message ||
+            "Failed to save design before adding to cart.";
+          this.toastService.error(msg);
+          return;
+        }
+      }
+
+      if (!designId) {
+        this.toastService.error("Could not save design. Please try again.");
+        return;
+      }
+
+      console.log("[Studio] addToCart: calling cart API", { productId: selectedProduct.id, designId });
+
+      this.productService
+        .addToCart({
+          productId: selectedProduct.id,
+          designId,
+          quantity: 1,
+        })
+        .subscribe({
+          next: () => {
+            console.log("[Studio] addToCart: success");
+            this.cartSuccessOpen.set(true);
+          },
+          error: (err: any) => {
+            console.error("[Studio] addToCart failed", err);
+            const msg =
+              err?.error?.Message ||
+              err?.error?.message ||
+              err?.message ||
+              "Failed to add to cart. Please try again.";
+            this.toastService.error(msg);
+          },
+        });
+    } finally {
+      this.isAddingToCart.set(false);
+    }
+  }
+
+  onContinueDesigning(): void {
+    this.cartSuccessOpen.set(false);
+  }
+
+  onViewCart(): void {
+    this.cartSuccessOpen.set(false);
+    this.router.navigate(['/cart']);
   }
 
   onPublishDesign(): void {
