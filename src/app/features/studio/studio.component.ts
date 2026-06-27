@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ViewChild } from "@angular/core";
+import { Component, inject, signal, computed, ViewChild, effect, untracked } from "@angular/core";
 import { Router, RouterLink } from "@angular/router";
 import { FormsModule } from "@angular/forms";
 import { forkJoin, catchError, of } from "rxjs";
@@ -130,6 +130,9 @@ export class StudioComponent {
   readonly canvasOpen = signal(false);
   readonly payOpen = signal(false);
 
+  readonly dynamicPrice = signal<number | null>(null);
+  readonly priceLoading = signal<boolean>(false);
+
   readonly chatInput = signal("");
   readonly messages = signal<ChatMsg[]>([
     {
@@ -227,6 +230,38 @@ export class StudioComponent {
   constructor() {
     this.loadCategories();
     this.loadProducts();
+
+    effect(() => {
+      const product = this.selected();
+      const currentSize = this.size();
+      const currentFabric = this.selectedFabric();
+      const currentPrintMethod = this.selectedPrintMethod();
+
+      if (!product || !product.id) {
+        return;
+      }
+
+      const sizeEnumVal = this.mapSizeToEnum(currentSize);
+
+      untracked(() => {
+        this.priceLoading.set(true);
+        this.aiImageService.calculatePrice(
+          product.id,
+          currentFabric,
+          currentPrintMethod,
+          sizeEnumVal
+        ).subscribe({
+          next: (price) => {
+            this.dynamicPrice.set(price);
+            this.priceLoading.set(false);
+          },
+          error: (err) => {
+            console.error('[Studio] Error calculating price dynamically', err);
+            this.priceLoading.set(false);
+          }
+        });
+      });
+    });
   }
 
   private createDefaultProduct(): StudioProduct {
@@ -846,7 +881,8 @@ export class StudioComponent {
   }
 
   get originalPrice(): number {
-    return this.selected().basePrice + 32;
+    const base = this.dynamicPrice() !== null ? this.dynamicPrice()! : (this.selected().basePrice || 0);
+    return base + 32;
   }
 
   private parsePrintableZone(zone: unknown): PrintableZoneBounds | null {

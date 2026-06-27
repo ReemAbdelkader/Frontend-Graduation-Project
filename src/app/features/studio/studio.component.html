@@ -387,8 +387,8 @@
           <p class="product-meta">{{ selected().category }} · SS 2026</p>
         </div>
 
-        <div class="price-row">
-          <span class="price">${{ selected().price }}</span>
+        <div class="price-row" [style.opacity]="priceLoading() ? 0.6 : 1" style="transition: opacity 0.15s ease;">
+          <span class="price">${{ dynamicPrice() !== null ? dynamicPrice() : selected().price }}</span>
           <span class="price-original">${{ originalPrice }}</span>
         </div>
 

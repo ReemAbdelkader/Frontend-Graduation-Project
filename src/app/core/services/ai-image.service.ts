@@ -33,4 +33,23 @@ export class AiImageService {
   getAdminGraphicAssets(): Observable<GraphicAssetDto[]> {
     return this.http.get<GraphicAssetDto[]>(`${this.apiUrl}/graphic-assets/admin`);
   }
+
+  calculatePrice(
+    productId: string,
+    fabric: number | null,
+    printMethod: number | null,
+    size: number | null
+  ): Observable<number> {
+    const params: any = { productId };
+    if (fabric !== null) {
+      params.fabric = fabric.toString();
+    }
+    if (printMethod !== null) {
+      params.printMethod = printMethod.toString();
+    }
+    if (size !== null) {
+      params.size = size.toString();
+    }
+    return this.http.get<number>(`${this.apiUrl}/calculate-price`, { params });
+  }
 }
