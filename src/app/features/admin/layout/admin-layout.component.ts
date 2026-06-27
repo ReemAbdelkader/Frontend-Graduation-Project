@@ -21,7 +21,7 @@ interface NavItem {
 })
 export class AdminLayoutComponent {
   private auth = inject(AuthService);
-  private toast = inject(ToastService);
+  readonly toast = inject(ToastService);
   private router = inject(Router);
 
   readonly logo = logoImage;

@@ -71,6 +71,17 @@
                 </td>
                 <td class="right">
                   <div class="action-row">
+                    @if (!u.emailConfirmed) {
+                      <button
+                        class="icon-action"
+                        (click)="resendInvitation(u)"
+                        [disabled]="resendingInviteId() === u.id"
+                        title="Resend invitation"
+                        aria-label="Resend invitation"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                      </button>
+                    }
                     <button class="icon-action" (click)="askSuspend(u)" [title]="u.isActive ? 'Suspend' : 'Activate'">
                       @if (!u.isActive) {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1Z"/><path d="m9 12 2 2 4-4"/></svg>
@@ -104,9 +115,8 @@
         <div class="field">
           <span class="label">Role *</span>
           <div class="role-options">
-            <button type="button" class="role-option" [class.active]="formRole() === 'User'" (click)="setFormRole('User')">User</button>
-            <button type="button" class="role-option" [class.active]="formRole() === 'Printer'" (click)="setFormRole('Printer')">Printer</button>
             <button type="button" class="role-option" [class.active]="formRole() === 'Admin'" (click)="setFormRole('Admin')">Admin</button>
+            <button type="button" class="role-option" [class.active]="formRole() === 'Printer'" (click)="setFormRole('Printer')">Printer</button>
           </div>
         </div>
 
@@ -119,6 +129,42 @@
           <span class="label">Email *</span>
           <input type="email" [ngModel]="formEmail()" (ngModelChange)="formEmail.set($event)" name="email" required />
         </label>
+
+        @if (formRole() === 'Printer') {
+          <div class="printer-fields">
+            <div class="field">
+              <span class="label">Supported fabrics *</span>
+              <div class="flag-grid">
+                @for (option of fabricOptions; track option.value) {
+                  <label class="flag-option">
+                    <input
+                      type="checkbox"
+                      [checked]="isFlagSelected(formSupportedFabrics(), option.value)"
+                      (change)="toggleFabric(option.value, $any($event.target).checked)"
+                    />
+                    <span>{{ option.label }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+
+            <div class="field">
+              <span class="label">Supported print methods *</span>
+              <div class="flag-grid">
+                @for (option of printMethodOptions; track option.value) {
+                  <label class="flag-option">
+                    <input
+                      type="checkbox"
+                      [checked]="isFlagSelected(formSupportedPrintMethods(), option.value)"
+                      (change)="togglePrintMethod(option.value, $any($event.target).checked)"
+                    />
+                    <span>{{ option.label }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+          </div>
+        }
 
         <footer class="modal-foot">
           <button type="button" class="ghost-btn" (click)="closeAddModal()">Cancel</button>

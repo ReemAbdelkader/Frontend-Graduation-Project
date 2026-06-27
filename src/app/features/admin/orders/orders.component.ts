@@ -4,6 +4,7 @@ import { DatePipe } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import {
   AdminApiService,
+  extractAdminApiError,
   OrderStatus,
   RecentOrderDto,
 } from '../../../core/services/admin-api.service';
@@ -83,6 +84,9 @@ export class OrdersComponent implements OnInit {
         this.savingId.set(null);
       },
       error: (err) => {
+        this.orders.update((list) =>
+          list.map((o) => (o.id === order.id ? { ...o, status: order.status } : o)),
+        );
         this.toast.error(this.extractError(err, 'Status update failed.'));
         this.savingId.set(null);
       },
@@ -98,8 +102,6 @@ export class OrdersComponent implements OnInit {
   }
 
   private extractError(error: unknown, fallback: string): string {
-    const err = error as { error?: { message?: string; errors?: string[] } | string; message?: string };
-    if (typeof err?.error === 'string') return err.error;
-    return err?.error?.message ?? err?.error?.errors?.join(', ') ?? err?.message ?? fallback;
+    return extractAdminApiError(error, fallback);
   }
 }

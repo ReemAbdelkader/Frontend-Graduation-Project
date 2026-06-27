@@ -4,6 +4,7 @@ import { DatePipe } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import {
   AdminApiService,
+  extractAdminApiError,
   ModerationReportDto,
   ModerationStatus,
 } from '../../../core/services/admin-api.service';
@@ -30,6 +31,9 @@ export class ModerationComponent implements OnInit {
 
   readonly statuses: Array<ModerationStatus | 'All'> = [
     'All', 'Pending', 'Reviewed', 'ActionTaken', 'Dismissed',
+  ];
+  readonly reportStatuses: ModerationStatus[] = [
+    'Pending', 'Reviewed', 'ActionTaken', 'Dismissed',
   ];
 
   readonly filtered = computed(() => this.reports());
@@ -93,6 +97,26 @@ export class ModerationComponent implements OnInit {
     this.actionInputs.update((m) => ({ ...m, [reportId]: value }));
   }
 
+  onStatusChange(report: ModerationReportDto, status: ModerationStatus): void {
+    if (status === report.status) return;
+
+    this.resolvingId.set(report.id);
+    this.adminApi.updateModerationReport(report.id, { status }).subscribe({
+      next: () => {
+        this.toast.success(`Report status updated to ${this.statusLabel(status)}.`);
+        this.resolvingId.set(null);
+        this.loadAfterChange();
+      },
+      error: (err) => {
+        this.reports.update((reports) =>
+          reports.map((item) => item.id === report.id ? { ...item, status: report.status } : item),
+        );
+        this.toast.error(this.extractError(err, 'Report status update failed.'));
+        this.resolvingId.set(null);
+      },
+    });
+  }
+
   resolve(report: ModerationReportDto): void {
     const action = (this.actionInputs()[report.id] ?? '').trim();
     if (!action) {
@@ -105,7 +129,7 @@ export class ModerationComponent implements OnInit {
       next: () => {
         this.toast.success(`Report on "${report.targetTemplateName}" resolved.`);
         this.resolvingId.set(null);
-        this.loadAfterResolve();
+        this.loadAfterChange();
       },
       error: (err) => {
         this.toast.error(this.extractError(err, 'Report resolution failed.'));
@@ -124,7 +148,7 @@ export class ModerationComponent implements OnInit {
     }
   }
 
-  private loadAfterResolve(): void {
+  private loadAfterChange(): void {
     this.adminApi.getModerationReports('All', 1, 100).subscribe({
       next: (result) => {
         this.allReports.set(result.data ?? []);
@@ -145,8 +169,6 @@ export class ModerationComponent implements OnInit {
   }
 
   private extractError(error: unknown, fallback: string): string {
-    const err = error as { error?: { message?: string; errors?: string[] } | string; message?: string };
-    if (typeof err?.error === 'string') return err.error;
-    return err?.error?.message ?? err?.error?.errors?.join(', ') ?? err?.message ?? fallback;
+    return extractAdminApiError(error, fallback);
   }
 }

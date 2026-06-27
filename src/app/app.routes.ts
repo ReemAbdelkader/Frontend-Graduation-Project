@@ -37,6 +37,12 @@ export const routes: Routes = [
     title: 'Reset password — Atelier',
   },
   {
+    path: 'accept-invitation',
+    loadComponent: () =>
+      import('./features/reset-password/reset-password.component').then((m) => m.ResetPasswordComponent),
+    title: 'Accept invitation - Atelier',
+  },
+  {
     path: 'confirm-mail',
     loadComponent: () =>
       import('./features/confirm-mail/confirm-mail.component').then((m) => m.ConfirmMailComponent),

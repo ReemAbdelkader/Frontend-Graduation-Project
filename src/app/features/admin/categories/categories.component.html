@@ -60,7 +60,7 @@
         </label>
 
         <label class="field">
-          <span class="label">Printable area config {{ editingId() ? '' : '*' }}</span>
+          <span class="label">Printable area config (JSON) {{ editingId() ? '' : '*' }}</span>
           <textarea rows="4" [ngModel]="formPrintableAreaConfig()" (ngModelChange)="formPrintableAreaConfig.set($event)" name="printableAreaConfig" [required]="!editingId()"></textarea>
         </label>
 

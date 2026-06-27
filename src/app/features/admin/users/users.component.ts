@@ -6,6 +6,7 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import {
   AdminApiService,
   AdminRole,
+  extractAdminApiError,
   InviteUserRequest,
   UserListItemDto,
 } from '../../../core/services/admin-api.service';
@@ -13,6 +14,11 @@ import {
 interface StatusConfirmState {
   user: UserListItemDto;
   nextActive: boolean;
+}
+
+interface FlagOption {
+  label: string;
+  value: number;
 }
 
 @Component({
@@ -34,12 +40,29 @@ export class UsersComponent implements OnInit {
   readonly confirm = signal<StatusConfirmState | null>(null);
   readonly showAddModal = signal(false);
   readonly changingRoleId = signal<string | null>(null);
+  readonly resendingInviteId = signal<string | null>(null);
 
   readonly roles: AdminRole[] = ['User', 'Printer', 'Admin'];
+  readonly fabricOptions: FlagOption[] = [
+    { label: 'Cotton', value: 1 },
+    { label: 'Polyester', value: 2 },
+    { label: 'Wool', value: 4 },
+    { label: 'Silk', value: 8 },
+    { label: 'Linen', value: 16 },
+  ];
+  readonly printMethodOptions: FlagOption[] = [
+    { label: 'Direct to garment', value: 1 },
+    { label: 'Screen printing', value: 2 },
+    { label: 'Heat transfer', value: 4 },
+    { label: 'Sublimation', value: 8 },
+    { label: 'Embroidery', value: 16 },
+  ];
 
   readonly formName = signal('');
   readonly formEmail = signal('');
-  readonly formRole = signal<AdminRole>('User');
+  readonly formRole = signal<AdminRole>('Admin');
+  readonly formSupportedFabrics = signal(0);
+  readonly formSupportedPrintMethods = signal(0);
 
   readonly filtered = computed(() => {
     const q = this.query().toLowerCase().trim();
@@ -76,7 +99,9 @@ export class UsersComponent implements OnInit {
   openAddModal(): void {
     this.formName.set('');
     this.formEmail.set('');
-    this.formRole.set('User');
+    this.formRole.set('Admin');
+    this.formSupportedFabrics.set(0);
+    this.formSupportedPrintMethods.set(0);
     this.showAddModal.set(true);
   }
 
@@ -88,6 +113,18 @@ export class UsersComponent implements OnInit {
     this.formRole.set(v);
   }
 
+  toggleFabric(value: number, checked: boolean): void {
+    this.formSupportedFabrics.update((mask) => checked ? mask | value : mask & ~value);
+  }
+
+  togglePrintMethod(value: number, checked: boolean): void {
+    this.formSupportedPrintMethods.update((mask) => checked ? mask | value : mask & ~value);
+  }
+
+  isFlagSelected(mask: number, value: number): boolean {
+    return (mask & value) === value;
+  }
+
   submitAddUser(): void {
     const name = this.formName().trim();
     const email = this.formEmail().trim();
@@ -97,10 +134,20 @@ export class UsersComponent implements OnInit {
       return;
     }
 
+    if (this.formRole() === 'Printer' &&
+        (!this.formSupportedFabrics() || !this.formSupportedPrintMethods())) {
+      this.toast.error('Select at least one fabric and one print method.');
+      return;
+    }
+
     const payload: InviteUserRequest = {
       name,
       email,
       role: this.formRole(),
+      ...(this.formRole() === 'Printer' ? {
+        supportedFabrics: this.formSupportedFabrics(),
+        supportedPrintMethods: this.formSupportedPrintMethods(),
+      } : {}),
     };
 
     this.saving.set(true);
@@ -154,13 +201,14 @@ export class UsersComponent implements OnInit {
     this.changingRoleId.set(user.id);
     this.adminApi.changeUserRole(user.id, { newRole }).subscribe({
       next: () => {
-        this.users.update((list) =>
-          list.map((u) => (u.id === user.id ? { ...u, role: newRole } : u)),
-        );
         this.toast.success(`${user.name} role updated to ${newRole}`);
         this.changingRoleId.set(null);
+        this.loadUsers();
       },
       error: (err) => {
+        this.users.update((list) =>
+          list.map((u) => (u.id === user.id ? { ...u, role: user.role } : u)),
+        );
         this.toast.error(this.extractError(err, 'Role update failed.'));
         this.changingRoleId.set(null);
       },
@@ -202,8 +250,20 @@ export class UsersComponent implements OnInit {
   }
 
   private extractError(error: unknown, fallback: string): string {
-    const err = error as { error?: { message?: string; errors?: string[] } | string; message?: string };
-    if (typeof err?.error === 'string') return err.error;
-    return err?.error?.message ?? err?.error?.errors?.join(', ') ?? err?.message ?? fallback;
+    return extractAdminApiError(error, fallback);
+  }
+
+  resendInvitation(user: UserListItemDto): void {
+    this.resendingInviteId.set(user.id);
+    this.adminApi.resendInvitation(user.id).subscribe({
+      next: () => {
+        this.toast.success(`Invitation resent to ${user.email}`);
+        this.resendingInviteId.set(null);
+      },
+      error: (err) => {
+        this.toast.error(this.extractError(err, 'Invitation resend failed.'));
+        this.resendingInviteId.set(null);
+      },
+    });
   }
 }

@@ -21,7 +21,9 @@ export class ResetPasswordComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly logo = logoImage;
+  readonly invitationMode = this.route.snapshot.routeConfig?.path === 'accept-invitation';
   readonly email = signal(this.route.snapshot.queryParamMap.get('email') ?? '');
+  readonly userId = signal(this.route.snapshot.queryParamMap.get('userId') ?? '');
   readonly token = signal(this.route.snapshot.queryParamMap.get('token') ?? '');
   readonly newPassword = signal('');
   readonly confirmPassword = signal('');
@@ -32,6 +34,7 @@ export class ResetPasswordComponent {
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       this.email.set(params.get('email') ?? '');
+      this.userId.set(params.get('userId') ?? '');
       this.token.set(params.get('token') ?? '');
     });
   }
@@ -56,7 +59,11 @@ export class ResetPasswordComponent {
     const password = this.newPassword().trim();
     const confirmPassword = this.confirmPassword().trim();
 
-    if (!e) {
+    if (this.invitationMode && !this.userId().trim()) {
+      this.error.set('Invitation user is missing.');
+      return;
+    }
+    if (!this.invitationMode && !e) {
       this.error.set('Email is required.');
       return;
     }
@@ -80,17 +87,27 @@ export class ResetPasswordComponent {
     this.loading.set(true);
     this.error.set('');
 
-    this.auth.resetPassword(e, authToken, password).subscribe((result) => {
+    const request = this.invitationMode
+      ? this.auth.acceptInvitation(this.userId(), authToken, password)
+      : this.auth.resetPassword(e, authToken, password);
+
+    request.subscribe((result) => {
       this.loading.set(false);
 
       if (!result.ok) {
-        const errorMessage = result.message ?? result.error ?? 'Unable to reset your password. Please try again.';
+        const errorMessage = result.message ?? result.error ??
+          (this.invitationMode
+            ? 'Unable to accept the invitation. Please request a new link.'
+            : 'Unable to reset your password. Please try again.');
         this.error.set(errorMessage);
         this.toast.error(errorMessage);
         return;
       }
 
-      const successMessage = result.message ?? 'Password reset successfully. Please log in.';
+      const successMessage = result.message ??
+        (this.invitationMode
+          ? 'Invitation accepted. Please log in.'
+          : 'Password reset successfully. Please log in.');
       this.toast.success(successMessage);
       window.setTimeout(() => {
         this.router.navigate(['/auth']);

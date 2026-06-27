@@ -6,6 +6,7 @@ import {
   AdminApiService,
   CategoryDto,
   CreateCategoryRequest,
+  extractAdminApiError,
   UpdateCategoryRequest,
 } from '../../../core/services/admin-api.service';
 
@@ -17,6 +18,13 @@ import {
   styleUrl: './categories.component.scss',
 })
 export class CategoriesComponent implements OnInit {
+  private static readonly DEFAULT_PRINTABLE_AREA_CONFIG = JSON.stringify({
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1,
+  }, null, 2);
+
   private toast = inject(ToastService);
   private adminApi = inject(AdminApiService);
 
@@ -60,7 +68,7 @@ export class CategoriesComponent implements OnInit {
     this.formName.set('');
     this.formDescription.set('');
     this.formImageUrl.set('');
-    this.formPrintableAreaConfig.set('');
+    this.formPrintableAreaConfig.set(CategoriesComponent.DEFAULT_PRINTABLE_AREA_CONFIG);
     this.showModal.set(true);
   }
 
@@ -86,6 +94,12 @@ export class CategoriesComponent implements OnInit {
 
     const id = this.editingId();
     const printableAreaConfig = this.formPrintableAreaConfig().trim();
+
+    if (printableAreaConfig && !this.isValidJsonObject(printableAreaConfig)) {
+      this.toast.error('Printable area config must be a valid JSON object.');
+      return;
+    }
+
     this.saving.set(true);
 
     if (id) {
@@ -102,8 +116,8 @@ export class CategoriesComponent implements OnInit {
           this.saving.set(false);
           this.loadCategories();
         },
-        error: () => {
-          this.toast.error('Category update failed.');
+        error: (err) => {
+          this.toast.error(this.extractError(err, 'Category update failed.'));
           this.saving.set(false);
         },
       });
@@ -126,8 +140,8 @@ export class CategoriesComponent implements OnInit {
           this.saving.set(false);
           this.loadCategories();
         },
-        error: () => {
-          this.toast.error('Category creation failed.');
+        error: (err) => {
+          this.toast.error(this.extractError(err, 'Category creation failed.'));
           this.saving.set(false);
         },
       });
@@ -151,8 +165,8 @@ export class CategoriesComponent implements OnInit {
         this.deleteTarget.set(null);
         this.loadCategories();
       },
-      error: () => {
-        this.toast.error('Category deletion failed.');
+      error: (err) => {
+        this.toast.error(this.extractError(err, 'Category deletion failed.'));
         this.deleteTarget.set(null);
       },
     });
@@ -161,5 +175,18 @@ export class CategoriesComponent implements OnInit {
   private optionalValue(value: string): string | null {
     const trimmed = value.trim();
     return trimmed ? trimmed : null;
+  }
+
+  private isValidJsonObject(value: string): boolean {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
+    } catch {
+      return false;
+    }
+  }
+
+  private extractError(error: unknown, fallback: string): string {
+    return extractAdminApiError(error, fallback);
   }
 }

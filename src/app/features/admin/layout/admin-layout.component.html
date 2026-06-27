@@ -120,3 +120,12 @@
     (closed)="cancelLogout()"
   />
 </div>
+
+<div class="toast-container" aria-live="polite">
+  @for (item of toast.toasts(); track item.id) {
+    <div class="toast" [class]="item.type">
+      <span>{{ item.message }}</span>
+      <button class="toast-close" type="button" (click)="toast.remove(item.id)" aria-label="Dismiss notification">&times;</button>
+    </div>
+  }
+</div>

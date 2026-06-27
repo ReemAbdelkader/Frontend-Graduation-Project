@@ -52,6 +52,7 @@ export class AuthService {
   private readonly refreshEndpoint = environment.auth?.refreshEndpoint ?? '/api/Identity/RefreshToken';
   private readonly forgotPasswordEndpoint = environment.auth?.forgotPasswordEndpoint ?? '/api/Identity/forget-password';
   private readonly resetPasswordEndpoint = environment.auth?.resetPasswordEndpoint ?? '/api/Identity/reset-password';
+  private readonly acceptInvitationEndpoint = '/api/Identity/accept-invitation';
   private readonly logoutEndpoint = environment.auth?.logoutEndpoint ?? '/api/Identity/logout';
   private readonly logoutAllEndpoint = environment.auth?.logoutAllEndpoint ?? '/api/Identity/logout-all';
   private readonly apiBaseUrl = (environment.apiUrl ?? '').replace(/\/$/, '');
@@ -242,6 +243,34 @@ export class AuthService {
       map((response) => this.normalizeResetPasswordResponse(response)),
       catchError((error) => {
         const message = this.extractErrorMessage(error) ?? this.toStringOrUndefined((error as any)?.message) ?? 'Password reset failed.';
+        return of({ ok: false, error: message, message });
+      }),
+    );
+  }
+
+  acceptInvitation(userId: string, token: string, newPassword: string): Observable<AuthApiResult> {
+    const id = userId.trim();
+    const authToken = token.trim();
+    const password = newPassword.trim();
+
+    if (!id || !authToken || !password) {
+      return of({
+        ok: false,
+        error: 'User, token and new password are required.',
+        message: 'User, token and new password are required.',
+      });
+    }
+
+    return this.http.post<unknown>(`${this.apiBaseUrl}${this.acceptInvitationEndpoint}`, {
+      userId: id,
+      token: authToken,
+      newPassword: password,
+    }).pipe(
+      map((response) => this.normalizeResetPasswordResponse(response)),
+      catchError((error) => {
+        const message = this.extractErrorMessage(error) ??
+          this.toStringOrUndefined((error as any)?.message) ??
+          'Invitation acceptance failed.';
         return of({ ok: false, error: message, message });
       }),
     );

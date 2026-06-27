@@ -45,9 +45,19 @@
                 <span>{{ r.createdAt | date:'MMM d, y, h:mm a' }}</span>
               </p>
             </div>
-            <span class="status-pill" [class]="'status-' + r.status.toLowerCase()">
-              {{ statusLabel(r.status) }}
-            </span>
+            <select
+              class="status-select"
+              [class]="'status-' + r.status.toLowerCase()"
+              [ngModel]="r.status"
+              (ngModelChange)="onStatusChange(r, $event)"
+              [disabled]="resolvingId() === r.id"
+              name="status-{{ r.id }}"
+              aria-label="Report status"
+            >
+              @for (status of reportStatuses; track status) {
+                <option [ngValue]="status">{{ statusLabel(status) }}</option>
+              }
+            </select>
           </div>
 
           <div class="report-reason">
@@ -62,7 +72,7 @@
             </div>
           }
 
-          @if (r.status !== 'ActionTaken') {
+          @if (r.status !== 'ActionTaken' && r.status !== 'Dismissed') {
             <div class="resolve-row">
               <input
                 type="text"

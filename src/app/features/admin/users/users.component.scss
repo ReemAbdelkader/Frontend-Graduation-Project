@@ -110,6 +110,7 @@
   border: none; border-radius: 6px; background: transparent;
   color: var(--foreground); cursor: pointer;
   &:hover { background: var(--muted); }
+  &:disabled { opacity: 0.5; cursor: wait; }
   &.danger { color: var(--destructive); }
 }
 
@@ -192,6 +193,29 @@ input[type="text"], input[type="email"], input[type="password"] {
 .printer-title {
   margin: 0; font-size: 0.75rem; font-weight: 600;
   color: var(--accent); letter-spacing: 0.05em; text-transform: uppercase;
+}
+
+.flag-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+
+  @media (max-width: 480px) { grid-template-columns: 1fr; }
+}
+
+.flag-option {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  font-size: 0.8125rem;
+  cursor: pointer;
+
+  input { accent-color: var(--primary); }
 }
 
 .modal-foot {

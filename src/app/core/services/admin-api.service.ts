@@ -89,6 +89,7 @@ export interface UserListItemDto {
   role: AdminRole | string;
   joinedAt: string;
   isActive: boolean;
+  emailConfirmed: boolean;
 }
 
 export interface CreateCategoryRequest {
@@ -140,12 +141,41 @@ export interface ChangeUserRoleRequest {
   newRole: AdminRole;
 }
 
+export interface UpdateModerationReportRequest {
+  actionTaken?: string | null;
+  status?: ModerationStatus | null;
+}
+
 export interface ReportChatResponseDto {
   sessionId: string;
   userMessageId: string;
   aiMessageId: string;
   response: string;
   responseTime: string;
+}
+
+export function extractAdminApiError(error: unknown, fallback: string): string {
+  const err = error as {
+    error?: { message?: string; errors?: unknown } | string;
+    message?: string;
+  };
+
+  if (typeof err?.error === 'string') return err.error;
+  if (err?.error?.message) return err.error.message;
+
+  const errors = err?.error?.errors;
+  if (Array.isArray(errors)) {
+    const message = errors.filter((value): value is string => typeof value === 'string').join(', ');
+    if (message) return message;
+  } else if (errors && typeof errors === 'object') {
+    const message = Object.values(errors)
+      .flatMap((value) => Array.isArray(value) ? value : [value])
+      .filter((value): value is string => typeof value === 'string')
+      .join(', ');
+    if (message) return message;
+  }
+
+  return err?.message ?? fallback;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -200,16 +230,22 @@ export class AdminApiService {
       .pipe(map((response) => this.unwrap(response) ?? []));
   }
 
-  createCategory(payload: CreateCategoryRequest): Observable<ApiEnvelope<CategoryDto>> {
-    return this.http.post<ApiEnvelope<CategoryDto>>(`${API_BASE_URL}/categories`, payload);
+  createCategory(payload: CreateCategoryRequest): Observable<CategoryDto> {
+    return this.http
+      .post<ApiEnvelope<CategoryDto>>(`${API_BASE_URL}/categories`, payload)
+      .pipe(map((response) => this.unwrap(response)));
   }
 
-  updateCategory(id: string, payload: UpdateCategoryRequest): Observable<ApiEnvelope<CategoryDto>> {
-    return this.http.put<ApiEnvelope<CategoryDto>>(`${API_BASE_URL}/categories/${id}`, payload);
+  updateCategory(id: string, payload: UpdateCategoryRequest): Observable<CategoryDto> {
+    return this.http
+      .put<ApiEnvelope<CategoryDto>>(`${API_BASE_URL}/categories/${id}`, payload)
+      .pipe(map((response) => this.unwrap(response)));
   }
 
-  deleteCategory(id: string): Observable<ApiEnvelope<string>> {
-    return this.http.delete<ApiEnvelope<string>>(`${API_BASE_URL}/categories/${id}`);
+  deleteCategory(id: string): Observable<string | null> {
+    return this.http
+      .delete<ApiEnvelope<string | null>>(`${API_BASE_URL}/categories/${id}`)
+      .pipe(map((response) => this.unwrap(response)));
   }
 
   getProducts(pageNumber = 1, pageSize = 100, categoryId?: string | null): Observable<PaginatedResult<ProductDto>> {
@@ -268,8 +304,14 @@ export class AdminApiService {
       .pipe(map((response) => this.unwrap(response)));
   }
 
-  resolveModerationReport(id: string, actionTaken: string): Observable<ApiEnvelope<string>> {
-    return this.http.patch<ApiEnvelope<string>>(`${API_BASE_URL}/admin/moderation/reports/${id}`, { actionTaken });
+  updateModerationReport(id: string, payload: UpdateModerationReportRequest): Observable<string | null> {
+    return this.http
+      .patch<ApiEnvelope<string | null>>(`${API_BASE_URL}/admin/moderation/reports/${id}`, payload)
+      .pipe(map((response) => this.unwrap(response)));
+  }
+
+  resolveModerationReport(id: string, actionTaken: string): Observable<string | null> {
+    return this.updateModerationReport(id, { actionTaken, status: 'ActionTaken' });
   }
 
   getUsers(pageNumber = 1, pageSize = 100, search?: string): Observable<PaginatedResult<UserListItemDto>> {
@@ -284,20 +326,37 @@ export class AdminApiService {
     return this.http.get<PaginatedResult<UserListItemDto>>(`${API_BASE_URL}/admin/users`, { params });
   }
 
-  inviteUser(payload: InviteUserRequest): Observable<ApiEnvelope<string>> {
-    return this.http.post<ApiEnvelope<string>>(`${API_BASE_URL}/admin/users/invite`, payload);
+  inviteUser(payload: InviteUserRequest): Observable<string | null> {
+    return this.http
+      .post<ApiEnvelope<string | null>>(`${API_BASE_URL}/admin/users/invite`, payload)
+      .pipe(map((response) => this.unwrap(response)));
   }
 
-  changeUserStatus(id: string, payload: ChangeUserStatusRequest): Observable<ApiEnvelope<string>> {
-    return this.http.patch<ApiEnvelope<string>>(`${API_BASE_URL}/admin/users/${id}/status`, payload);
+  resendInvitation(id: string): Observable<string | null> {
+    return this.http
+      .post<ApiEnvelope<string | null>>(`${API_BASE_URL}/admin/users/${id}/resend-invitation`, {})
+      .pipe(map((response) => this.unwrap(response)));
   }
 
-  changeUserRole(id: string, payload: ChangeUserRoleRequest): Observable<ApiEnvelope<string>> {
-    return this.http.patch<ApiEnvelope<string>>(`${API_BASE_URL}/admin/users/${id}/role`, payload);
+  changeUserStatus(id: string, payload: ChangeUserStatusRequest): Observable<string | null> {
+    return this.http
+      .patch<ApiEnvelope<string | null>>(`${API_BASE_URL}/admin/users/${id}/status`, payload)
+      .pipe(map((response) => this.unwrap(response)));
   }
 
-  updateOrderStatus(orderId: string, newStatus: OrderStatus): Observable<string> {
-    return this.http.put(`${API_BASE_URL}/orders/update-status`, { orderId, newStatus }, { responseType: 'text' });
+  changeUserRole(id: string, payload: ChangeUserRoleRequest): Observable<string | null> {
+    return this.http
+      .patch<ApiEnvelope<string | null>>(`${API_BASE_URL}/admin/users/${id}/role`, payload)
+      .pipe(map((response) => this.unwrap(response)));
+  }
+
+  updateOrderStatus(orderId: string, newStatus: OrderStatus): Observable<string | null> {
+    return this.http
+      .patch<ApiEnvelope<string | null>>(
+        `${API_BASE_URL}/admin/orders/${orderId}/status`,
+        { newStatus },
+      )
+      .pipe(map((response) => this.unwrap(response)));
   }
 
   createReportChatSession(): Observable<string> {
@@ -317,6 +376,13 @@ export class AdminApiService {
   }
 
   private unwrap<T>(response: ApiEnvelope<T>): T {
+    if (!response.succeeded) {
+      const errors = Array.isArray(response.errors)
+        ? response.errors.filter((error): error is string => typeof error === 'string')
+        : [];
+      throw new Error(errors.join(', ') || response.message || 'The request failed.');
+    }
+
     return response.data;
   }
 }
