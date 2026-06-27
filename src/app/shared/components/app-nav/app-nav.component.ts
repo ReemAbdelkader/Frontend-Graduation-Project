@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { NgForOf, NgIf } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Router } from '@angular/router';
@@ -27,6 +27,8 @@ export class AppNavComponent {
 
   readonly user = this.auth.user;
   readonly isAdmin = this.auth.isAdmin;
+  readonly isPrinter = computed(() => this.user()?.roles.some((role) => role.toLowerCase() === 'printer') ?? false);
+  readonly canSwitchToPrinter = computed(() => !this.isAdmin() && this.isPrinter());
   private router = inject(Router);
 
   readonly askLogout = signal(false);
@@ -68,6 +70,10 @@ export class AppNavComponent {
 
   targetForControl(): string {
     return this.isControlCenterActive() ? '/dashboard' : '/control-center';
+  }
+
+  goToPrinter(): void {
+    this.router.navigate(['/printer']);
   }
 
   controlLabel(): string {

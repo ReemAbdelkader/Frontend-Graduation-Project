@@ -29,3 +29,18 @@ export const adminGuard: CanActivateFn = () => {
 
   return router.createUrlTree(['/dashboard']);
 };
+
+export const printerGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (!auth.isLoggedIn()) {
+    return router.createUrlTree(['/login']);
+  }
+
+  if (auth.user()?.roles.some((role) => role.toLowerCase() === 'printer')) {
+    return true;
+  }
+
+  return router.createUrlTree(['/dashboard']);
+};

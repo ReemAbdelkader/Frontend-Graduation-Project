@@ -1,0 +1,52 @@
+<section class="profile-card">
+  <div class="profile-row">
+    <label>
+      <span>Name</span>
+      <input type="text" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+    </label>
+    <label>
+      <span>Email</span>
+      <input type="email" [ngModel]="email()" (ngModelChange)="email.set($event)" />
+    </label>
+  </div>
+
+  <div class="profile-row">
+    <label>
+      <span>Phone</span>
+      <input type="text" [ngModel]="phone()" (ngModelChange)="phone.set($event)" />
+    </label>
+    <label>
+      <span>Company Name</span>
+      <input type="text" [ngModel]="companyName()" (ngModelChange)="companyName.set($event)" />
+    </label>
+  </div>
+
+  <label class="field full-width">
+    <span>Address</span>
+    <input type="text" [ngModel]="address()" (ngModelChange)="address.set($event)" />
+  </label>
+
+  <div class="profile-section">
+    <h3>Supported Fabrics</h3>
+    <div class="checkbox-grid">
+      @for (fabric of fabricOptions; track fabric) {
+        <label class="checkbox-item">
+          <input type="checkbox" [checked]="supportedFabrics().includes(fabric)" (change)="toggleFabric(fabric)" />
+          <span>{{ fabric }}</span>
+        </label>
+      }
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <h3>Supported Print Methods</h3>
+    <div class="checkbox-grid">
+      @for (method of methodOptions; track method) {
+        <label class="checkbox-item">
+          <input type="checkbox" [checked]="supportedPrintMethods().includes(method)" (change)="toggleMethod(method)" />
+          <span>{{ method }}</span>
+        </label>
+      }
+    </div>
+  </div>
+</section>

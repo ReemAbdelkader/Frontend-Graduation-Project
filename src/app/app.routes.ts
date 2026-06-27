@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, adminGuard } from './core/guards/auth.guard';
+import { authGuard, adminGuard, printerGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -102,6 +102,32 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/profile/profile.component').then((m) => m.ProfileComponent),
     title: 'Profile — Atelier',
+  },
+  {
+    path: 'printer',
+    canActivate: [printerGuard],
+    loadComponent: () =>
+      import('./features/printer/printer-layout.component').then((m) => m.PrinterLayoutComponent),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/printer/dashboard/printer-dashboard.component').then((m) => m.PrinterDashboardComponent),
+        title: 'Printer Dashboard — Atelier',
+      },
+      {
+        path: 'orders',
+        loadComponent: () =>
+          import('./features/printer/orders/printer-orders.component').then((m) => m.PrinterOrdersComponent),
+        title: 'Printer Orders — Atelier',
+      },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/printer/profile/printer-profile.component').then((m) => m.PrinterProfileComponent),
+        title: 'Printer Profile — Atelier',
+      },
+    ],
   },
   {
     path: 'studio',

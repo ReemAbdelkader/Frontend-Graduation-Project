@@ -35,6 +35,10 @@
         >
           {{ controlLabel() }}
         </a>
+      } @if (canSwitchToPrinter()) {
+        <button class="control-center-btn" (click)="goToPrinter()">
+          Printer view
+        </button>
       }
       <app-notification-bell />
 

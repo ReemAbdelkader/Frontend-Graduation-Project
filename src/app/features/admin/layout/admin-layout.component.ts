@@ -2,7 +2,7 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { LogoutDialogComponent } from '../../../shared/components/logout-dialog/logout-dialog.component';
 import { logoImage } from '../../../core/data/wearly-data';
 
 interface NavItem {
@@ -15,7 +15,7 @@ interface NavItem {
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ConfirmDialogComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LogoutDialogComponent],
   templateUrl: './admin-layout.component.html',
   styleUrl: './admin-layout.component.scss',
 })
@@ -73,17 +73,5 @@ export class AdminLayoutComponent {
 
   cancelLogout(): void {
     this.askLogout.set(false);
-  }
-
-  confirmLogout(): void {
-    this.askLogout.set(false);
-    this.auth.logout().subscribe((result) => {
-      if (result.ok) {
-        this.toast.success(result.message ?? 'Signed out successfully.');
-        this.router.navigate(['/auth']);
-      } else {
-        this.toast.error(result.message ?? result.error ?? 'Logout failed.');
-      }
-    });
   }
 }

@@ -65,6 +65,7 @@ export class AuthService {
   });
   readonly isLoggedIn = computed(() => this._authState() !== null);
   readonly isAdmin = computed(() => this.user()?.roles.some((role) => role.toLowerCase() === 'admin') ?? false);
+  readonly isPrinter = computed(() => this.user()?.roles.some((role) => role.toLowerCase() === 'printer') ?? false);
   readonly role = computed<UserRole | null>(() => (this.isAdmin() ? 'admin' : this.isLoggedIn() ? 'user' : null));
   readonly accessToken = computed(() => this._authState()?.accessToken ?? '');
   readonly refreshToken = computed(() => this._authState()?.refreshToken ?? '');
@@ -291,6 +292,7 @@ export class AuthService {
   resolvePostLoginRoute(): string {
     const role = this.role();
     if (role === 'admin') return '/control-center';
+    if (this.isPrinter()) return '/printer';
     return this.hasCompletedOnboarding() ? '/dashboard' : '/onboarding';
   }
 
