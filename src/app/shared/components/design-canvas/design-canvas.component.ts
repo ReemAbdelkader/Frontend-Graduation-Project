@@ -223,8 +223,10 @@ export class DesignCanvasComponent
       return null;
     }
     this.syncCanvasSize();
-    const imageEl = this.previewImageRef?.nativeElement as HTMLImageElement | undefined;
-    return this.compositeWithBackground(imageEl?.src ?? '');
+    const imageEl = this.previewImageRef?.nativeElement as
+      | HTMLImageElement
+      | undefined;
+    return this.compositeWithBackground(imageEl?.src ?? "");
   }
 
   /**
@@ -235,7 +237,7 @@ export class DesignCanvasComponent
    * restoring the original view via restoreViewSnapshot() when all captures are done.
    */
   async captureViewSnapshot(
-    targetView: 'front' | 'back',
+    targetView: "front" | "back",
     bgImageUrl: string,
   ): Promise<string | null> {
     if (!this.fabricCanvas) {
@@ -255,7 +257,10 @@ export class DesignCanvasComponent
       try {
         await this.loadFromJSONAsync(state);
       } catch (err) {
-        console.error('[DesignCanvas] captureViewSnapshot – loadFromJSON failed', err);
+        console.error(
+          "[DesignCanvas] captureViewSnapshot – loadFromJSON failed",
+          err,
+        );
       }
     }
 
@@ -270,7 +275,7 @@ export class DesignCanvasComponent
    * Call this after all captureViewSnapshot() calls to bring the editor
    * back to the side the user was editing.
    */
-  async restoreViewSnapshot(view: 'front' | 'back'): Promise<void> {
+  async restoreViewSnapshot(view: "front" | "back"): Promise<void> {
     if (!this.fabricCanvas) {
       return;
     }
@@ -284,7 +289,10 @@ export class DesignCanvasComponent
       try {
         await this.loadFromJSONAsync(state);
       } catch (err) {
-        console.error('[DesignCanvas] restoreViewSnapshot – loadFromJSON failed', err);
+        console.error(
+          "[DesignCanvas] restoreViewSnapshot – loadFromJSON failed",
+          err,
+        );
         this.fabricCanvas.clear();
       }
     }
@@ -315,10 +323,10 @@ export class DesignCanvasComponent
       const bgImg = await this.loadImageAsync(imageUrl);
 
       // 2. Create offscreen composite canvas
-      const tempCanvas = document.createElement('canvas');
+      const tempCanvas = document.createElement("canvas");
       tempCanvas.width = w;
       tempCanvas.height = h;
-      const ctx = tempCanvas.getContext('2d');
+      const ctx = tempCanvas.getContext("2d");
       if (!ctx) return null;
 
       if (bgImg) {
@@ -326,16 +334,16 @@ export class DesignCanvasComponent
       }
 
       if (!canvasState) {
-        return tempCanvas.toDataURL('image/png');
+        return tempCanvas.toDataURL("image/png");
       }
 
       // 3. Create offscreen Fabric canvas
-      const fCanvasEl = document.createElement('canvas');
+      const fCanvasEl = document.createElement("canvas");
       fCanvasEl.width = w;
       fCanvasEl.height = h;
 
       const fCanvas = new FabricCanvas(fCanvasEl, {
-        backgroundColor: 'transparent',
+        backgroundColor: "transparent",
         enableRetinaScaling: false,
       });
       fCanvas.setDimensions({ width: w, height: h });
@@ -348,9 +356,12 @@ export class DesignCanvasComponent
       ctx.drawImage(fCanvasEl, 0, 0, w, h);
       fCanvas.dispose();
 
-      return tempCanvas.toDataURL('image/png');
+      return tempCanvas.toDataURL("image/png");
     } catch (error) {
-      console.error('[DesignCanvas] generateSnapshotForStateAndImage error:', error);
+      console.error(
+        "[DesignCanvas] generateSnapshotForStateAndImage error:",
+        error,
+      );
       return null;
     }
   }
@@ -360,7 +371,7 @@ export class DesignCanvasComponent
       return;
     }
 
-    const snapshot = this.fabricCanvas.toJSON();
+    const snapshot = this.serializeCanvasState();
     const objectCount = this.fabricCanvas.getObjects().length;
 
     console.log(`[Fabric] saveCurrentViewState`, {
@@ -484,6 +495,7 @@ export class DesignCanvasComponent
       );
 
       if (imageLayer) {
+        this.applyGraphicAssetMetadata(imageLayer);
         this.schedulePrintableConstraint();
         this.syncToolbarState();
       }
@@ -492,7 +504,10 @@ export class DesignCanvasComponent
     }
   }
 
-  async addGraphicAsset(imageUrl: string): Promise<void> {
+  async addGraphicAsset(
+    imageUrl: string,
+    graphicAssetId?: string,
+  ): Promise<void> {
     if (!this.fabricCanvas || !imageUrl) {
       return;
     }
@@ -506,12 +521,21 @@ export class DesignCanvasComponent
       );
 
       if (imageLayer) {
+        this.applyGraphicAssetMetadata(imageLayer, {
+          graphicAssetId,
+          placement: "foreground",
+        });
         this.schedulePrintableConstraint();
         this.syncToolbarState();
       }
     } catch (err: any) {
-      console.error('[DesignCanvas] Failed to add graphic asset to canvas.', err);
-      this.toastService.error(`Failed to add image: ${err?.message || err || 'Unknown error'}`);
+      console.error(
+        "[DesignCanvas] Failed to add graphic asset to canvas.",
+        err,
+      );
+      this.toastService.error(
+        `Failed to add image: ${err?.message || err || "Unknown error"}`,
+      );
     }
   }
 
@@ -521,18 +545,26 @@ export class DesignCanvasComponent
     const proxyPath = (() => {
       try {
         const path = new URL(imageUrl).pathname;
-        return path.replace(/^\/GraphicAssets\//, '/api/DesignStudio/graphic-asset-file/');
+        return path.replace(
+          /^\/GraphicAssets\//,
+          "/api/DesignStudio/graphic-asset-file/",
+        );
       } catch {
-        return imageUrl.replace(/^\/GraphicAssets\//, '/api/DesignStudio/graphic-asset-file/');
+        return imageUrl.replace(
+          /^\/GraphicAssets\//,
+          "/api/DesignStudio/graphic-asset-file/",
+        );
       }
     })();
 
     const response = await fetch(proxyPath);
     if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch image: ${response.status} ${response.statusText}`,
+      );
     }
     const blob = await response.blob();
-    const filename = proxyPath.split('/').pop() ?? 'graphic-asset';
+    const filename = proxyPath.split("/").pop() ?? "graphic-asset";
     return new File([blob], filename, { type: blob.type });
   }
 
@@ -768,6 +800,144 @@ export class DesignCanvasComponent
     this.schedulePrintableConstraint();
   }
 
+  private serializeCanvasState(): unknown {
+    if (!this.fabricCanvas) {
+      return null;
+    }
+
+    const snapshot = (this.fabricCanvas as any).toJSON(["graphicAssetId", "data"]);
+    const objects = Array.isArray(snapshot?.objects) ? snapshot.objects : [];
+
+    return {
+      ...snapshot,
+      objects: objects.map((objectState: Record<string, unknown>) =>
+        this.serializeFabricObjectState(objectState),
+      ),
+    };
+  }
+
+  private serializeFabricObjectState(
+    objectState: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const existingData = (objectState["data"] ?? {}) as Record<string, unknown>;
+    const graphicAssetId =
+      (existingData["graphicAssetId"] as string | null | undefined) ??
+      (objectState["graphicAssetId"] as string | null | undefined) ??
+      null;
+    const position = this.resolveObjectPosition(objectState, existingData);
+    const rotation = this.resolveObjectRotation(objectState, existingData);
+    const placement = this.resolveObjectPlacement(existingData);
+
+    return {
+      ...objectState,
+      graphicAssetId,
+      data: {
+        ...existingData,
+        graphicAssetId,
+        position,
+        rotation,
+        placement,
+      },
+    };
+  }
+
+  private resolveObjectPosition(
+    objectState: Record<string, unknown>,
+    existingData: Record<string, unknown>,
+  ): { left: number; top: number } {
+    const existingPosition = existingData["position"] as
+      | { left?: number; top?: number }
+      | undefined;
+
+    return {
+      left: Number(existingPosition?.left ?? objectState["left"] ?? 0),
+      top: Number(existingPosition?.top ?? objectState["top"] ?? 0),
+    };
+  }
+
+  private resolveObjectRotation(
+    objectState: Record<string, unknown>,
+    existingData: Record<string, unknown>,
+  ): number {
+    const existingRotation = existingData["rotation"] as number | undefined;
+    return Number(existingRotation ?? objectState["angle"] ?? 0);
+  }
+
+  private resolveObjectPlacement(
+    existingData: Record<string, unknown>,
+  ): "foreground" | "background" {
+    return existingData["placement"] === "background"
+      ? "background"
+      : "foreground";
+  }
+
+  private applyGraphicAssetMetadata(
+    object: FabricObject,
+    metadata?: {
+      graphicAssetId?: string | null;
+      placement?: "foreground" | "background";
+      position?: { left: number; top: number };
+      rotation?: number;
+    },
+    targetCanvas?: FabricCanvas,
+    serializedObj?: Record<string, unknown>,
+  ): void {
+    const existingData = (object.get("data") ?? serializedObj?.["data"] ?? {}) as Record<string, unknown>;
+    const placement =
+      metadata?.placement ?? this.resolveObjectPlacement(existingData);
+    const position =
+      metadata?.position ??
+      this.resolveObjectPosition(
+        {
+          left: object.left ?? 0,
+          top: object.top ?? 0,
+        } as Record<string, unknown>,
+        existingData,
+      );
+    const rotation =
+      metadata?.rotation ??
+      this.resolveObjectRotation(
+        {
+          angle: object.angle ?? 0,
+        } as Record<string, unknown>,
+        existingData,
+      );
+    const graphicAssetId =
+      metadata?.graphicAssetId ??
+      (existingData["graphicAssetId"] as string | null | undefined) ??
+      (serializedObj?.["graphicAssetId"] as string | null | undefined) ??
+      (object.get("graphicAssetId" as any) as string | null | undefined) ??
+      null;
+
+    const nextData = {
+      ...existingData,
+      graphicAssetId,
+      position,
+      rotation,
+      placement,
+    };
+
+    object.set("data", nextData);
+    object.set("graphicAssetId", graphicAssetId);
+    object.set("graphicAssetPlacement", placement);
+    object.set("graphicAssetPosition", position);
+    object.set("graphicAssetRotation", rotation);
+
+    const canvas = targetCanvas ?? this.fabricCanvas;
+    if (canvas) {
+      const canvasWithStacking = canvas as FabricCanvas & {
+        sendToBack?: (obj: FabricObject) => void;
+        bringToFront?: (obj: FabricObject) => void;
+      };
+
+      if (placement === "background") {
+        canvasWithStacking.sendToBack?.(object);
+      } else {
+        canvasWithStacking.bringToFront?.(object);
+      }
+    }
+  }
+
   private parseCanvasState(canvasStateJSON: string): {
     activeView: "front" | "back";
     front: unknown;
@@ -839,16 +1009,29 @@ export class DesignCanvasComponent
     if (!this.fabricCanvas) return;
 
     // Fabric v6: loadFromJSON(json, reviver?) returns Promise<Canvas>
-    await (this.fabricCanvas.loadFromJSON(state as any) as unknown as Promise<unknown>);
+    await (this.fabricCanvas.loadFromJSON(
+      state as any,
+      (_serializedObj: unknown, instance: unknown) => {
+        if (instance) {
+          this.applyGraphicAssetMetadata(
+            instance as FabricObject,
+            undefined,
+            undefined,
+            _serializedObj as Record<string, unknown>,
+          );
+        }
+      },
+    ) as unknown as Promise<unknown>);
 
     // Wait for any embedded FabricImage src URLs to finish loading
-    const imageObjects = this.fabricCanvas.getObjects().filter(
-      (o: any) => o.type === 'image',
-    );
+    const imageObjects = this.fabricCanvas
+      .getObjects()
+      .filter((o: any) => o.type === "image");
     await Promise.all(
       imageObjects.map((obj: any) => {
         const el: HTMLImageElement | null = obj._element ?? null;
-        if (!el || (el.complete && el.naturalWidth > 0)) return Promise.resolve();
+        if (!el || (el.complete && el.naturalWidth > 0))
+          return Promise.resolve();
         return new Promise<void>((resolve) => {
           el.onload = () => resolve();
           el.onerror = () => resolve();
@@ -865,13 +1048,28 @@ export class DesignCanvasComponent
     fCanvas: FabricCanvas,
     state: unknown,
   ): Promise<void> {
-    await (fCanvas.loadFromJSON(state as any) as unknown as Promise<unknown>);
+    await (fCanvas.loadFromJSON(
+      state as any,
+      (_serializedObj: unknown, instance: unknown) => {
+        if (instance) {
+          this.applyGraphicAssetMetadata(
+            instance as FabricObject,
+            undefined,
+            fCanvas,
+            _serializedObj as Record<string, unknown>,
+          );
+        }
+      },
+    ) as unknown as Promise<unknown>);
 
-    const imageObjects = fCanvas.getObjects().filter((o: any) => o.type === 'image');
+    const imageObjects = fCanvas
+      .getObjects()
+      .filter((o: any) => o.type === "image");
     await Promise.all(
       imageObjects.map((obj: any) => {
         const el: HTMLImageElement | null = obj._element ?? null;
-        if (!el || (el.complete && el.naturalWidth > 0)) return Promise.resolve();
+        if (!el || (el.complete && el.naturalWidth > 0))
+          return Promise.resolve();
         return new Promise<void>((resolve) => {
           el.onload = () => resolve();
           el.onerror = () => resolve();
@@ -884,23 +1082,29 @@ export class DesignCanvasComponent
    * Composites the current Fabric canvas on top of a background image URL
    * and returns a base64 PNG data URL.
    */
-  private async compositeWithBackground(bgImageUrl: string): Promise<string | null> {
+  private async compositeWithBackground(
+    bgImageUrl: string,
+  ): Promise<string | null> {
     if (!this.fabricCanvas) return null;
 
     const width = this.fabricCanvas.getWidth() || 800;
     const height = this.fabricCanvas.getHeight() || 800;
 
-    const tempCanvas = document.createElement('canvas');
+    const tempCanvas = document.createElement("canvas");
     tempCanvas.width = width;
     tempCanvas.height = height;
-    const ctx = tempCanvas.getContext('2d');
+    const ctx = tempCanvas.getContext("2d");
     if (!ctx) return null;
 
     // 1. Draw product background image
     if (bgImageUrl) {
       const bg = await this.loadImageAsync(bgImageUrl);
       if (bg) {
-        try { ctx.drawImage(bg, 0, 0, width, height); } catch { /* tainted */ }
+        try {
+          ctx.drawImage(bg, 0, 0, width, height);
+        } catch {
+          /* tainted */
+        }
       }
     }
 
@@ -908,10 +1112,14 @@ export class DesignCanvasComponent
     this.fabricCanvas.renderAll();
     const fabricEl = this.fabricCanvasRef?.nativeElement;
     if (fabricEl) {
-      try { ctx.drawImage(fabricEl, 0, 0, width, height); } catch { /* tainted */ }
+      try {
+        ctx.drawImage(fabricEl, 0, 0, width, height);
+      } catch {
+        /* tainted */
+      }
     }
 
-    return tempCanvas.toDataURL('image/png');
+    return tempCanvas.toDataURL("image/png");
   }
 
   /**
@@ -920,9 +1128,12 @@ export class DesignCanvasComponent
    */
   private loadImageAsync(src: string): Promise<HTMLImageElement | null> {
     return new Promise((resolve) => {
-      if (!src) { resolve(null); return; }
+      if (!src) {
+        resolve(null);
+        return;
+      }
       const img = new Image();
-      img.crossOrigin = 'anonymous';
+      img.crossOrigin = "anonymous";
       img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
       img.src = src;

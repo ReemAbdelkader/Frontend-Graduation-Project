@@ -242,8 +242,15 @@
                   >
                     @if (m.imageUrl) {
                       <div class="ai-generated-image-wrap">
-                        <img [src]="m.imageUrl" class="ai-generated-img" alt="AI Generated graphic" />
-                        <button class="btn-add-canvas" (click)="addToCanvas(m.imageUrl)">
+                        <img
+                          [src]="m.imageUrl"
+                          class="ai-generated-img"
+                          alt="AI Generated graphic"
+                        />
+                        <button
+                          class="btn-add-canvas"
+                          (click)="addToCanvas(m.imageUrl, m.graphicAssetId)"
+                        >
                           <svg
                             width="12"
                             height="12"
@@ -270,7 +277,11 @@
             <div class="chat-input-wrap">
               <div class="quick-prompts">
                 @for (q of quickPrompts; track q) {
-                  <button class="quick-pill" (click)="useQuickPrompt(q)" [disabled]="aiLoading()">
+                  <button
+                    class="quick-pill"
+                    (click)="useQuickPrompt(q)"
+                    [disabled]="aiLoading()"
+                  >
                     {{ q }}
                   </button>
                 }
@@ -285,7 +296,11 @@
                   (keydown.enter)="sendChat()"
                   [disabled]="aiLoading()"
                 />
-                <button class="chat-send" (click)="sendChat()" [disabled]="aiLoading() || !chatInput().trim()">
+                <button
+                  class="chat-send"
+                  (click)="sendChat()"
+                  [disabled]="aiLoading() || !chatInput().trim()"
+                >
                   @if (aiLoading()) {
                     <span class="loading-spinner"></span>
                   } @else {
@@ -463,7 +478,9 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+            <path
+              d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+            />
             <polyline points="17 21 17 13 7 13 7 21" />
             <polyline points="7 3 7 8 15 8" />
           </svg>
@@ -482,7 +499,9 @@
           >
             <circle cx="8" cy="21" r="1" />
             <circle cx="19" cy="21" r="1" />
-            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+            <path
+              d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"
+            />
           </svg>
           Add to Cart
         </button>
@@ -590,7 +609,9 @@
     @for (t of toastService.toasts(); track t.id) {
       <div class="toast" [class]="t.type">
         {{ t.message }}
-        <button class="toast-close" (click)="toastService.remove(t.id)">×</button>
+        <button class="toast-close" (click)="toastService.remove(t.id)">
+          ×
+        </button>
       </div>
     }
   </div>
