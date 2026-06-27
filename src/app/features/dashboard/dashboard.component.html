@@ -7,14 +7,62 @@
       <div>
         <p class="eyebrow">{{ isAdmin() ? 'Atelier AI Control Center' : 'Your Atelier Dashboard' }} · {{ currentDate }}</p>
         <h1 class="title">
-          Good morning, <span class="italic-light">{{ firstName }}</span> —<br />here's your style world.
+          {{ greeting }}, <span class="italic-light">{{ firstName }}</span>.<br />Pick up your next piece.
         </h1>
       </div>
-      <a routerLink="/studio" class="studio-cta">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>
-        Open Design Studio
-      </a>
+
+      <div class="header-actions">
+        <a routerLink="/studio" class="studio-cta">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>
+          Open Studio
+        </a>
+        <a routerLink="/shop" class="shop-cta">Shop blanks</a>
+      </div>
     </div>
+
+    <!-- CONTINUE WORK -->
+    <section class="focus-grid">
+      <article class="draft-card glass-strong">
+        <div class="draft-copy">
+          <p class="eyebrow">Continue designing</p>
+          <h2 class="focus-title">{{ featuredDraft.title }}</h2>
+          <p class="focus-sub">{{ featuredDraft.product }} &middot; {{ featuredDraft.updated }}</p>
+
+          <div class="progress-wrap" aria-label="Design progress">
+            <div class="progress-track">
+              <span class="progress-fill" [style.width.%]="featuredDraft.progress"></span>
+            </div>
+            <span class="progress-label">{{ featuredDraft.progress }}% ready</span>
+          </div>
+
+          <div class="draft-tags">
+            @for (tag of featuredDraft.tags; track tag) {
+              <span>{{ tag }}</span>
+            }
+          </div>
+
+          <div class="draft-actions">
+            <a routerLink="/studio" class="primary-action">Continue</a>
+            <a routerLink="/templates" class="secondary-action">Try another template</a>
+          </div>
+        </div>
+
+        <div class="draft-preview">
+          <img [src]="featuredDraft.image" [alt]="featuredDraft.title" />
+        </div>
+      </article>
+
+      <article class="order-focus-card">
+        <p class="eyebrow">Production</p>
+        <h2 class="side-title">Active order</h2>
+        <p class="order-id">{{ activeOrder.id }}</p>
+        <div class="status-row">
+          <span class="status-pill">{{ activeOrder.status }}</span>
+          <span>{{ activeOrder.eta }}</span>
+        </div>
+        <a routerLink="/orders" class="story-link order-link">View order</a>
+      </article>
+    </section>
 
     <!-- STATS -->
     <section class="stats-grid">
@@ -35,9 +83,6 @@
                   @case ('heart') {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
                   }
-                  @case ('trending') {
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-                  }
                 }
               </span>
             </div>
@@ -49,9 +94,16 @@
     </section>
 
     <!-- QUICK ACCESS -->
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Next actions</p>
+        <h2 class="section-title">What do you want to do?</h2>
+      </div>
+    </div>
+
     <section class="quick-grid">
       @for (q of quickAccess; track q.to) {
-        <a routerLink="{{ q.to }}" class="quick-card hover-lift">
+        <a [routerLink]="q.to" class="quick-card hover-lift">
           <div class="quick-icon">
             @switch (q.icon) {
               @case ('wand') {
@@ -81,13 +133,16 @@
         <div class="recos-head">
           <div>
             <p class="eyebrow">Curated for you</p>
-            <h2 class="recos-title">Picked from your style DNA</h2>
+            <h2 class="recos-title">Recommended blanks and styles</h2>
           </div>
           <a routerLink="/shop" class="story-link browse">Browse all</a>
         </div>
         <div class="recos-grid">
           @for (p of recos; track p.id) {
-            <app-product-card [product]="p" />
+            <div class="reco-item">
+              <app-product-card [product]="p" />
+              <p class="reco-reason">Recommended for your saved styles</p>
+            </div>
           }
         </div>
       </div>
@@ -109,12 +164,20 @@
         </div>
 
         <div class="tip-card">
-          <p class="tip-eyebrow">Atelier tip</p>
-          <p class="tip-text">"Try a coral accent on your next hoodie — it's trending in your circle."</p>
-          <a routerLink="/studio" class="story-link tip-link">
-            Open studio
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </a>
+          <p class="tip-eyebrow">Design checklist</p>
+          <ul class="check-list">
+            @for (item of checklist; track item.label) {
+              <li [class.done]="item.complete">
+                <span class="check-dot">
+                  @if (item.complete) {
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  }
+                </span>
+                {{ item.label }}
+              </li>
+            }
+          </ul>
+          <a routerLink="/studio" class="story-link tip-link">Finish in studio</a>
         </div>
       </aside>
     </section>
