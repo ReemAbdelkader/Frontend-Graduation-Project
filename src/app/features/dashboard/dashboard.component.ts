@@ -50,6 +50,7 @@ export class DashboardComponent {
   private auth = inject(AuthService);
 
   readonly user = this.auth.user;
+  readonly isAdmin = this.auth.isAdmin;
 
   readonly recos = products.slice(0, 4);
   readonly activity = dashboardActivity;
