@@ -66,7 +66,7 @@ export class StudioComponent {
   readonly aiLoading = signal(false);
   readonly isSaving = signal(false);
   readonly saveSuccessOpen = signal(false);
-  readonly saveSuccessPreviewUrl = signal('');
+  readonly saveSuccessPreviewUrl = signal("");
 
   @ViewChild(DesignCanvasComponent)
   private readonly designCanvas?: DesignCanvasComponent;
@@ -430,11 +430,11 @@ export class StudioComponent {
     });
   }
 
-  addToCanvas(imageUrl: string): void {
+  addToCanvas(imageUrl: string, graphicAssetId?: string): void {
     if (!imageUrl || !this.designCanvas) {
       return;
     }
-    this.designCanvas.addGraphicAsset(imageUrl);
+    this.designCanvas.addGraphicAsset(imageUrl, graphicAssetId);
   }
 
   getProductImageUrlForAngle(angle: ViewAngle): string {
@@ -518,12 +518,14 @@ export class StudioComponent {
           next: (designId) => {
             if (designId) {
               localStorage.setItem(this.lastDraftStorageKey, designId);
-              
+
               // Load design details to retrieve the generated SnapshotImageURL
               this.productService.getDesignById(designId).subscribe({
                 next: (design) => {
                   if (design && design.snapshotImageURL) {
-                    this.saveSuccessPreviewUrl.set(resolveApiUrl(design.snapshotImageURL) || "");
+                    this.saveSuccessPreviewUrl.set(
+                      resolveApiUrl(design.snapshotImageURL) || "",
+                    );
                     this.saveSuccessOpen.set(true);
                   } else {
                     this.toastService.success("Design saved successfully!");
@@ -531,7 +533,7 @@ export class StudioComponent {
                 },
                 error: () => {
                   this.toastService.success("Design saved successfully!");
-                }
+                },
               });
             }
             console.log("[Studio] design saved", { designId });
@@ -592,7 +594,9 @@ export class StudioComponent {
         );
 
         if (!product) {
-          this.toastService.error("Product associated with this design was not found.");
+          this.toastService.error(
+            "Product associated with this design was not found.",
+          );
           return;
         }
 
@@ -629,7 +633,10 @@ export class StudioComponent {
                 }
               }
             } catch (e) {
-              console.error("[Studio] Failed to parse activeView from canvasStateJSON", e);
+              console.error(
+                "[Studio] Failed to parse activeView from canvasStateJSON",
+                e,
+              );
             }
 
             this.activeViewAngle = activeView;
@@ -649,7 +656,7 @@ export class StudioComponent {
             requestAnimationFrame(() => {
               this.designCanvas?.restoreDesignState(design.canvasStateJSON);
             });
-          }
+          },
         });
       },
       error: (error) => {
