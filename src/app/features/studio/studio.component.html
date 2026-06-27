@@ -65,7 +65,7 @@
                   ? "AI Prompt"
                   : t === "products"
                     ? "Products"
-                    : "Custom"
+                    : "Graphics"
               }}
             </button>
           }
@@ -124,86 +124,100 @@
         }
 
         @if (tab() === "custom") {
-          <div class="custom-section">
-            <div class="section-block">
-              <p class="section-label">Layers</p>
-              <div class="layer-list">
-                <div class="layer-row">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                    <circle cx="9" cy="9" r="2" />
-                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                  </svg>
-                  Base · Charcoal
-                </div>
-                <div class="layer-row">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <polyline points="4 7 4 4 20 4 20 7" />
-                    <line x1="9" y1="20" x2="15" y2="20" />
-                    <line x1="12" y1="4" x2="12" y2="20" />
-                  </svg>
-                  Text · ATELIER
-                </div>
-                <div class="layer-row">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <polygon points="12 2 2 8 12 14 22 8 12 2" />
-                    <polyline points="2 16 12 22 22 16" />
-                    <polyline points="2 12 12 18 22 12" />
-                  </svg>
-                  Graphic · W mark
-                </div>
-              </div>
+          <div class="graphics-section">
+
+            <!-- Action buttons -->
+            <div class="graphics-actions">
+              <button class="gfx-btn" (click)="triggerImageUpload()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Upload Image
+              </button>
+              <button class="gfx-btn danger" (click)="deleteSelected()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6"/>
+                  <path d="M14 11v6"/>
+                </svg>
+                Delete
+              </button>
             </div>
 
-            <div class="section-block">
-              <p class="section-label">Color</p>
-              <div class="color-grid">
-                @for (c of colorPalette; track c) {
-                  <button
-                    class="color-cell"
-                    [style.background]="c"
-                    [class.selected]="color() === c"
-                    (click)="pickColor(c)"
-                  ></button>
-                }
-              </div>
+            <!-- Sub-tab toggle -->
+            <div class="gfx-sub-tabs">
+              <button
+                class="gfx-sub-tab"
+                [class.active]="graphicsSubTab() === 'mine'"
+                (click)="setGraphicsSubTab('mine')"
+              >My Graphics</button>
+              <button
+                class="gfx-sub-tab"
+                [class.active]="graphicsSubTab() === 'gallery'"
+                (click)="setGraphicsSubTab('gallery')"
+              >Studio Gallery</button>
             </div>
 
-            <div class="section-block">
-              <p class="section-label">Fabric</p>
-              <div class="pill-list">
-                @for (f of fabricOptions; track f) {
-                  <button class="pill">{{ f }}</button>
-                }
-              </div>
-            </div>
+            <!-- Loading -->
+            @if (assetsLoading()) {
+              <p class="gfx-empty">Loading assets…</p>
+            }
+
+            <!-- My Graphics -->
+            @if (!assetsLoading() && graphicsSubTab() === 'mine') {
+              @if (userAssets().length === 0) {
+                <div class="gfx-empty-state">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.35">
+                    <rect width="18" height="18" x="3" y="3" rx="2"/>
+                    <circle cx="9" cy="9" r="2"/>
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                  </svg>
+                  <p>No graphics yet.</p>
+                  <span>Use the AI Prompt tab or upload an image to get started.</span>
+                </div>
+              } @else {
+                <div class="asset-grid">
+                  @for (asset of userAssets(); track asset.id) {
+                    <button class="asset-thumb" (click)="addAssetToCanvas(asset)" [title]="asset.title || asset.name || 'Graphic'">
+                      <img [src]="resolveAssetImageUrl(asset.imageUrl)" alt="" />
+                      <div class="asset-thumb-overlay">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                      </div>
+                    </button>
+                  }
+                </div>
+              }
+            }
+
+            <!-- Studio Gallery -->
+            @if (!assetsLoading() && graphicsSubTab() === 'gallery') {
+              @if (adminAssets().length === 0) {
+                <div class="gfx-empty-state">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.35">
+                    <rect width="18" height="18" x="3" y="3" rx="2"/>
+                    <circle cx="9" cy="9" r="2"/>
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                  </svg>
+                  <p>No sample assets yet.</p>
+                  <span>Admin assets will appear here.</span>
+                </div>
+              } @else {
+                <div class="asset-grid">
+                  @for (asset of adminAssets(); track asset.id) {
+                    <button class="asset-thumb" (click)="addAssetToCanvas(asset)" [title]="asset.title || asset.name || 'Sample'">
+                      <img [src]="resolveAssetImageUrl(asset.imageUrl)" alt="" />
+                      <div class="asset-thumb-overlay">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                      </div>
+                    </button>
+                  }
+                </div>
+              }
+            }
+
           </div>
         }
 
@@ -343,40 +357,6 @@
         </button>
       </div>
 
-      <div class="icon-actions">
-        <button class="icon-btn">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            <line x1="11" y1="8" x2="11" y2="14" />
-            <line x1="8" y1="11" x2="14" y2="11" />
-          </svg>
-        </button>
-        <button class="icon-btn">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-          </svg>
-        </button>
-      </div>
 
       <div class="preview-area">
         <div class="preview-inner">

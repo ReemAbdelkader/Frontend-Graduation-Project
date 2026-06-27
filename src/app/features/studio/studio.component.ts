@@ -1,12 +1,13 @@
 import { Component, inject, signal, computed, ViewChild } from "@angular/core";
 import { Router, RouterLink } from "@angular/router";
 import { FormsModule } from "@angular/forms";
+import { forkJoin, catchError, of } from "rxjs";
 import { CheckoutPayModalComponent } from "../../shared/components/checkout-pay-modal/checkout-pay-modal.component";
 import { DesignCanvasComponent } from "../../shared/components/design-canvas/design-canvas.component";
 import { ConfirmDialogComponent } from "../../shared/components/confirm-dialog/confirm-dialog.component";
 import { ProductService } from "../../core/services/product.service";
 import { AuthService } from "../../core/services/auth.service";
-import { AiImageService } from "../../core/services/ai-image.service";
+import { AiImageService, GraphicAssetDto } from "../../core/services/ai-image.service";
 import { ToastService } from "../../core/services/toast.service";
 import { resolveApiUrl } from "../../core/services/api-config";
 import {
@@ -91,6 +92,13 @@ export class StudioComponent {
 
   readonly tab = signal<StudioTab>("products");
   readonly tabOptions: StudioTab[] = ["products", "custom", "ai"];
+
+  // Graphics tab state
+  readonly userAssets = signal<GraphicAssetDto[]>([]);
+  readonly adminAssets = signal<GraphicAssetDto[]>([]);
+  readonly assetsLoading = signal(false);
+  readonly graphicsSubTab = signal<'mine' | 'gallery'>('mine');
+  private assetsLoaded = false;
   readonly selected = signal<StudioProduct>(this.createDefaultProduct());
   activeViewAngle: ViewAngle = ViewAngle.Front;
 
@@ -307,10 +315,59 @@ export class StudioComponent {
 
   setTab(t: StudioTab): void {
     this.tab.set(t);
+    if (t === 'custom') {
+      this.loadGraphicAssets();
+    }
   }
 
   setSelectedCategory(categoryName: string): void {
     this.selectedCategory.set(categoryName);
+  }
+
+  setGraphicsSubTab(sub: 'mine' | 'gallery'): void {
+    this.graphicsSubTab.set(sub);
+  }
+
+  private loadGraphicAssets(): void {
+    this.assetsLoading.set(true);
+    forkJoin({
+      user: this.aiImageService.getUserGraphicAssets().pipe(catchError(() => of([]))),
+      admin: this.aiImageService.getAdminGraphicAssets().pipe(catchError(() => of([]))),
+    }).subscribe(({ user, admin }) => {
+      this.userAssets.set(user);
+      this.adminAssets.set(admin);
+      this.assetsLoading.set(false);
+      this.assetsLoaded = true;
+    });
+  }
+
+  /** Called from the Graphics tab to add a gallery asset onto the canvas. */
+  addAssetToCanvas(asset: GraphicAssetDto): void {
+    if (!this.designCanvas) {
+      this.toastService.error('Open the Canvas Editor first to add graphics.');
+      return;
+    }
+    const url = this.resolveAssetImageUrl(asset.imageUrl);
+    this.designCanvas.addGraphicAsset(url, asset.id);
+  }
+
+  resolveAssetImageUrl(url: string): string {
+    if (!url) return this.logo;
+    return resolveApiUrl(url) || url;
+  }
+
+  /** Delegates to the canvas toolbar's hidden file input. */
+  triggerImageUpload(): void {
+    if (!this.designCanvas) {
+      this.toastService.error('Open the Canvas Editor first to upload images.');
+      return;
+    }
+    this.designCanvas.triggerImageUpload();
+  }
+
+  /** Delegates delete of the selected canvas object. */
+  deleteSelected(): void {
+    this.designCanvas?.deleteSelectedObject();
   }
 
   toggleViewAngle(): void {
