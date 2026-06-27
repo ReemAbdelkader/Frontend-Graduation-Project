@@ -68,145 +68,8 @@
       </div>
     </div>
 
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-head">
-          <div class="metric-icon">🛍️</div>
-          <p class="metric-label">ITEMS PURCHASED</p>
-        </div>
-        <p class="metric-value">{{ displayUser.itemsPurchased }}</p>
-      </div>
+    <h2 class="section-heading">Settings</h2>
 
-      <div class="metric-card">
-        <div class="metric-head">
-          <div class="metric-icon">📦</div>
-          <p class="metric-label">TOTAL ORDERS</p>
-        </div>
-        <p class="metric-value">{{ displayUser.totalOrders }}</p>
-      </div>
-
-      <div class="metric-card">
-        <div class="metric-head">
-          <div class="metric-icon">💲</div>
-          <p class="metric-label">TOTAL SPENT</p>
-        </div>
-        <p class="metric-value">
-          @if (displayUser.totalSpent !== null) {
-            <span>${{ displayUser.totalSpent }}</span>
-          }
-        </p>
-      </div>
-
-      <div class="metric-card">
-        <div class="metric-head">
-          <div class="metric-icon">🎨</div>
-          <p class="metric-label">TEMPLATES CREATED</p>
-        </div>
-        <p class="metric-value">{{ displayUser.templatesCreated }}</p>
-      </div>
-
-      <div class="metric-card">
-        <div class="metric-head">
-          <div class="metric-icon">⭐</div>
-          <p class="metric-label">AVG. RATING</p>
-        </div>
-        <p class="metric-value">{{ displayUser.avgRating }}</p>
-      </div>
-
-      <div class="metric-card">
-        <div class="metric-head">
-          <div class="metric-icon">👑</div>
-          <p class="metric-label">TOP PROFILE</p>
-        </div>
-        <p class="metric-value" style="font-size: 1.15rem; margin-top: 0.75rem">
-          {{ displayUser.isTopProfile ? "Yes" : "No" }}
-        </p>
-      </div>
-    </div>
-
-    <div class="tabs-row">
-      <button
-        class="tab-btn"
-        [class.active]="activeTab() === 'community'"
-        (click)="setTab('community')"
-      >
-        Community posts
-      </button>
-      <button
-        class="tab-btn"
-        [class.active]="activeTab() === 'templates'"
-        (click)="setTab('templates')"
-      >
-        Design studio templates
-      </button>
-      <button
-        class="tab-btn"
-        [class.active]="activeTab() === 'rewards'"
-        (click)="setTab('rewards')"
-      >
-        Rewards
-      </button>
-      <button
-        class="tab-btn"
-        [class.active]="activeTab() === 'orders'"
-        (click)="setTab('orders')"
-      >
-        My Orders
-      </button>
-      <button
-        class="tab-btn"
-        [class.active]="activeTab() === 'settings'"
-        (click)="setTab('settings')"
-      >
-        ⚙️ Settings
-      </button>
-    </div>
-
-    @if (activeTab() === "community") {
-      <div class="empty-tab">
-        <p>No community posts published yet.</p>
-      </div>
-    }
-
-    @if (activeTab() === "templates") {
-      @if (userTemplates().length === 0) {
-        <div class="empty-tab">
-          <p>
-            No design templates created yet. Start designing on the Studio
-            canvas!
-          </p>
-        </div>
-      }
-    }
-
-    @if (activeTab() === "rewards") {
-      @if (userRewards().length === 0) {
-        <div class="empty-tab">
-          <p>No rewards or badges earned yet.</p>
-        </div>
-      }
-    }
-
-    @if (activeTab() === "orders") {
-      @if (userOrders().length === 0) {
-        <div class="empty-tab">
-          <p>
-            No orders yet,
-            <a
-              routerLink="/shop"
-              style="
-                color: var(--primary);
-                font-weight: 500;
-                text-decoration: underline;
-              "
-              >add to cart now</a
-            >
-          </p>
-        </div>
-      }
-    }
-
-    @if (activeTab() === "settings") {
       <div class="settings-grid">
         <div class="settings-side">
           <div class="side-head">
@@ -503,7 +366,6 @@
           }
         </div>
       </div>
-    }
 
     <div class="signout-section">
       <button class="signout-btn" (click)="toggleLogoutModal(true)">

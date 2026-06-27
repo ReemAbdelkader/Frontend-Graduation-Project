@@ -1,23 +1,12 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { OnboardingApiService, UserPreferencesResponse } from '../../core/services/onboarding-api.service';
-import { AppNavComponent } from '../../shared/components/app-nav/app-nav.component';
-import { LogoutDialogComponent } from '../../shared/components/logout-dialog/logout-dialog.component';
 import { ProfileService } from '../../core/services/profile.service'; 
 import { environment } from '../../../environments/environment';
-
-type ProfileTab = 'community' | 'templates' | 'rewards' | 'orders' | 'settings';
-
-interface Metric {
-  icon: 'shopping' | 'store' | 'dollar' | 'layers' | 'star' | 'crown';
-  label: string;
-  value: string;
-  sub?: string;
-}
 
 export interface UserProfileDto {
   name: string;
@@ -27,11 +16,7 @@ export interface UserProfileDto {
   photoUrl: string;
   followers: number | null;
   following: number | null;
-  itemsPurchased: number | null;
-  totalOrders: number | null;
-  totalSpent: number | null;
   templatesCreated: number | null;
-  avgRating: number | null;
   isTopProfile: boolean;
 }
 
@@ -66,12 +51,11 @@ const DESIGN_OPTIONS = [
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss'
 })
 export class ProfileComponent implements OnInit {
-  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router); 
   private readonly authService = inject(AuthService);
   private readonly toast = inject(ToastService);
@@ -79,8 +63,6 @@ export class ProfileComponent implements OnInit {
   private readonly profileService = inject(ProfileService); 
 
   readonly user = this.authService.user();
-  readonly tab = signal<ProfileTab>('settings');
-  readonly activeTab = signal<string>('settings');
 
   // Editable form fields
   readonly formName = signal(this.user?.name ?? '');
@@ -108,43 +90,14 @@ export class ProfileComponent implements OnInit {
 
   displayUser: UserProfileDto = {
     name: '', username: '', email: '', bio: '', photoUrl: '',
-    followers: null, following: null, itemsPurchased: null, 
-    totalOrders: null, totalSpent: null, templatesCreated: null, 
-    avgRating: null, isTopProfile: false
+    followers: null, following: null, templatesCreated: null,
+    isTopProfile: false
   };
 
   editForm = { name: '', bio: '' };
 
-  readonly userOrders = signal<any[]>([]); 
-  readonly userRewards = signal<any[]>([]);
-  readonly userTemplates = signal<any[]>([]);
-
-  readonly metrics: Metric[] = [
-    { icon: 'shopping', label: 'Items purchased', value: '38', sub: 'from 12 sellers' },
-    { icon: 'store', label: 'Total orders', value: '24' },
-    { icon: 'dollar', label: 'Total spent', value: '$4,218' },
-    { icon: 'layers', label: 'Templates created', value: '9' },
-    { icon: 'star', label: 'Avg. template rating', value: '4.82', sub: 'from other users' },
-    { icon: 'crown', label: 'Top profile', value: 'Yes', sub: 'High-rated templates' },
-  ];
-
-  readonly tabs: Array<{ key: ProfileTab; label: string; hasIcon: boolean }> = [
-    { key: 'community', label: 'Community posts', hasIcon: false },
-    { key: 'templates', label: 'Design studio templates', hasIcon: false },
-    { key: 'rewards', label: 'Rewards', hasIcon: false },
-    { key: 'orders', label: 'My Orders', hasIcon: false },
-    { key: 'settings', label: 'Settings', hasIcon: true },
-  ];
-
   ngOnInit(): void {
     this.loadPreferences();
-
-    this.route.queryParams.subscribe(params => {
-      if (params['tab']) { 
-        this.activeTab.set(params['tab']); 
-        this.tab.set(params['tab'] as ProfileTab);
-      }
-    });
 
     const currentUser = this.authService.user();
     console.log('1. Current user retrieved from AuthService:', currentUser);
@@ -164,11 +117,7 @@ export class ProfileComponent implements OnInit {
               photoUrl: profile.profilePictureUrl ? `${environment.apiUrl}${profile.profilePictureUrl}` : '',
               followers: profile.followersCount || 0,
               following: profile.followingCount || 0,
-              itemsPurchased: profile.itemsPurchasedCount || 0,
-              totalOrders: profile.totalOrdersCount || 0,
-              totalSpent: profile.totalSpent || 0,
               templatesCreated: profile.templatesCreatedCount || 0, 
-              avgRating: profile.avgTemplateRating || 0,
               isTopProfile: profile.isTopProfile || false
             };
             
@@ -255,11 +204,6 @@ export class ProfileComponent implements OnInit {
           this.toast.error('Failed to save preferences.');
         },
       });
-  }
-
-  setTab(t: ProfileTab): void {
-    this.tab.set(t);
-    this.activeTab.set(t);
   }
 
   syncEditForm(): void {
