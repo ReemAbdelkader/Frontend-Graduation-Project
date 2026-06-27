@@ -41,7 +41,7 @@
             <p class="h-stat-label">FOLLOWING</p>
           </div>
           <div class="h-stat">
-            <p class="h-stat-value">{{ displayUser.designsCount }}</p>
+            <p class="h-stat-value">{{ displayUser.templatesCreated }}</p>
             <p class="h-stat-label">DESIGNS</p>
           </div>
         </div>
@@ -50,7 +50,6 @@
     </div>
 
     <div class="metrics-grid">
-      
       <div class="metric-card">
         <div class="metric-head">
           <div class="metric-icon">🛍️</div>
@@ -73,7 +72,7 @@
           <p class="metric-label">TOTAL SPENT</p>
         </div>
         <p class="metric-value">
-          @if (displayUser.totalSpent !== null) { ${{ displayUser.totalSpent }} }
+          @if (displayUser.totalSpent !== null) { <span>${{ displayUser.totalSpent }}</span> }
         </p>
       </div>
 
@@ -102,7 +101,6 @@
           {{ displayUser.isTopProfile ? 'Yes' : 'No' }}
         </p>
       </div>
-
     </div>
 
     <div class="tabs-row">
@@ -120,10 +118,7 @@
     }
 
     @if (activeTab() === 'templates') {
-      @if (userTemplates().length > 0) {
-        <div class="metrics-grid" style="margin-top: 1.5rem;">
-          </div>
-      } @else {
+      @if (userTemplates().length === 0) {
         <div class="empty-tab">
           <p>No design templates created yet. Start designing on the Studio canvas!</p>
         </div>
@@ -131,8 +126,7 @@
     }
 
     @if (activeTab() === 'rewards') {
-      @if (userRewards().length > 0) {
-        } @else {
+      @if (userRewards().length === 0) {
         <div class="empty-tab">
           <p>No rewards or badges earned yet.</p>
         </div>
@@ -140,8 +134,7 @@
     }
 
     @if (activeTab() === 'orders') {
-      @if (userOrders().length > 0) {
-        } @else {
+      @if (userOrders().length === 0) {
         <div class="empty-tab">
           <p>No orders yet, <a routerLink="/shop" style="color: var(--primary); font-weight: 500; text-decoration: underline;">add to cart now</a></p>
         </div>
@@ -166,32 +159,24 @@
             </div>
           </div>
           <button class="change-photo" (click)="fileInput.click()">Change photo</button>
-          <input #fileInput type="file" (change)="onPhotoSelected($event)" style="display: none;" accept="image/*" />
+          <input #fileInput type="file" (change)="onPhotoSelected($event)" style="display: none;" accept="image/*" title="Upload Profile Image" aria-label="Upload Profile Image" />
           <p class="side-note">Settings are only visible to you.</p>
         </div>
 
         <div class="settings-form">
           <h2 class="form-title">Account settings</h2>
           <div class="form-grid">
-            <div class="field">
-              <label class="label">Full name</label>
-              <input type="text" [(ngModel)]="editForm.name" placeholder="Full name" />
+            <div class="field" style="grid-column: span 2;">
+              <label class="label" for="fullName">Full name</label>
+              <input type="text" id="fullName" name="fullName" [(ngModel)]="editForm.name" placeholder="Full name" />
             </div>
-            <div class="field">
-              <label class="label">Username</label>
-              <input type="text" [(ngModel)]="editForm.username" placeholder="Username" />
-            </div>
-            <div class="field">
-              <label class="label">Email</label>
-              <input type="email" [(ngModel)]="editForm.email" placeholder="Email address" />
-            </div>
-            <div class="field">
-              <label class="label">New password</label>
-              <input type="password" [(ngModel)]="editForm.password" placeholder="Leave blank to keep current" />
+            <div class="field" style="grid-column: span 2;">
+              <label class="label" for="emailAddress">Email</label>
+              <input type="email" id="emailAddress" name="emailAddress" [value]="displayUser.email" readonly style="background-color: #f4f4f5; cursor: not-allowed; color: #71717a;" />
             </div>
             <div class="field bio-field" style="grid-column: span 2;">
-              <label class="label">Bio</label>
-              <textarea [(ngModel)]="editForm.bio" placeholder="Write something about yourself..."></textarea>
+              <label class="label" for="userBio">Bio</label>
+              <textarea id="userBio" name="userBio" [(ngModel)]="editForm.bio" placeholder="Write something about yourself..."></textarea>
             </div>
           </div>
           <div class="form-actions">

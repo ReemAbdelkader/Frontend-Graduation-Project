@@ -17,6 +17,7 @@ export interface ProfileDto {
   avgTemplateRating: number;
   followersCount: number;
   followingCount: number;
+  isTopProfile?: boolean;
 }
 
 @Injectable({
@@ -27,8 +28,8 @@ export class ProfileService {
 
   constructor(private readonly http: HttpClient) {}
 
-  getProfile(userId: string): Observable<ProfileDto | null> {
-    const params = new HttpParams().set('userId', userId);
+  getProfile(email: string): Observable<ProfileDto | null> {
+    const params = new HttpParams().set('email', email); 
     return this.http.get<ApiResponse<ProfileDto>>(`${this.apiUrl}/me`, { params }).pipe(
       map(response => response.succeeded ? response.data : null),
       catchError(() => of(null))
@@ -38,7 +39,11 @@ export class ProfileService {
   updateProfile(formData: FormData): Observable<ApiResponse<string>> {
     return this.http.put<ApiResponse<string>>(`${this.apiUrl}/update`, formData).pipe(
       catchError((err) => {
-        return of({ succeeded: false, message: err.message || 'Error updating profile', data: '' });
+        return of({ 
+          succeeded: false, 
+          message: err.error?.message || err.message || 'Error updating profile', 
+          data: '' 
+        });
       })
     );
   }
