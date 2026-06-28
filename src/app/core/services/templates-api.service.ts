@@ -37,6 +37,7 @@ export interface TemplateDto {
 export interface TemplateDetailDto extends TemplateDto {
   averageRating: number;
   reviewCount: number;
+  creatorName: string;
   likedByCurrentUser?: boolean;
   savedByCurrentUser?: boolean;
   commentCount?: number;
@@ -150,6 +151,19 @@ export class TemplatesApiService {
     return this.http
       .get<ApiEnvelope<PaginatedResult<TemplateDto>>>(`${API_BASE_URL}/templates/mine`, { params })
       .pipe(map((response) => response.data));
+  }
+
+  publishTemplate(id: string): Observable<string> {
+    return this.http
+      .post<ApiEnvelope<string>>(`${API_BASE_URL}/templates/${id}/publish`, {})
+      .pipe(
+        map((response) => {
+          if (!response.succeeded) {
+            throw new Error(response.message ?? 'Failed to publish template.');
+          }
+          return response.data;
+        })
+      );
   }
 
   resolvePreviewUrl(url: string): string {

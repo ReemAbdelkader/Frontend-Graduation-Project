@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppNavComponent } from '../../shared/components/app-nav/app-nav.component';
 import { CommunityInteractionRowComponent } from '../../shared/components/community-interaction-row/community-interaction-row.component';
 import { PostDetailModalComponent } from '../../shared/components/post-detail-modal/post-detail-modal.component';
-import { TemplatesApiService } from '../../core/services/templates-api.service';
+import { TemplatesApiService, TemplateDto } from '../../core/services/templates-api.service';
 import {
   CommunityApiService,
   CommunityCommentDto,
@@ -27,6 +27,11 @@ export class CommunityComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly creators = signal<CommunityTopCreatorDto[]>([]);
+  readonly showPublishDialog = signal(false);
+  readonly myTemplates = signal<TemplateDto[]>([]);
+  readonly loadingTemplates = signal(false);
+  readonly selectedTemplateId = signal<string | null>(null);
+  readonly publishing = signal(false);
 
   readonly posts = signal<CommunityFeedItemDto[]>([]);
   readonly loading = signal(false);
@@ -578,5 +583,71 @@ export class CommunityComponent {
       .join('')
       .slice(0, 2)
       .toUpperCase();
+  }
+
+  openPublishDialog(): void {
+    this.showPublishDialog.set(true);
+    this.loadingTemplates.set(true);
+    this.selectedTemplateId.set(null);
+    this.templatesApi
+      .getMyTemplates(1, 50)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.myTemplates.set(res.data.filter((t) => !t.isPublic));
+          this.loadingTemplates.set(false);
+        },
+        error: () => {
+          this.loadingTemplates.set(false);
+          this.toast.error('Unable to load your templates.');
+        },
+      });
+  }
+
+  publishSelected(): void {
+    const templateId = this.selectedTemplateId();
+    if (!templateId) {
+      return;
+    }
+
+    this.publishing.set(true);
+    this.templatesApi
+      .publishTemplate(templateId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success('Template published successfully.');
+          this.showPublishDialog.set(false);
+
+          this.templatesApi.getTemplate(templateId).subscribe({
+            next: (detail) => {
+              const feedItem: CommunityFeedItemDto = {
+                id: detail.id,
+                name: detail.name,
+                previewImageURL: detail.previewImageURL,
+                styleTags: detail.styleTags,
+                likesCount: detail.likesCount,
+                remixesCount: detail.remixesCount,
+                commentCount: detail.commentCount ?? 0,
+                averageRating: detail.averageRating,
+                creatorUserId: detail.creatorUserId,
+                creatorName: detail.creatorName,
+                creatorProfileImageUrl: null,
+                createdAt: detail.createdAt,
+                likedByCurrentUser: detail.likedByCurrentUser,
+                savedByCurrentUser: detail.savedByCurrentUser,
+              };
+              this.posts.update((current) => [feedItem, ...current]);
+            },
+          });
+        },
+        error: (err) => {
+          this.publishing.set(false);
+          this.toast.error(err.message ?? 'Failed to publish template.');
+        },
+        complete: () => {
+          this.publishing.set(false);
+        },
+      });
   }
 }
