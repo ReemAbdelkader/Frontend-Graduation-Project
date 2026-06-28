@@ -778,7 +778,7 @@ export class DesignCanvasComponent
       this.constraintService.constrainObject(
         this.fabricCanvas,
         target,
-        this.printableZone,
+        this.effectiveZone(),
       );
     });
 
@@ -790,7 +790,7 @@ export class DesignCanvasComponent
       this.constraintService.constrainObject(
         this.fabricCanvas,
         target,
-        this.printableZone,
+        this.effectiveZone(),
       );
     });
 
@@ -802,7 +802,7 @@ export class DesignCanvasComponent
       this.constraintService.constrainObject(
         this.fabricCanvas,
         target,
-        this.printableZone,
+        this.effectiveZone(),
       );
     });
   }
@@ -1069,10 +1069,29 @@ export class DesignCanvasComponent
     this.pendingConstraintFrame = requestAnimationFrame(() => {
       this.constraintService.constrainAllObjects(
         this.fabricCanvas,
-        this.printableZone,
+        this.effectiveZone(),
       );
       this.pendingConstraintFrame = 0;
     });
+  }
+
+  /**
+   * Returns the zone that constrains graphic objects.
+   * The canvas is always sized to match the product mockup image
+   * (via syncCanvasSize), so the full canvas rectangle is always
+   * the correct printable area — regardless of any admin-entered
+   * printableZone values.
+   */
+  private effectiveZone(): { left: number; top: number; width: number; height: number } | null {
+    if (!this.fabricCanvas) {
+      return null;
+    }
+    return {
+      left: 0,
+      top: 0,
+      width: this.fabricCanvas.getWidth(),
+      height: this.fabricCanvas.getHeight(),
+    };
   }
 
   /**

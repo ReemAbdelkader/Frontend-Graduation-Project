@@ -6,102 +6,148 @@
       <div>
         <p class="eyebrow">Orders</p>
         <h1 class="title">My Orders</h1>
-        <p class="sub">{{ activeCount }} active orders · 24 lifetime</p>
+        <p class="sub">{{ activeCount }} orders</p>
       </div>
       <a routerLink="/shop" class="story-link continue">Continue shopping →</a>
     </header>
 
-    <div class="orders-list">
-      @for (o of orders; track o.id) {
-        <article class="order-card">
-          <div class="order-head">
-            <div class="head-block">
-              <p class="head-label">Order</p>
-              <p class="order-id">{{ o.id }}</p>
-            </div>
-            <div class="head-divider"></div>
-            <div class="head-block">
-              <p class="head-label">Placed</p>
-              <p class="head-value">{{ o.placedDate }}</p>
-            </div>
-            <div class="head-block">
-              <p class="head-label">ETA</p>
-              <p class="head-value">{{ o.eta }}</p>
-            </div>
-            <span class="status-badge" [class]="statusClass(o.status)">{{ o.status }}</span>
+    @if (showPaymentBanner()) {
+      <div class="payment-banner">
+        <div class="banner-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <div>
+            <p class="banner-title">Payment successful</p>
+            <p class="banner-desc">Your order is confirmed. Track its progress below.</p>
           </div>
+        </div>
+        <button class="banner-dismiss" (click)="dismissPaymentBanner()" aria-label="Dismiss">×</button>
+      </div>
+    }
 
-          <!-- TIMELINE -->
-          <div class="timeline-wrap">
-            <div class="timeline-row">
-              @for (s of stages; track s; let i = $index) {
-                <div class="stage">
-                  <div
-                    class="stage-circle"
-                    [class.done]="isDone(i, o.timeline)"
-                    [class.current]="isCurrent(i, o.timeline)"
-                  >
-                    @if (isDone(i, o.timeline)) {
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    } @else {
-                      {{ i + 1 }}
-                    }
-                  </div>
-                  <p class="stage-label" [class.done]="isDone(i, o.timeline)">{{ s }}</p>
+    @if (loading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading your orders...</p>
+      </div>
+    } @else if (orders().length === 0) {
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <h2 class="empty-title">No orders yet</h2>
+        <p class="empty-desc">When you place your first order, it will appear here.</p>
+        <a routerLink="/shop" class="shop-link">Browse Products</a>
+      </div>
+    } @else {
+      <div class="orders-list">
+        @for (o of orders(); track o.orderId) {
+          <article class="order-card" [class.highlighted]="highlightedOrderId() === o.orderId" [id]="'order-' + o.orderId">
+            <div class="order-head">
+              <div class="head-block">
+                <p class="head-label">Order</p>
+                <p class="order-id">{{ o.orderNumber }}</p>
+              </div>
+              <div class="head-divider"></div>
+              <div class="head-block">
+                <p class="head-label">Placed</p>
+                <p class="head-value">{{ formatDate(o.placedDate) }}</p>
+              </div>
+              <div class="head-block">
+                <p class="head-label">ETA</p>
+                <p class="head-value">{{ formatDate(o.estimatedDeliveryDate) }}</p>
+              </div>
+              <span class="status-badge" [class]="statusClass(o.orderStatus)">{{ o.orderStatus }}</span>
+            </div>
+
+            @if (o.orderStatus !== 'Cancelled' && o.orderStatus !== 'Returned') {
+              <!-- TIMELINE -->
+              <div class="timeline-wrap">
+                <div class="timeline-row">
+                  @for (s of stages; track s; let i = $index) {
+                    <div class="stage">
+                      <div
+                        class="stage-circle"
+                        [class.done]="isDone(i, o.orderStatus)"
+                        [class.current]="isCurrent(i, o.orderStatus)"
+                      >
+                        @if (isDone(i, o.orderStatus)) {
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        } @else {
+                          {{ i + 1 }}
+                        }
+                      </div>
+                      <p class="stage-label" [class.done]="isDone(i, o.orderStatus)">{{ s }}</p>
+                    </div>
+                  }
+                  <div class="timeline-track"></div>
+                  <div class="timeline-progress" [style.width]="progressWidth(o.orderStatus)"></div>
                 </div>
-              }
-              <div class="timeline-track"></div>
-              <div class="timeline-progress" [style.width]="progressWidth(o.timeline)"></div>
-            </div>
-          </div>
+              </div>
+            }
 
-          <div class="order-body">
-            <div class="items-col">
-              <p class="col-label">Order summary</p>
-              <ul class="items-list">
-                @for (it of o.items; track $index) {
-                  <li class="item-row">
-                    <div class="item-image">
-                      <img [src]="it.image" [alt]="it.name" />
-                    </div>
-                    <div class="item-info">
-                      <p class="item-name">{{ it.name }}</p>
-                      <p class="item-meta">Size {{ it.size }} · Qty {{ it.qty }}</p>
-                    </div>
-                    <p class="item-price">${{ formatPrice(itemTotal(it.price, it.qty)) }}</p>
-                  </li>
+            <div class="order-body">
+              <div class="items-col">
+                <p class="col-label">Order summary</p>
+                <ul class="items-list">
+                  @for (it of o.orderItems; track it.designId) {
+                    <li class="item-row">
+                      <div class="item-image">
+                        <img [src]="it.snapshotImageURL" [alt]="it.designName" />
+                      </div>
+                      <div class="item-info">
+                        <p class="item-name">{{ it.designName }}</p>
+                        <p class="item-meta">{{ it.variationDetails }} &middot; Qty {{ it.quantity }}</p>
+                      </div>
+                      <p class="item-price">${{ formatPrice(it.unitPrice * it.quantity) }}</p>
+                    </li>
+                  }
+                </ul>
+              </div>
+
+              <div class="totals-col">
+                <div class="row"><span>Subtotal</span><span>${{ formatPrice(o.subtotal) }}</span></div>
+                <div class="row"><span>Shipping</span><span>{{ o.shipping === 0 ? 'Free' : '$' + formatPrice(o.shipping) }}</span></div>
+                <div class="row"><span>Tax</span><span>${{ formatPrice(o.tax) }}</span></div>
+                <div class="totals-divider"></div>
+                <div class="row total"><span>Total</span><span class="total-value">${{ formatPrice(o.total) }}</span></div>
+              </div>
+            </div>
+
+            <div class="order-footer">
+              <div class="tracking">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+                <span class="tracking-label">Tracking</span>
+                <span class="tracking-num">{{ o.trackingNumber || 'Not available yet' }}</span>
+              </div>
+              <div class="footer-actions">
+                @if (o.trackingNumber) {
+                  <button class="track-btn" (click)="trackOrder(o.trackingNumber!)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+                    Track
+                  </button>
                 }
-              </ul>
+                @if (isCancellable(o.orderStatus)) {
+                  <button
+                    class="cancel-btn"
+                    [disabled]="cancellingOrderId() === o.orderId"
+                    (click)="cancelOrder(o.orderId)"
+                  >
+                    @if (cancellingOrderId() === o.orderId) {
+                      Cancelling...
+                    } @else {
+                      Cancel Order
+                    }
+                  </button>
+                }
+                <button class="support-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+                  Contact Support
+                </button>
+              </div>
             </div>
-
-            <div class="totals-col">
-              <div class="row"><span>Subtotal</span><span>${{ formatPrice(o.subtotal) }}</span></div>
-              <div class="row"><span>Shipping</span><span>{{ o.shipping === 0 ? 'Free' : '$' + o.shipping }}</span></div>
-              <div class="row"><span>Tax</span><span>${{ formatPrice(o.tax) }}</span></div>
-              <div class="totals-divider"></div>
-              <div class="row total"><span>Total</span><span class="total-value">${{ formatPrice(o.total) }}</span></div>
-            </div>
-          </div>
-
-          <div class="order-footer">
-            <div class="tracking">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
-              <span class="tracking-label">Tracking</span>
-              <span class="tracking-num">{{ o.tracking }}</span>
-            </div>
-            <div class="footer-actions">
-              <button class="track-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
-                Track
-              </button>
-              <button class="support-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
-                Contact Support
-              </button>
-            </div>
-          </div>
-        </article>
-      }
-    </div>
+          </article>
+        }
+      </div>
+    }
   </main>
 </div>

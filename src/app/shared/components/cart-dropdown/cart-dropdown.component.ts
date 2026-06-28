@@ -81,4 +81,9 @@ export class CartDropdownComponent {
     this.close();
     this.router.navigate(['/cart']);
   }
+
+  goToCustomize(item: CartItemDto): void {
+    this.close();
+    this.router.navigate(['/studio'], { queryParams: { productId: item.productId } });
+  }
 }

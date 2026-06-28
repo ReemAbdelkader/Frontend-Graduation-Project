@@ -1,68 +1,82 @@
-<div class="overlay" (click)="close.emit()">
+<div class="overlay" (click)="onOverlayClick()">
   <div class="modal" (click)="$event.stopPropagation()">
-    <button class="close-btn" (click)="close.emit()" aria-label="Close">×</button>
+    @if (!paymentSuccess()) {
+      <button class="close-btn" (click)="close.emit()" aria-label="Close">×</button>
+    }
 
-    @if (!paid()) {
-      <div class="grid">
-        <div class="product-side">
-          <div class="image-wrap">
-            <img [src]="productImage" [alt]="productName" />
-          </div>
-          <div class="product-info">
-            <p class="product-name">{{ productName }}</p>
-            <p class="product-price">${{ price }}</p>
-            <div class="totals">
-              <div class="row"><span>Subtotal</span><span>${{ price }}</span></div>
-              <div class="row"><span>Shipping</span><span>Free</span></div>
-              <div class="row"><span>Tax</span><span>${{ (price * 0.08).toFixed(2) }}</span></div>
-              <div class="divider"></div>
-              <div class="row total"><span>Total</span><span>${{ (price * 1.08).toFixed(2) }}</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-side">
-          <h2 class="title">Checkout & Pay</h2>
-          <p class="subtitle">Secure payment — encrypted end-to-end.</p>
-
-          <label class="field">
-            <span class="label">Cardholder name</span>
-            <input type="text" placeholder="Elena Auclair" [ngModel]="name()" (ngModelChange)="name.set($event)" />
-          </label>
-
-          <label class="field">
-            <span class="label">Card number</span>
-            <input type="text" placeholder="4242 4242 4242 4242" [ngModel]="cardNumber()" (ngModelChange)="cardNumber.set($event)" />
-          </label>
-
-          <div class="row-fields">
-            <label class="field">
-              <span class="label">Expiry</span>
-              <input type="text" placeholder="MM / YY" [ngModel]="expiry()" (ngModelChange)="expiry.set($event)" />
-            </label>
-            <label class="field">
-              <span class="label">CVC</span>
-              <input type="text" placeholder="123" [ngModel]="cvc()" (ngModelChange)="cvc.set($event)" />
-            </label>
-          </div>
-
-          <button class="pay-btn" (click)="pay()" [disabled]="isProcessing()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-            {{ isProcessing() ? 'Processing Payment...' : 'Pay $' + (price * 1.08).toFixed(2) }}
-          </button>
-
-          <p class="secure-note">🔒 Payments processed via Stripe. We never store your card details.</p>
-        </div>
-      </div>
-    } @else {
+    @if (paymentSuccess()) {
       <div class="success">
         <div class="check-circle">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
         </div>
-        <h2 class="title">Payment confirmed</h2>
-        <p class="subtitle">Your design is now in production. Estimated dispatch: Jun 4 — Jun 9, 2026.</p>
-        <button class="pay-btn" (click)="close.emit()">Done</button>
+        <h2 class="title">Payment Successful!</h2>
+        <p class="subtitle">Your order has been placed and is being processed. You can track it in My Orders.</p>
+        <button class="pay-btn" (click)="goToOrders()">View My Orders</button>
       </div>
+    } @else {
+    <div class="grid">
+      <div class="product-side">
+        <div class="image-wrap">
+          <img [src]="productImage" [alt]="productName" />
+        </div>
+        <div class="product-info">
+          <p class="product-name">{{ productName }}</p>
+          <p class="product-price">${{ price.toFixed(2) }}</p>
+          <div class="totals">
+            <div class="row"><span>Subtotal</span><span>${{ price.toFixed(2) }}</span></div>
+            <div class="row"><span>Shipping</span><span>Free</span></div>
+            <div class="row"><span>Tax (8%)</span><span>${{ (price * 0.08).toFixed(2) }}</span></div>
+            <div class="divider"></div>
+            <div class="row total"><span>Estimated Total</span><span>${{ (price * 1.08).toFixed(2) }}</span></div>
+            <p class="tax-note">Final total will be calculated including any coupons after submission.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-side">
+        <h2 class="title">Checkout</h2>
+        <p class="subtitle">Enter your shipping details to complete your order.</p>
+
+        <label class="field">
+          <span class="label">Full name <span class="req">*</span></span>
+          <input type="text" placeholder="John Doe" [ngModel]="receiverName()" (ngModelChange)="receiverName.set($event)" />
+        </label>
+
+        <label class="field">
+          <span class="label">Phone number <span class="req">*</span></span>
+          <input type="tel" placeholder="01xxxxxxxxx" [ngModel]="phoneNumber()" (ngModelChange)="phoneNumber.set($event)" />
+        </label>
+
+        <label class="field">
+          <span class="label">Address <span class="req">*</span></span>
+          <input type="text" placeholder="123 Street, Building, Apt" [ngModel]="address()" (ngModelChange)="address.set($event)" />
+        </label>
+
+        <label class="field">
+          <span class="label">City <span class="req">*</span></span>
+          <input type="text" placeholder="Cairo" [ngModel]="city()" (ngModelChange)="city.set($event)" />
+        </label>
+
+        <label class="field">
+          <span class="label">Delivery notes</span>
+          <input type="text" placeholder="Ring the bell, leave at door..." [ngModel]="deliveryNotes()" (ngModelChange)="deliveryNotes.set($event)" />
+        </label>
+
+        <label class="field">
+          <span class="label">Coupon code (optional)</span>
+          <input type="text" placeholder="SAVE10" [ngModel]="couponCode()" (ngModelChange)="couponCode.set($event)" />
+        </label>
+
+        <button class="pay-btn" type="button" (click)="pay()" [disabled]="isProcessing()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          {{ isProcessing() ? 'Processing Payment...' : 'Proceed to Payment' }}
+        </button>
+
+        <p class="secure-note">Your payment is processed securely. You'll be redirected to track your order after confirmation.</p>
+      </div>
+    </div>
     }
   </div>
 </div>

@@ -68,6 +68,13 @@ export const routes: Routes = [
     title: 'Shop — Atelier',
   },
   {
+    path: 'cart',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/cart/cart.component').then((m) => m.CartComponent),
+    title: 'Shopping Cart — Atelier',
+  },
+  {
     path: 'templates',
     canActivate: [authGuard],
     loadComponent: () =>

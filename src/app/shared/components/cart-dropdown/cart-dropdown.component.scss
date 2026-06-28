@@ -404,6 +404,31 @@
       text-align: center;
     }
   }
+
+  .customize-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--foreground);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+
+    &:hover:not(:disabled) {
+      background: var(--muted);
+      border-color: var(--muted-foreground);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
 }
 
 /* FOOTER */

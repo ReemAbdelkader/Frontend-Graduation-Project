@@ -197,6 +197,17 @@
   text-align: center;
 }
 
+.tax-note {
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.req {
+  color: oklch(0.6 0.15 25);
+}
+
 .success {
   padding: 3rem 2rem;
   text-align: center;

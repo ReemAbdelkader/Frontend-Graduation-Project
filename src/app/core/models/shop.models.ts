@@ -112,4 +112,4 @@ export interface CartDto {
   items: CartItemDto[];
   totalCost: number;
   itemCount: number;
-}
+}

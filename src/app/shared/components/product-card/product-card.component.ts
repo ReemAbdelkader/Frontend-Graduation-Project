@@ -1,4 +1,5 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { Product } from '../../../core/data/wearly-data';
 
 @Component({
@@ -10,6 +11,8 @@ import { Product } from '../../../core/data/wearly-data';
 export class ProductCardComponent {
   @Input({ required: true }) product!: Product;
   @Output() cardClick = new EventEmitter<Product>();
+
+  private readonly router = inject(Router);
 
   get hasReviewCount(): boolean {
     return typeof this.product.reviews === 'number';
@@ -23,7 +26,9 @@ export class ProductCardComponent {
     this.cardClick.emit(this.product);
   }
 
-  onHeartClick(event: Event): void {
+  onCustomize(event: Event): void {
     event.stopPropagation();
+    if (this.product.isAvailable === false) return;
+    this.router.navigate(['/studio'], { queryParams: { productId: this.product.id } });
   }
 }

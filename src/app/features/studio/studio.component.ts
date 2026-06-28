@@ -1,7 +1,8 @@
-import { Component, inject, signal, computed, ViewChild, effect, untracked } from "@angular/core";
-import { Router, RouterLink } from "@angular/router";
+import { Component, inject, signal, computed, ViewChild, effect, untracked, OnInit, DestroyRef } from "@angular/core";
+import { Router, RouterLink, ActivatedRoute } from "@angular/router";
 import { FormsModule } from "@angular/forms";
 import { forkJoin, catchError, of } from "rxjs";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { CheckoutPayModalComponent } from "../../shared/components/checkout-pay-modal/checkout-pay-modal.component";
 import { DesignCanvasComponent } from "../../shared/components/design-canvas/design-canvas.component";
 import { ConfirmDialogComponent } from "../../shared/components/confirm-dialog/confirm-dialog.component";
@@ -59,12 +60,14 @@ import { CartService } from "../../core/services/cart.service";
   templateUrl: "./studio.component.html",
   styleUrl: "./studio.component.scss",
 })
-export class StudioComponent {
+export class StudioComponent implements OnInit {
   private readonly productService = inject(ProductService);
   private readonly cartService = inject(CartService);
   private readonly authService = inject(AuthService);
   private readonly aiImageService = inject(AiImageService);
   private readonly router = inject(Router);
+  private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   readonly toastService = inject(ToastService);
   private readonly lastDraftStorageKey = "atelier-last-design-id";
 
@@ -262,6 +265,27 @@ export class StudioComponent {
         });
       });
     });
+  }
+
+  ngOnInit(): void {
+    // Check for productId query param to auto-select product
+    this.activatedRoute.queryParams
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        if (params['productId']) {
+          // Wait for products to load before selecting
+          if (this.allProducts().length > 0) {
+            this.selectProduct(params['productId']);
+          } else {
+            // If products not loaded yet, use effect to select when they load
+            effect(() => {
+              if (this.allProducts().length > 0) {
+                this.selectProduct(params['productId']);
+              }
+            }, { allowSignalWrites: true });
+          }
+        }
+      });
   }
 
   private createDefaultProduct(): StudioProduct {
@@ -495,6 +519,36 @@ export class StudioComponent {
   }
 
   openPay(): void {
+    void this.prepareCheckout();
+  }
+
+  private async prepareCheckout(): Promise<void> {
+    const selectedProduct = this.selected();
+
+    if (!selectedProduct?.id) {
+      this.toastService.error("Please select a product before checkout.");
+      return;
+    }
+
+    if (!this.currentDesignId()) {
+      try {
+        await this.executeSave();
+      } catch (saveErr: any) {
+        const msg =
+          saveErr?.error?.Message ||
+          saveErr?.error?.message ||
+          saveErr?.message ||
+          "Please save your design before checkout.";
+        this.toastService.error(msg);
+        return;
+      }
+    }
+
+    if (!this.currentDesignId()) {
+      this.toastService.error("Please save your design before checkout.");
+      return;
+    }
+
     this.payOpen.set(true);
   }
 

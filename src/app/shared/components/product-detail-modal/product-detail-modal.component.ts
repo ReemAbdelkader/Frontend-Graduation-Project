@@ -1,5 +1,8 @@
-import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { Product } from '../../../core/data/wearly-data';
+import { CartService } from '../../../core/services/cart.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-product-detail-modal',
@@ -11,8 +14,13 @@ export class ProductDetailModalComponent {
   @Input({ required: true }) product!: Product;
   @Output() close = new EventEmitter<void>();
 
+  private readonly cartService = inject(CartService);
+  private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
+
   readonly selectedImage = signal<string>('');
   readonly selectedColor = signal<string>('');
+  readonly addingToCart = signal(false);
 
   ngOnInit(): void {
     this.syncSelection();
@@ -43,7 +51,29 @@ export class ProductDetailModalComponent {
   }
 
   onAddToCart(): void {
-    // TODO: No Cart API exists yet in the backend. Blocked until a Cart/CartItem endpoint is added. See OrdersController for the eventual checkout call once cart contents need to convert to a real order.
+    if (this.addingToCart()) return;
+    this.addingToCart.set(true);
+
+    this.cartService.addToCart(this.product.id).subscribe({
+      next: (cart) => {
+        if (cart) {
+          this.toast.success(`${this.product.name} added to cart!`);
+        } else {
+          this.toast.success(`${this.product.name} added to cart!`);
+        }
+        this.addingToCart.set(false);
+      },
+      error: (err) => {
+        const msg = err?.error?.Message || err?.error?.message || 'Failed to add to cart.';
+        this.toast.error(msg);
+        this.addingToCart.set(false);
+      },
+    });
+  }
+
+  onCustomize(): void {
+    this.close.emit();
+    this.router.navigate(['/studio'], { queryParams: { productId: this.product.id } });
   }
 
   private syncSelection(): void {
