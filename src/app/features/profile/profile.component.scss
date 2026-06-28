@@ -702,8 +702,34 @@ textarea { resize: vertical; }
   }
 
   .card-icon {
-    font-size: 2.25rem;
-    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    flex-shrink: 0;
+
+    .summary-icon-svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+    }
+  }
+
+  &.points-card .card-icon {
+    background: oklch(0.48 0.05 250 / 0.08);
+    color: var(--primary);
+  }
+
+  &.rank-card .card-icon {
+    background: oklch(0.78 0.12 85 / 0.1);
+    color: oklch(0.72 0.13 85); /* gold */
+  }
+
+  &.badges-card .card-icon {
+    background: oklch(0.62 0.16 35 / 0.08);
+    color: oklch(0.62 0.16 35); /* rose/coral */
   }
 
   .card-info {
@@ -998,9 +1024,21 @@ textarea { resize: vertical; }
   margin-top: 1.5rem;
 
   .empty-gfx {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: oklch(0 0 0 / 0.03);
+    color: oklch(0.18 0.04 280 / 0.35);
+    margin-bottom: 1.25rem;
+
+    .empty-icon-svg {
+      width: 40px;
+      height: 40px;
+      stroke: currentColor;
+    }
   }
 
   h3 {
