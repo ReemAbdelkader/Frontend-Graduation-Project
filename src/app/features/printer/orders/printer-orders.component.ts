@@ -1,11 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PrinterService, PrinterOrderItemDto, PrinterOrderItemStatus } from '../../../core/services/printer.service';
+import {
+  PRINTER_ORDER_ITEM_STATUSES,
+  PrinterService,
+  PrinterOrderItemDto,
+  PrinterOrderItemStatus,
+} from '../../../core/services/printer.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { API_ORIGIN } from '../../../core/services/api-config';
-
-export const printerStatusOptions: PrinterOrderItemStatus[] = ['Pending', 'AssignedToPrinter', 'InProduction', 'Ready', 'Shipped'];
 
 @Component({
   selector: 'app-printer-orders',
@@ -20,7 +23,7 @@ export class PrinterOrdersComponent implements OnInit {
 
   readonly orders = signal<PrinterOrderItemDto[]>([]);
   readonly loading = signal(true);
-  readonly statusOptions = printerStatusOptions;
+  readonly statusOptions = PRINTER_ORDER_ITEM_STATUSES;
   readonly updatingId = signal<string | null>(null);
 
   readonly apiOrigin = API_ORIGIN;

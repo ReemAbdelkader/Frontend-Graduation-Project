@@ -24,6 +24,17 @@ export interface OrderStatusCountDto {
   count: number;
 }
 
+export interface AdminOrderItemDto {
+  id: string;
+  designName: string;
+  snapshotImageURL: string;
+  quantity: number;
+  unitPrice: number;
+  status: string;
+  printerProfileId?: string | null;
+  printerName?: string | null;
+}
+
 export interface RecentOrderDto {
   id: string;
   orderNumber: string;
@@ -31,6 +42,7 @@ export interface RecentOrderDto {
   totalAmount: number;
   status: OrderStatus;
   createdAt: string;
+  orderItems?: AdminOrderItemDto[];
 }
 
 export interface CategoryDto {
@@ -241,7 +253,44 @@ export class AdminApiService {
 
     return this.http
       .get<ApiEnvelope<PaginatedResult<RecentOrderDto>>>(`${API_BASE_URL}/admin/orders`, { params })
-      .pipe(map((response) => this.unwrap(response)));
+      .pipe(
+        map((response) => {
+          const result = this.unwrap(response);
+          return {
+            ...result,
+            data: (result.data ?? []).map((order) => this.normalizeRecentOrder(order)),
+          };
+        }),
+      );
+  }
+
+  private normalizeRecentOrder(order: RecentOrderDto | Record<string, unknown>): RecentOrderDto {
+    const raw = order as Record<string, unknown>;
+    const rawItems = (raw['orderItems'] ?? raw['OrderItems']) as AdminOrderItemDto[] | undefined;
+
+    return {
+      id: String(raw['id'] ?? raw['Id'] ?? ''),
+      orderNumber: String(raw['orderNumber'] ?? raw['OrderNumber'] ?? ''),
+      customerName: String(raw['customerName'] ?? raw['CustomerName'] ?? ''),
+      totalAmount: Number(raw['totalAmount'] ?? raw['TotalAmount'] ?? 0),
+      status: (raw['status'] ?? raw['Status'] ?? 'Pending') as OrderStatus,
+      createdAt: String(raw['createdAt'] ?? raw['CreatedAt'] ?? ''),
+      orderItems: Array.isArray(rawItems) ? rawItems.map((item) => this.normalizeOrderItem(item)) : [],
+    };
+  }
+
+  private normalizeOrderItem(item: AdminOrderItemDto | Record<string, unknown>): AdminOrderItemDto {
+    const raw = item as Record<string, unknown>;
+    return {
+      id: String(raw['id'] ?? raw['Id'] ?? ''),
+      designName: String(raw['designName'] ?? raw['DesignName'] ?? 'Custom Design'),
+      snapshotImageURL: String(raw['snapshotImageURL'] ?? raw['SnapshotImageURL'] ?? ''),
+      quantity: Number(raw['quantity'] ?? raw['Quantity'] ?? 0),
+      unitPrice: Number(raw['unitPrice'] ?? raw['UnitPrice'] ?? 0),
+      status: String(raw['status'] ?? raw['Status'] ?? 'Pending'),
+      printerProfileId: (raw['printerProfileId'] ?? raw['PrinterProfileId'] ?? null) as string | null,
+      printerName: (raw['printerName'] ?? raw['PrinterName'] ?? null) as string | null,
+    };
   }
 
   getCategories(): Observable<CategoryDto[]> {
@@ -406,6 +455,15 @@ export class AdminApiService {
       .patch<ApiEnvelope<string | null>>(
         `${API_BASE_URL}/admin/orders/${orderId}/status`,
         { newStatus },
+      )
+      .pipe(map((response) => this.unwrap(response)));
+  }
+
+  assignPrinterToOrderItem(orderItemId: string, printerProfileId: string): Observable<string | null> {
+    return this.http
+      .patch<ApiEnvelope<string | null>>(
+        `${API_BASE_URL}/admin/order-items/${orderItemId}/assign-printer`,
+        { printerProfileId }
       )
       .pipe(map((response) => this.unwrap(response)));
   }

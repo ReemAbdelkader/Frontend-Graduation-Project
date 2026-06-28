@@ -46,6 +46,7 @@
         <table class="orders-table">
           <thead>
             <tr>
+              <th style="width: 40px;"></th>
               <th>Order</th>
               <th>Customer</th>
               <th>Total</th>
@@ -55,11 +56,16 @@
           </thead>
           <tbody>
             @for (o of filtered(); track o.id) {
-              <tr>
+              <tr class="order-row" (click)="toggleOrderDetails(o.id)" [class.expanded]="expandedOrderId() === o.id">
+                <td class="toggle-cell">
+                  <span class="chevron-icon" [class.rotated]="expandedOrderId() === o.id">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                  </span>
+                </td>
                 <td class="mono">{{ o.orderNumber }}</td>
                 <td>{{ o.customerName }}</td>
                 <td>{{ formatCurrency(o.totalAmount) }}</td>
-                <td>
+                <td (click)="$event.stopPropagation()">
                   <select
                     class="status-select"
                     [class]="statusClass(o.status)"
@@ -75,9 +81,67 @@
                 </td>
                 <td class="muted">{{ o.createdAt | date:'MMM d, y' }}</td>
               </tr>
+
+              @if (expandedOrderId() === o.id) {
+                <tr class="details-row">
+                  <td colspan="6" (click)="$event.stopPropagation()">
+                    <div class="details-container">
+                      <h4 class="details-title">Order Items & Printer Assignment</h4>
+                      
+                      @if (!o.orderItems || o.orderItems.length === 0) {
+                        <p class="details-empty">No items in this order.</p>
+                      } @else {
+                        <div class="items-grid">
+                          @for (item of o.orderItems; track item.id) {
+                            <div class="item-card">
+                              <div class="item-preview">
+                                @if (item.snapshotImageURL) {
+                                  <img [src]="resolveImg(item.snapshotImageURL)" alt="Design Snapshot" />
+                                } @else {
+                                  <div class="no-preview">No Preview</div>
+                                }
+                              </div>
+                              
+                              <div class="item-info">
+                                <div class="item-name">{{ item.designName }}</div>
+                                <div class="item-meta">
+                                  <span>Qty: {{ item.quantity }}</span>
+                                  <span>Price: {{ formatCurrency(item.unitPrice) }}</span>
+                                </div>
+                                <div class="item-status-badge" [class]="'badge-' + item.status.toLowerCase()">
+                                  {{ item.status }}
+                                </div>
+                              </div>
+
+                              <div class="item-assignment">
+                                <label>Assign Printer</label>
+                                <select
+                                  [ngModel]="item.printerProfileId"
+                                  (ngModelChange)="onAssignPrinter(item.id, $event, o)"
+                                  class="printer-select"
+                                >
+                                  <option [ngValue]="null" disabled selected>Select a printer...</option>
+                                  @for (p of printers(); track p.id) {
+                                    <option [ngValue]="p.id">{{ p.printerName || ('Printer ' + p.id.slice(0, 8)) }}</option>
+                                  }
+                                </select>
+                                @if (item.printerName) {
+                                  <div class="assigned-hint">
+                                    Assigned to: <strong>{{ item.printerName }}</strong>
+                                  </div>
+                                }
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
             }
             @if (filtered().length === 0) {
-              <tr><td colspan="5" class="empty">No orders found.</td></tr>
+              <tr><td colspan="6" class="empty">No orders found.</td></tr>
             }
           </tbody>
         </table>

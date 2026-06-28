@@ -7,7 +7,10 @@ import {
   extractAdminApiError,
   OrderStatus,
   RecentOrderDto,
+  AdminOrderItemDto,
 } from '../../../core/services/admin-api.service';
+import { PrinterService, PrinterProfileDto } from '../../../core/services/printer.service';
+import { API_ORIGIN } from '../../../core/services/api-config';
 
 type StatusFilter = OrderStatus | 'All';
 
@@ -21,13 +24,17 @@ type StatusFilter = OrderStatus | 'All';
 export class OrdersComponent implements OnInit {
   private toast = inject(ToastService);
   private adminApi = inject(AdminApiService);
+  private printerService = inject(PrinterService);
 
   readonly orders = signal<RecentOrderDto[]>([]);
+  readonly printers = signal<PrinterProfileDto[]>([]);
+  readonly expandedOrderId = signal<string | null>(null);
   readonly query = signal('');
   readonly statusFilter = signal<StatusFilter>('All');
   readonly loading = signal(true);
   readonly savingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  readonly apiOrigin = API_ORIGIN;
 
   readonly statuses: StatusFilter[] = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
   readonly updatableStatuses: OrderStatus[] = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
@@ -43,6 +50,56 @@ export class OrdersComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadOrders();
+    this.loadPrinters();
+  }
+
+  loadPrinters(): void {
+    this.printerService.getPrinterProfiles(1, 100).subscribe({
+      next: (res) => {
+        this.printers.set(res.data?.filter((p) => p.isActive !== false) ?? []);
+      },
+      error: (err) => {
+        console.error('Failed to load printers', err);
+      }
+    });
+  }
+
+  toggleOrderDetails(orderId: string): void {
+    this.expandedOrderId.update((id) => (id === orderId ? null : orderId));
+  }
+
+  onAssignPrinter(orderItemId: string, printerProfileId: string, order: RecentOrderDto): void {
+    const printer = this.printers().find(p => p.id === printerProfileId);
+    const printerName = printer?.printerName || 'Printer';
+
+    this.adminApi.assignPrinterToOrderItem(orderItemId, printerProfileId).subscribe({
+      next: () => {
+        // update the local state of order items
+        this.orders.update((list) =>
+          list.map((o) => {
+            if (o.id === order.id && o.orderItems) {
+              const updatedItems = o.orderItems.map((item) =>
+                item.id === orderItemId
+                  ? { ...item, printerProfileId, printerName, status: 'AssignedToPrinter' }
+                  : item
+              );
+              return { ...o, orderItems: updatedItems };
+            }
+            return o;
+          })
+        );
+        this.toast.success(`Assigned item to ${printerName}`);
+      },
+      error: (err) => {
+        this.toast.error(this.extractError(err, 'Failed to assign printer.'));
+      }
+    });
+  }
+
+  resolveImg(url: string): string {
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url) || url.startsWith('data:') || url.startsWith('assets/')) return url;
+    return `${this.apiOrigin}/${url.replace(/^\//, '')}`;
   }
 
   loadOrders(): void {

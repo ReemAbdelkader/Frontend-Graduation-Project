@@ -1,52 +1,61 @@
-<section class="profile-card">
-  <div class="profile-row">
-    <label>
-      <span>Name</span>
-      <input type="text" [ngModel]="name()" (ngModelChange)="name.set($event)" />
-    </label>
-    <label>
-      <span>Email</span>
-      <input type="email" [ngModel]="email()" (ngModelChange)="email.set($event)" />
-    </label>
-  </div>
-
-  <div class="profile-row">
-    <label>
-      <span>Phone</span>
-      <input type="text" [ngModel]="phone()" (ngModelChange)="phone.set($event)" />
-    </label>
-    <label>
-      <span>Company Name</span>
-      <input type="text" [ngModel]="companyName()" (ngModelChange)="companyName.set($event)" />
-    </label>
-  </div>
-
-  <label class="field full-width">
-    <span>Address</span>
-    <input type="text" [ngModel]="address()" (ngModelChange)="address.set($event)" />
-  </label>
-
-  <div class="profile-section">
-    <h3>Supported Fabrics</h3>
-    <div class="checkbox-grid">
-      @for (fabric of fabricOptions; track fabric) {
-        <label class="checkbox-item">
-          <input type="checkbox" [checked]="supportedFabrics().includes(fabric)" (change)="toggleFabric(fabric)" />
-          <span>{{ fabric }}</span>
-        </label>
-      }
+@if (loading()) {
+  <section class="profile-card loading-state">
+    <p>Loading printer profile...</p>
+  </section>
+} @else {
+  <section class="profile-card">
+    <div class="profile-row">
+      <label>
+        <span>Name</span>
+        <input type="text" [ngModel]="name()" readonly />
+      </label>
+      <label>
+        <span>Email</span>
+        <input type="email" [ngModel]="email()" readonly />
+      </label>
     </div>
-  </div>
 
-  <div class="profile-section">
-    <h3>Supported Print Methods</h3>
-    <div class="checkbox-grid">
-      @for (method of methodOptions; track method) {
-        <label class="checkbox-item">
-          <input type="checkbox" [checked]="supportedPrintMethods().includes(method)" (change)="toggleMethod(method)" />
-          <span>{{ method }}</span>
-        </label>
-      }
+    <label class="field full-width">
+      <span>Address</span>
+      <input type="text" [ngModel]="address()" readonly />
+    </label>
+
+    <div class="profile-section">
+      <h3>Supported Fabrics</h3>
+      <div class="checkbox-grid">
+        @for (fabric of fabricOptions; track fabric.value) {
+          <label class="checkbox-item">
+            <input
+              type="checkbox"
+              [checked]="isFabricSelected(fabric.value)"
+              (change)="toggleFabric(fabric.value, $any($event.target).checked)"
+            />
+            <span>{{ fabric.label }}</span>
+          </label>
+        }
+      </div>
     </div>
-  </div>
-</section>
+
+    <div class="profile-section">
+      <h3>Supported Print Methods</h3>
+      <div class="checkbox-grid">
+        @for (method of methodOptions; track method.value) {
+          <label class="checkbox-item">
+            <input
+              type="checkbox"
+              [checked]="isMethodSelected(method.value)"
+              (change)="toggleMethod(method.value, $any($event.target).checked)"
+            />
+            <span>{{ method.label }}</span>
+          </label>
+        }
+      </div>
+    </div>
+
+    <div class="profile-actions">
+      <button type="button" class="save-btn" [disabled]="saving()" (click)="saveProfile()">
+        {{ saving() ? 'Saving...' : (hasExistingProfile() ? 'Save Changes' : 'Create Profile') }}
+      </button>
+    </div>
+  </section>
+}

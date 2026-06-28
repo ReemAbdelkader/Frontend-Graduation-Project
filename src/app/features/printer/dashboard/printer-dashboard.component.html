@@ -1,25 +1,32 @@
-<section class="stats-grid">
-  <article class="stat-card">
-    <h3>Total Orders</h3>
-    <p>{{ totalOrders() }}</p>
-  </article>
-  <article class="stat-card">
-    <h3>Pending Orders</h3>
-    <p>{{ pendingOrders() }}</p>
-  </article>
-  <article class="stat-card">
-    <h3>Printing Orders</h3>
-    <p>{{ printingOrders() }}</p>
-  </article>
-  <article class="stat-card">
-    <h3>Completed Orders</h3>
-    <p>{{ completedOrders() }}</p>
-  </article>
-</section>
+@if (loading()) {
+  <section class="intro-card loading-state">
+    <p>Loading dashboard...</p>
+  </section>
+} @else {
+  <section class="stats-grid">
+    <article class="stat-card">
+      <h3>Total Orders</h3>
+      <p>{{ stats().totalOrders }}</p>
+    </article>
+    <article class="stat-card">
+      <h3>Pending Orders</h3>
+      <p>{{ stats().pendingOrders }}</p>
+    </article>
+    <article class="stat-card">
+      <h3>Printing Orders</h3>
+      <p>{{ stats().printingOrders }}</p>
+    </article>
+    <article class="stat-card">
+      <h3>Completed Orders</h3>
+      <p>{{ stats().completedOrders }}</p>
+    </article>
+  </section>
+}
 
 <section class="intro-card">
   <div>
     <h2>Printer Dashboard</h2>
     <p>Manage your print orders, view status updates, and keep your shop information current.</p>
+    <a routerLink="/printer/orders" class="orders-link">View assigned orders</a>
   </div>
 </section>
