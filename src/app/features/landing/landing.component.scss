@@ -7,83 +7,105 @@
   background: var(--background);
 }
 
-/* ============ PUBLIC NAV ============ */
-.pub-nav {
+/* ============ LANDING NAV OVERRIDE ============ */
+/* Make app-nav float over the hero with a transparent/glass background  */
+app-nav.landing-nav {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 30;
-}
+  z-index: 40;
+  background: transparent;
 
-.nav-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: white;
-
-  .logo {
-    height: 32px;
-    width: 32px;
-    object-fit: contain;
+  /* Dark-glass background so hero bleeds through */
+  ::ng-deep .app-nav {
+    background: oklch(0 0 0 / 0.28);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border-bottom: 1px solid oklch(1 0 0 / 0.12);
   }
 
-  .brand-name {
-    font-family: "Playfair Display", serif;
-    font-size: 1.5rem;
-    font-weight: 700;
+  /* ── Brand ── */
+  /* Use .brand .brand-name to match the component's nested specificity */
+  ::ng-deep .brand .brand-name {
+    color: white;
   }
-}
 
-.links {
-  display: none;
-  align-items: center;
-  gap: 1.75rem;
-  font-size: 0.875rem;
-  color: oklch(1 0 0 / 0.85);
-  margin-left: 1.5rem;
-
-  @media (min-width: 768px) {
-    display: flex;
+  ::ng-deep .role-chip {
+    color: oklch(1 0 0 / 0.9);
+    background: oklch(1 0 0 / 0.12);
   }
-}
 
-.actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
+  /* ── Nav links ──
+     Must mirror .links .nav-link nesting from app-nav.component.scss
+     so we beat its two-attribute compiled specificity.              */
+  ::ng-deep .links .nav-link {
+    color: oklch(1 0 0 / 0.85) !important;
 
-.signin-link {
-  font-size: 0.875rem;
-  color: oklch(1 0 0 / 0.9);
-  padding: 0.5rem 1rem;
-  transition: color 0.2s;
+    &:hover {
+      color: white !important;
+      background: oklch(1 0 0 / 0.1);
+    }
 
-  &:hover { color: white; }
-}
+    &.active {
+      color: white !important;
+      background: oklch(1 0 0 / 0.16);
+      font-weight: 500;
+    }
+  }
 
-.cta-btn {
-  font-size: 0.875rem;
-  font-weight: 500;
-  padding: 0.625rem 1.25rem;
-  border-radius: 9999px;
-  background: white;
-  color: var(--foreground);
-  transition: background 0.2s;
+  /* ── Icon buttons (logout, notification bell, cart) ── */
+  ::ng-deep .icon-btn,
+  ::ng-deep .cart-btn {
+    color: oklch(1 0 0 / 0.85);
 
-  &:hover { background: oklch(1 0 0 / 0.9); }
+    svg {
+      stroke: currentColor;
+    }
+
+    &:hover {
+      color: white;
+      background: oklch(1 0 0 / 0.1);
+    }
+  }
+
+  /* ── Avatar (initials circle) ── */
+  ::ng-deep .avatar {
+    /* gradient already looks good; just ensure border contrast */
+    box-shadow: 0 0 0 2px oklch(1 0 0 / 0.25);
+  }
+
+  /* ── Sign-in button ── */
+  ::ng-deep .signin-btn {
+    background: white;
+    color: oklch(0.18 0.04 280);
+
+    &:hover {
+      opacity: 0.92;
+    }
+  }
+
+  /* ── Control-center / Printer-view button ── */
+  ::ng-deep .control-center-btn {
+    border-color: oklch(1 0 0 / 0.6);
+    color: white;
+
+    &:hover {
+      background: oklch(1 0 0 / 0.1);
+    }
+
+    &.active {
+      background: white;
+      color: oklch(0.18 0.04 280);
+      border-color: white;
+    }
+  }
+
+  /* ── Notification / cart badges stay vibrant ── */
+  ::ng-deep .cart-badge,
+  ::ng-deep .badge {
+    /* no override needed – accent colour already pops on dark */
+  }
 }
 
 /* ============ HERO ============ */

@@ -1,22 +1,7 @@
 <div class="landing">
-  <!-- Public Navbar (overlay on hero) -->
-  <header class="pub-nav">
-    <div class="nav-inner">
-      <a routerLink="/" class="brand">
-        <img [src]="logo" alt="Atelier" class="logo" />
-        <span class="brand-name">Atelier</span>
-      </a>
-      <nav class="links">
-        <a href="#features" class="story-link">Features</a>
-        <a href="#pricing" class="story-link">Pricing</a>
-        <a routerLink="/community" class="story-link">Community</a>
-      </nav>
-      <div class="actions">
-        <a routerLink="/auth" class="signin-link">Sign In</a>
-        <a routerLink="/auth" class="cta-btn">Get Started</a>
-      </div>
-    </div>
-  </header>
+  <!-- Shared nav: auth-aware, shows avatar when logged in -->
+  <app-nav class="landing-nav" />
+
 
   <!-- HERO -->
   <section class="hero">

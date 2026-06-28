@@ -5,6 +5,7 @@ import {
   logoImage,
   garmentImages,
 } from '../../core/data/wearly-data';
+import { AppNavComponent } from '../../shared/components/app-nav/app-nav.component';
 
 interface Feature {
   title: string;
@@ -21,7 +22,7 @@ interface Testimonial {
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, AppNavComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.scss',
 })
