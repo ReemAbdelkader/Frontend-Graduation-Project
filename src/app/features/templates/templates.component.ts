@@ -1,27 +1,44 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, map, of, catchError, switchMap } from 'rxjs';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AppNavComponent } from '../../shared/components/app-nav/app-nav.component';
+import {
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { ActivatedRoute, Router } from "@angular/router";
+import { forkJoin, map, of, catchError, switchMap } from "rxjs";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { AppNavComponent } from "../../shared/components/app-nav/app-nav.component";
 import {
   TemplateDetailDto,
   TemplateDto,
   TemplatesApiService,
-} from '../../core/services/templates-api.service';
-import { AuthService } from '../../core/services/auth.service';
-import { AiImageService, GenerateAiImageResult, GraphicAssetDto } from '../../core/services/ai-image.service';
-import { OnboardingApiService, UserPreferencesResponse } from '../../core/services/onboarding-api.service';
-import { resolveApiUrl } from '../../core/services/api-config';
+} from "../../core/services/templates-api.service";
+import { AuthService } from "../../core/services/auth.service";
+import {
+  AiImageService,
+  GenerateAiImageResult,
+  GraphicAssetDto,
+} from "../../core/services/ai-image.service";
+import {
+  OnboardingApiService,
+  UserPreferencesResponse,
+} from "../../core/services/onboarding-api.service";
+import { resolveApiUrl } from "../../core/services/api-config";
+import { CartService } from "../../core/services/cart.service";
+import { ProductService } from "../../core/services/product.service";
+import { ToastService } from "../../core/services/toast.service";
 
-type TabType = 'public' | 'mine' | 'my-templates';
+type TabType = "public" | "mine" | "my-templates";
 
 @Component({
-  selector: 'app-templates',
+  selector: "app-templates",
   standalone: true,
   imports: [CommonModule, AppNavComponent],
-  templateUrl: './templates.component.html',
-  styleUrl: './templates.component.scss',
+  templateUrl: "./templates.component.html",
+  styleUrl: "./templates.component.scss",
 })
 export class TemplatesComponent implements OnInit {
   private readonly api = inject(TemplatesApiService);
@@ -31,6 +48,9 @@ export class TemplatesComponent implements OnInit {
   private readonly onboardingApi = inject(OnboardingApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly cartService = inject(CartService);
+  private readonly productService = inject(ProductService);
+  private readonly toastService = inject(ToastService);
 
   readonly templates = signal<TemplateDto[]>([]);
   readonly loading = signal(false);
@@ -44,7 +64,8 @@ export class TemplatesComponent implements OnInit {
   readonly selectedTemplate = signal<TemplateDetailDto | null>(null);
   readonly detailLoading = signal(false);
   readonly detailError = signal<string | null>(null);
-  readonly activeTab = signal<TabType>('public');
+  readonly activeTab = signal<TabType>("public");
+  readonly addingTemplateToCartId = signal<string | null>(null);
 
   // ── My Templates (onboarding AI generation & user assets) ──────────────
   readonly myImages = signal<GraphicAssetDto[]>([]);
@@ -66,25 +87,25 @@ export class TemplatesComponent implements OnInit {
 
   ngOnInit(): void {
     const params = this.route.snapshot.queryParamMap;
-    const tab = params.get('tab') as TabType | null;
-    const generate = params.get('generate') === 'true';
+    const tab = params.get("tab") as TabType | null;
+    const generate = params.get("generate") === "true";
 
-    if (tab === 'my-templates') {
-      this.activeTab.set('my-templates');
+    if (tab === "my-templates") {
+      this.activeTab.set("my-templates");
       this.templates.set([]);
-      
+
       if (generate) {
         // Clear the generate param from the url so refreshes won't re-trigger it
         this.router.navigate([], {
           relativeTo: this.route,
           queryParams: { generate: null },
-          queryParamsHandling: 'merge'
+          queryParamsHandling: "merge",
         });
         this.loadMyTemplateImages();
       } else {
         this.loadUserGraphicAssets();
       }
-    } else if (tab && ['public', 'mine'].includes(tab)) {
+    } else if (tab && ["public", "mine"].includes(tab)) {
       if (tab !== this.activeTab()) {
         this.switchTab(tab);
       }
@@ -95,7 +116,7 @@ export class TemplatesComponent implements OnInit {
     if (tab === this.activeTab()) return;
     this.activeTab.set(tab);
 
-    if (tab === 'my-templates') {
+    if (tab === "my-templates") {
       this.templates.set([]);
       // When visiting this tab, load existing graphic assets. Do not trigger generation.
       this.loadUserGraphicAssets();
@@ -119,7 +140,7 @@ export class TemplatesComponent implements OnInit {
     this.error.set(null);
 
     const fetch$ =
-      this.activeTab() === 'mine'
+      this.activeTab() === "mine"
         ? this.api.getMyTemplates(pageNumber, this.pageSize)
         : this.api.getPublicTemplates(pageNumber, this.pageSize);
 
@@ -135,7 +156,7 @@ export class TemplatesComponent implements OnInit {
       error: () => {
         this.templates.set([]);
         this.loading.set(false);
-        this.error.set('Templates are unavailable right now.');
+        this.error.set("Templates are unavailable right now.");
       },
     });
   }
@@ -159,7 +180,9 @@ export class TemplatesComponent implements OnInit {
         error: () => {
           this.myImages.set([]);
           this.loading.set(false);
-          this.error.set('Failed to load your graphic assets. Please try again.');
+          this.error.set(
+            "Failed to load your graphic assets. Please try again.",
+          );
         },
       });
   }
@@ -180,26 +203,28 @@ export class TemplatesComponent implements OnInit {
           // Fire all 6 requests simultaneously; individual failures return null
           return forkJoin(
             prompts.map((prompt) =>
-              this.aiImageService.generateAiImage(prompt).pipe(
-                catchError(() => of(null as GenerateAiImageResult | null))
-              )
-            )
+              this.aiImageService
+                .generateAiImage(prompt)
+                .pipe(
+                  catchError(() => of(null as GenerateAiImageResult | null)),
+                ),
+            ),
           );
         }),
-        catchError(() => of([] as (GenerateAiImageResult | null)[]))
+        catchError(() => of([] as (GenerateAiImageResult | null)[])),
       )
       .subscribe({
         next: (results) => {
           const valid = results.filter(
-            (r): r is GenerateAiImageResult => r !== null
+            (r): r is GenerateAiImageResult => r !== null,
           );
           this.generationProgress.set(valid.length);
           this.myImagesLoaded = true;
           this.generatingMyImages.set(false);
-          
+
           if (valid.length === 0) {
             this.generationError.set(
-              'Image generation failed. Please try again — it may have been a temporary server issue.'
+              "Image generation failed. Please try again — it may have been a temporary server issue.",
             );
           } else {
             // Load user assets which now contains the newly generated ones sorted at the top!
@@ -209,7 +234,7 @@ export class TemplatesComponent implements OnInit {
         error: () => {
           this.generatingMyImages.set(false);
           this.generationError.set(
-            'Could not reach the AI service. Check your connection and try again.'
+            "Could not reach the AI service. Check your connection and try again.",
           );
         },
       });
@@ -231,14 +256,137 @@ export class TemplatesComponent implements OnInit {
     if (t) {
       this.useTemplateInStudio(t.id);
     } else {
-      this.router.navigate(['/studio']);
+      this.router.navigate(["/studio"]);
     }
   }
 
   useTemplateInStudio(templateId: string): void {
-    this.router.navigate(['/studio'], {
-      queryParams: { templateId }
+    this.router.navigate(["/studio"], {
+      queryParams: { templateId },
     });
+  }
+
+  addTemplateToCart(templateId: string): void {
+    if (!templateId) return;
+    if (this.addingTemplateToCartId() === templateId) return;
+
+    if (!this.auth.isLoggedIn()) {
+      this.toastService.error("Please log in to add designs to your cart.");
+      return;
+    }
+
+    this.addingTemplateToCartId.set(templateId);
+    this.error.set(null);
+
+    this.api
+      .getTemplate(templateId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (template) => {
+          if (!template?.canvasStateJSON) {
+            this.toastService.error("This template has no canvas data.");
+            this.addingTemplateToCartId.set(null);
+            return;
+          }
+
+          this.productService
+            .getProducts(1, 100)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+              next: (result) => {
+                const categoryName =
+                  this.categoryNames()[template.categoryId] ?? null;
+                const matchedProduct =
+                  (categoryName
+                    ? result.data.find(
+                        (product) =>
+                          product.categoryName?.toLowerCase() ===
+                          categoryName.toLowerCase(),
+                      )
+                    : null) ??
+                  result.data[0] ??
+                  null;
+
+                if (!matchedProduct) {
+                  this.toastService.error(
+                    "No product is available for this template right now.",
+                  );
+                  this.addingTemplateToCartId.set(null);
+                  return;
+                }
+
+                this.productService
+                  .createDesign({
+                    id: null,
+                    productId: matchedProduct.id,
+                    templateId: template.id,
+                    canvasStateJSON: template.canvasStateJSON ?? "{}",
+                    base64Snapshot: null,
+                    base64Front: null,
+                    base64Back: null,
+                    selectedSize: null,
+                    selectedFabric: null,
+                    selectedPrintMethod: null,
+                    selectedColor: null,
+                  })
+                  .pipe(takeUntilDestroyed(this.destroyRef))
+                  .subscribe({
+                    next: (designId) => {
+                      if (!designId) {
+                        this.toastService.error(
+                          "Could not save this design. Please try again.",
+                        );
+                        this.addingTemplateToCartId.set(null);
+                        return;
+                      }
+
+                      this.cartService
+                        .addToCart(matchedProduct.id, designId, 1)
+                        .subscribe({
+                          next: () => {
+                            this.toastService.success(
+                              "Added this design to cart.",
+                            );
+                          },
+                          error: (err: any) => {
+                            const msg =
+                              err?.error?.Message ||
+                              err?.error?.message ||
+                              err?.message ||
+                              "Failed to add this design to cart.";
+                            this.toastService.error(msg);
+                          },
+                          complete: () => {
+                            this.addingTemplateToCartId.set(null);
+                          },
+                        });
+                    },
+                    error: (err: any) => {
+                      const msg =
+                        err?.error?.Message ||
+                        err?.error?.message ||
+                        err?.message ||
+                        "Failed to save this design. Please try again.";
+                      this.toastService.error(msg);
+                      this.addingTemplateToCartId.set(null);
+                    },
+                  });
+              },
+              error: () => {
+                this.toastService.error(
+                  "Unable to load products for this template.",
+                );
+                this.addingTemplateToCartId.set(null);
+              },
+            });
+        },
+        error: () => {
+          this.toastService.error(
+            "Template details are unavailable right now.",
+          );
+          this.addingTemplateToCartId.set(null);
+        },
+      });
   }
 
   /**
@@ -247,13 +395,13 @@ export class TemplatesComponent implements OnInit {
    * so the generated graphic is ready to be placed directly on clothing.
    */
   private buildOnboardingPrompts(prefs: UserPreferencesResponse): string[] {
-    const style = prefs.styleType || 'Streetwear';
-    const colors = prefs.favoriteColors || 'Black, White';
+    const style = prefs.styleType || "Streetwear";
+    const colors = prefs.favoriteColors || "Black, White";
     const avoid = prefs.bannedColors
       ? `Strictly avoid these colors: ${prefs.bannedColors}.`
-      : '';
-    const interests = prefs.interests || 'Art, Music';
-    const designType = prefs.designPreference || 'Bold Prints';
+      : "";
+    const interests = prefs.interests || "Art, Music";
+    const designType = prefs.designPreference || "Bold Prints";
 
     const themes = [
       `${interests} inspired emblem artwork`,
@@ -270,7 +418,7 @@ export class TemplatesComponent implements OnInit {
         `CRITICAL: fully transparent background, no white fill, no background elements, cutout PNG style, alpha channel. ` +
         `Theme: ${theme}. Style aesthetic: ${style}. Color palette: ${colors}. ${avoid} ` +
         `Design mood: ${designType}. High-contrast, ultra-detailed, print-ready art. ` +
-        `No photographic backgrounds, no gradients behind the subject. Variation ${i + 1} of 6.`
+        `No photographic backgrounds, no gradients behind the subject. Variation ${i + 1} of 6.`,
     );
   }
 
@@ -292,7 +440,7 @@ export class TemplatesComponent implements OnInit {
         },
         error: () => {
           this.detailLoading.set(false);
-          this.detailError.set('Template details are unavailable right now.');
+          this.detailError.set("Template details are unavailable right now.");
         },
       });
   }
@@ -308,7 +456,7 @@ export class TemplatesComponent implements OnInit {
   }
 
   styleTags(template: TemplateDto): string[] {
-    return (template.styleTags ?? '')
+    return (template.styleTags ?? "")
       .split(/[,;|·]/)
       .map((tag) => tag.trim())
       .filter(Boolean);
@@ -336,7 +484,7 @@ export class TemplatesComponent implements OnInit {
             categories.reduce<Record<string, string>>((acc, cat) => {
               acc[cat.id] = cat.name;
               return acc;
-            }, {})
+            }, {}),
           );
         },
         error: () => this.categoryNames.set({}),
@@ -346,7 +494,7 @@ export class TemplatesComponent implements OnInit {
   private loadCreatorNames(templates: TemplateDto[]): void {
     const knownCreators = this.creatorNames();
     const creatorIds = Array.from(
-      new Set(templates.map((t) => t.creatorUserId))
+      new Set(templates.map((t) => t.creatorUserId)),
     ).filter((id) => id && knownCreators[id] === undefined);
 
     if (creatorIds.length === 0) return;
@@ -355,9 +503,9 @@ export class TemplatesComponent implements OnInit {
       creatorIds.map((id) =>
         this.api.getProfile(id).pipe(
           map((profile) => [id, profile.name || profile.userName] as const),
-          catchError(() => of([id, ''] as const))
-        )
-      )
+          catchError(() => of([id, ""] as const)),
+        ),
+      ),
     )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((entries) => {
