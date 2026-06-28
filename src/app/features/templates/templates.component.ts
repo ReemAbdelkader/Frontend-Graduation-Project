@@ -227,7 +227,18 @@ export class TemplatesComponent implements OnInit {
   }
 
   useInStudio(): void {
-    this.router.navigate(['/studio']);
+    const t = this.selectedTemplate();
+    if (t) {
+      this.useTemplateInStudio(t.id);
+    } else {
+      this.router.navigate(['/studio']);
+    }
+  }
+
+  useTemplateInStudio(templateId: string): void {
+    this.router.navigate(['/studio'], {
+      queryParams: { templateId }
+    });
   }
 
   /**

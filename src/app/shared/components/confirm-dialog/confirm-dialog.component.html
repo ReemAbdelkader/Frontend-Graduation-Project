@@ -37,9 +37,15 @@
           class="btn"
           [class.btn-destructive]="destructive"
           [class.btn-primary]="!destructive"
-          (click)="confirm.emit()"
+          [disabled]="confirmLoading"
+          (click)="!confirmLoading && confirm.emit()"
         >
-          {{ confirmLabel }}
+          @if (confirmLoading) {
+            <span class="btn-spinner"></span>
+            Publishing...
+          } @else {
+            {{ confirmLabel }}
+          }
         </button>
       </div>
     </div>

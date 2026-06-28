@@ -16,6 +16,8 @@ export class ConfirmDialogComponent {
   @Input() success = false;
   @Input() previewImageUrl = '';
   @Input() showCommunitySection = false;
+  /** When true, the confirm button shows a loading spinner and is disabled. */
+  @Input() confirmLoading = false;
 
   @Output() cancel = new EventEmitter<void>();
   @Output() confirm = new EventEmitter<void>();

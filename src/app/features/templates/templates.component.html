@@ -203,7 +203,7 @@
               <div class="image-wrap" [ngClass]="bgClass(i)">
                 <img [src]="previewUrl(t)" [alt]="t.name" loading="lazy" />
                 <div class="image-overlay"></div>
-                <button class="use-btn" type="button">Use Template</button>
+                <button class="use-btn" type="button" (click)="$event.stopPropagation(); useTemplateInStudio(t.id)">Use Template</button>
               </div>
               <div class="body">
                 <div class="meta-row">
@@ -294,7 +294,7 @@
                     <span class="stat-label">Reviews</span>
                   </div>
                 </div>
-                <button class="modal-action" type="button">Use Template</button>
+                <button class="modal-action" type="button" (click)="useInStudio()">Use Template</button>
               </div>
             </div>
           }

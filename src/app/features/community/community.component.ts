@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppNavComponent } from '../../shared/components/app-nav/app-nav.component';
 import { CommunityInteractionRowComponent } from '../../shared/components/community-interaction-row/community-interaction-row.component';
@@ -25,6 +26,7 @@ export class CommunityComponent {
   readonly api = inject(CommunityApiService);
   readonly templatesApi = inject(TemplatesApiService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   readonly creators = signal<CommunityTopCreatorDto[]>([]);
   readonly showPublishDialog = signal(false);
@@ -110,6 +112,14 @@ export class CommunityComponent {
     this.loadComments(post.id);
     this.loadTemplateDetail(post);
   }
+
+  useTemplate(templateId: string): void {
+    this.closeDetail();
+    this.router.navigate(['/studio'], {
+      queryParams: { templateId }
+    });
+  }
+
 
   closeDetail(): void {
     this.openPost.set(null);

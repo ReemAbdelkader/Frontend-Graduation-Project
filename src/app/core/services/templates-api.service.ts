@@ -38,6 +38,8 @@ export interface TemplateDetailDto extends TemplateDto {
   averageRating: number;
   reviewCount: number;
   creatorName: string;
+  categoryName?: string;
+  canvasStateJSON?: string;
   likedByCurrentUser?: boolean;
   savedByCurrentUser?: boolean;
   commentCount?: number;

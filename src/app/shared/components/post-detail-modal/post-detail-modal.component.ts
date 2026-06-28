@@ -39,6 +39,7 @@ export class PostDetailModalComponent {
   @Output() report = new EventEmitter<string>();
   @Output() commentDraftChange = new EventEmitter<string>();
   @Output() reportDraftChange = new EventEmitter<string>();
+  @Output() useTemplate = new EventEmitter<void>();
 
   focusCommentInput(): void {
     this.commentInput?.nativeElement?.focus();

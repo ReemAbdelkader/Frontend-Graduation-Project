@@ -582,6 +582,7 @@
     [showCommunitySection]="true"
     confirmLabel="Publish"
     cancelLabel="Maybe Later"
+    [confirmLoading]="isPublishing()"
     (confirm)="onPublishDesign()"
     (cancel)="onCloseSaveSuccess()"
   ></app-confirm-dialog>

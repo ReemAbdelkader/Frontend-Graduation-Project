@@ -11,6 +11,7 @@ import { AuthService } from "../../core/services/auth.service";
 import { AiImageService, GraphicAssetDto } from "../../core/services/ai-image.service";
 import { ToastService } from "../../core/services/toast.service";
 import { resolveApiUrl } from "../../core/services/api-config";
+import { TemplatesApiService, TemplateDetailDto } from "../../core/services/templates-api.service";
 import {
   CategoryDto,
   PrintableZoneBounds,
@@ -65,6 +66,7 @@ export class StudioComponent implements OnInit {
   private readonly cartService = inject(CartService);
   private readonly authService = inject(AuthService);
   private readonly aiImageService = inject(AiImageService);
+  private readonly templatesApiService = inject(TemplatesApiService);
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
@@ -76,6 +78,9 @@ export class StudioComponent implements OnInit {
   readonly isAddingToCart = signal(false);
   readonly saveSuccessOpen = signal(false);
   readonly saveSuccessPreviewUrl = signal("");
+  /** Stores the templateId returned by the saved design so Publish can use it. */
+  readonly saveSuccessTemplateId = signal<string | null>(null);
+  readonly isPublishing = signal(false);
   readonly cartSuccessOpen = signal(false);
   /** Tracks the designId of the currently saved design so Add to Cart can skip re-saving. */
   readonly currentDesignId = signal<string | null>(null);
@@ -268,24 +273,31 @@ export class StudioComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Check for productId query param to auto-select product
     this.activatedRoute.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
-        if (params['productId']) {
-          // Wait for products to load before selecting
-          if (this.allProducts().length > 0) {
-            this.selectProduct(params['productId']);
-          } else {
-            // If products not loaded yet, use effect to select when they load
-            effect(() => {
-              if (this.allProducts().length > 0) {
-                this.selectProduct(params['productId']);
-              }
-            }, { allowSignalWrites: true });
-          }
-        }
+        this.handleQueryParams(params);
       });
+  }
+
+  private handleQueryParams(params: any): void {
+    if (this.allProducts().length === 0) {
+      // Products not loaded yet — handleQueryParams will be run when loadProducts completes
+      return;
+    }
+
+    if (params['productId']) {
+      this.selectProduct(params['productId']);
+    } else if (params['templateId']) {
+      this.loadTemplate(params['templateId']);
+    } else {
+      // If no query parameters, select the first product as default if none is currently selected
+      const products = this.allProducts();
+      if (products.length && !this.selected().id) {
+        this.selected.set(products[0]);
+        this.color.set(products[0].colors[0]);
+      }
+    }
   }
 
   private createDefaultProduct(): StudioProduct {
@@ -345,11 +357,11 @@ export class StudioComponent implements OnInit {
       next: (result) => {
         const mapped = result.data.map((dto) => this.mapProduct(dto));
         this.allProducts.set(mapped);
-        if (mapped.length) {
-          this.selected.set(mapped[0]);
-          this.color.set(mapped[0].colors[0]);
-        }
         this.productLoading.set(false);
+
+        // Process query params now that all products are loaded
+        const params = this.activatedRoute.snapshot.queryParams;
+        this.handleQueryParams(params);
       },
       error: () => {
         this.productLoading.set(false);
@@ -717,13 +729,15 @@ export class StudioComponent implements OnInit {
       const designId = await this.executeSave();
 
       if (designId) {
-        // Load design details to retrieve the generated SnapshotImageURL
+        // Load design details to retrieve the generated SnapshotImageURL and templateId
         this.productService.getDesignById(designId).subscribe({
           next: (design) => {
             if (design && design.snapshotImageURL) {
               this.saveSuccessPreviewUrl.set(
                 resolveApiUrl(design.snapshotImageURL) || "",
               );
+              // Store template ID so the Publish button can use it
+              this.saveSuccessTemplateId.set(design.templateId ?? null);
               this.saveSuccessOpen.set(true);
             } else {
               this.toastService.success("Design saved successfully!");
@@ -825,8 +839,38 @@ export class StudioComponent implements OnInit {
   }
 
   onPublishDesign(): void {
-    this.saveSuccessOpen.set(false);
-    this.toastService.success("Community publishing is coming soon.");
+    const templateId = this.saveSuccessTemplateId();
+
+    if (!templateId) {
+      this.toastService.error(
+        "No template linked to this design. Please save the design again and try publishing."
+      );
+      return;
+    }
+
+    if (this.isPublishing()) return;
+    this.isPublishing.set(true);
+
+    this.templatesApiService.publishTemplate(templateId).subscribe({
+      next: () => {
+        this.isPublishing.set(false);
+        this.saveSuccessOpen.set(false);
+        this.toastService.success(
+          "Your design has been published to the Community! 🎉"
+        );
+        this.router.navigate(["/community"]);
+      },
+      error: (err: unknown) => {
+        this.isPublishing.set(false);
+        const e = err as any;
+        const msg =
+          e?.error?.Message ||
+          e?.error?.message ||
+          e?.message ||
+          "Failed to publish template.";
+        this.toastService.error(msg);
+      },
+    });
   }
 
   onCloseSaveSuccess(): void {
@@ -909,7 +953,7 @@ export class StudioComponent implements OnInit {
             }
 
             this.activeViewAngle = activeView;
-            this.canvasOpen.set(true);
+            this.canvasOpen.set(false);
 
             requestAnimationFrame(() => {
               this.designCanvas?.restoreDesignState(design.canvasStateJSON);
@@ -921,7 +965,7 @@ export class StudioComponent implements OnInit {
               ...product,
               images: product.images ?? [],
             });
-            this.canvasOpen.set(true);
+            this.canvasOpen.set(false);
             requestAnimationFrame(() => {
               this.designCanvas?.restoreDesignState(design.canvasStateJSON);
             });
@@ -933,6 +977,113 @@ export class StudioComponent implements OnInit {
       },
     });
   }
+
+  /**
+   * Loads a community template into the Studio:
+   * 1. Fetches template details (canvasStateJSON, categoryId) from the API.
+   * 2. Finds a product that belongs to the same category.
+   * 3. Selects that product, opens the canvas, and restores the saved canvas state.
+   */
+  loadTemplate(templateId: string): void {
+    if (!templateId) return;
+
+    this.templatesApiService.getTemplate(templateId).subscribe({
+      next: (template) => {
+        if (!template) {
+          this.toastService.error('Template not found.');
+          return;
+        }
+
+        if (!template.canvasStateJSON) {
+          this.toastService.error('This template has no canvas data.');
+          return;
+        }
+
+        // Find a product whose category matches the template's categoryId.
+        // The template entity stores CategoryId; products carry categoryName.
+        // We first try to match by looking up the category name from our
+        // local category list, then fall back to picking the first product.
+        const products = this.allProducts();
+
+        // Match product by the category name directly returned by the template,
+        // or look up using local categories mapping.
+        const categoryEntry = this.categories().find(
+          (c) => c.id === template.categoryId
+        );
+        const categoryName = template.categoryName || categoryEntry?.name || null;
+
+        let matchedProduct = categoryName
+          ? products.find((p) => p.categoryName?.toLowerCase() === categoryName.toLowerCase())
+          : null;
+
+        // Fallback: just use the first available product
+        if (!matchedProduct) {
+          matchedProduct = products[0];
+        }
+
+        if (!matchedProduct) {
+          this.toastService.error('No products are available in the Studio.');
+          return;
+        }
+
+        // Fetch product images / printable zones then open the canvas
+        this.productService.getProductImages(matchedProduct.id).subscribe({
+          next: (images) => {
+            const mappedImages = images.map((image) => ({
+              ...image,
+              viewAngle: image.viewAngle ?? ViewAngle.Front,
+              printableZone: this.parsePrintableZone(
+                image.printableZone ?? image.printableZoneJson ?? null,
+              ),
+            }));
+
+            this.selected.set({
+              ...matchedProduct!,
+              images: mappedImages,
+              image:
+                mappedImages.find((img) => img.viewAngle === ViewAngle.Front)
+                  ?.imageUrl || matchedProduct!.image,
+            });
+
+            // Determine which side was active when the template was saved
+            let activeView = ViewAngle.Front;
+            try {
+              const parsed = JSON.parse(template.canvasStateJSON!);
+              if (parsed?.activeView === 'back') activeView = ViewAngle.Back;
+            } catch { /* ignore */ }
+
+            this.activeViewAngle = activeView;
+            this.color.set(matchedProduct!.colors[0]);
+            this.canvasOpen.set(false);
+
+            // Restore canvas after the Angular + Fabric render cycle
+            requestAnimationFrame(() => {
+              this.designCanvas?.restoreDesignState(template.canvasStateJSON!);
+              this.toastService.success(
+                `Template "${template.name}" loaded — start customising!`
+              );
+            });
+          },
+          error: () => {
+            // Fallback: open canvas with basic product data and still restore state
+            this.selected.set({
+              ...matchedProduct!,
+              images: matchedProduct!.images ?? [],
+            });
+            this.canvasOpen.set(false);
+            requestAnimationFrame(() => {
+              this.designCanvas?.restoreDesignState(template.canvasStateJSON!);
+            });
+          },
+        });
+      },
+      error: (err: unknown) => {
+        console.error('[Studio] loadTemplate failed', err);
+        this.toastService.error('Failed to load the template. Please try again.');
+      },
+    });
+  }
+
 
   get originalPrice(): number {
     const base = this.dynamicPrice() !== null ? this.dynamicPrice()! : (this.selected().basePrice || 0);

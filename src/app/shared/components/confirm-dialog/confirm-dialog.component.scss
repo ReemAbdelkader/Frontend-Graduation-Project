@@ -54,6 +54,14 @@
   cursor: pointer;
   border: none;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
 
   &.btn-ghost {
     background: transparent;
@@ -66,15 +74,29 @@
     background: var(--gradient-primary);
     color: white;
 
-    &:hover { opacity: 0.95; }
+    &:hover:not(:disabled) { opacity: 0.95; }
   }
 
   &.btn-destructive {
     background: var(--destructive);
     color: var(--destructive-foreground);
 
-    &:hover { opacity: 0.95; }
+    &:hover:not(:disabled) { opacity: 0.95; }
   }
+}
+
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: btn-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
 }
 
 .success-icon-container {

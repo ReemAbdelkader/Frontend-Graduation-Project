@@ -66,6 +66,9 @@ export class DesignCanvasComponent
   private resizeObserver?: ResizeObserver;
   private resizeFrame = 0;
   private pendingConstraintFrame = 0;
+  private pendingRestoreState: string | null = null;
+  /** True while restoreDesignState is actively loading state – blocks switchView from overwriting the incoming template state. */
+  private isRestoringState = false;
   private readonly keyboardHandler = (event: KeyboardEvent) => {
     this.handleKeyboardShortcut(event);
   };
@@ -107,7 +110,11 @@ export class DesignCanvasComponent
       });
 
       requestAnimationFrame(() => {
-        this.switchView(this.viewAngle, previousView);
+        // Skip switchView if a template restore is pending or actively running –
+        // restoreDesignState handles the view switch itself.
+        if (!this.isRestoringState && !this.pendingRestoreState) {
+          this.switchView(this.viewAngle, previousView);
+        }
       });
     }
   }
@@ -134,6 +141,13 @@ export class DesignCanvasComponent
 
   onImageLoaded(): void {
     this.syncCanvasSize();
+    if (this.pendingRestoreState) {
+      const state = this.pendingRestoreState;
+      this.pendingRestoreState = null;
+      requestAnimationFrame(() => {
+        this.restoreDesignState(state);
+      });
+    }
   }
 
   clearDesign(): void {
@@ -161,9 +175,19 @@ export class DesignCanvasComponent
       return;
     }
 
+    const img = this.previewImageRef?.nativeElement;
+    if (!img || !img.complete || img.naturalWidth === 0) {
+      console.log("[Fabric] Mockup image still loading; deferring restoreDesignState.");
+      this.pendingRestoreState = canvasStateJSON;
+      return;
+    }
+
+    this.isRestoringState = true;
+
     const parsedState = this.parseCanvasState(canvasStateJSON);
 
     if (!parsedState) {
+      this.isRestoringState = false;
       return;
     }
 
@@ -184,10 +208,25 @@ export class DesignCanvasComponent
     }
 
     this.viewAngle = nextView;
-    this.loadViewState(this.viewAngle);
-    this.syncCanvasSize();
-    this.schedulePrintableConstraint();
-    this.syncToolbarState();
+    // loadViewState is async internally — clear the flag once its promise resolves
+    const stateToLoad = this.stateService.getState(nextView);
+    this.fabricCanvas.discardActiveObject();
+    this.fabricCanvas.clear();
+
+    const loadPromise = stateToLoad
+      ? this.loadFromJSONAsync(stateToLoad)
+      : Promise.resolve();
+
+    loadPromise
+      .then(() => {
+        this.fabricCanvas?.requestRenderAll();
+        this.syncCanvasSize();
+        this.schedulePrintableConstraint();
+        this.syncToolbarState();
+      })
+      .finally(() => {
+        this.isRestoringState = false;
+      });
   }
 
   async exportCurrentDesignSnapshot(): Promise<string | null> {
@@ -367,6 +406,11 @@ export class DesignCanvasComponent
   }
 
   saveCurrentViewState(viewAngle: "front" | "back" = this.viewAngle): void {
+    // Do not overwrite state while a template/design restore is in progress
+    if (this.isRestoringState) {
+      return;
+    }
+
     if (!this.fabricCanvas) {
       return;
     }
@@ -1102,9 +1146,13 @@ export class DesignCanvasComponent
   private async loadFromJSONAsync(state: unknown): Promise<void> {
     if (!this.fabricCanvas) return;
 
+    // Normalise absolute src URLs so that canvases saved on one host
+    // (e.g. http://localhost:4200) render correctly on any other host.
+    const normalised = this.normalizeSrcUrls(state);
+
     // Fabric v6: loadFromJSON(json, reviver?) returns Promise<Canvas>
     await (this.fabricCanvas.loadFromJSON(
-      state as any,
+      normalised as any,
       (_serializedObj: unknown, instance: unknown) => {
         if (instance) {
           this.applyGraphicAssetMetadata(
@@ -1142,8 +1190,9 @@ export class DesignCanvasComponent
     fCanvas: FabricCanvas,
     state: unknown,
   ): Promise<void> {
+    const normalised = this.normalizeSrcUrls(state);
     await (fCanvas.loadFromJSON(
-      state as any,
+      normalised as any,
       (_serializedObj: unknown, instance: unknown) => {
         if (instance) {
           this.applyGraphicAssetMetadata(
@@ -1232,6 +1281,47 @@ export class DesignCanvasComponent
       img.onerror = () => resolve(null);
       img.src = src;
     });
+  }
+
+  /**
+   * Pre-processes a canvas-state object (or JSON string) and rewrites any
+   * absolute graphic-asset src URLs to origin-relative proxy paths.
+   *
+   * Handles all three known forms:
+   *   • http(s)://any-host/api/DesignStudio/graphic-asset-file/...  → /api/DesignStudio/graphic-asset-file/...
+   *   • http(s)://any-host/GraphicAssets/...                        → /api/DesignStudio/graphic-asset-file/...
+   *   • /GraphicAssets/...                                          → /api/DesignStudio/graphic-asset-file/...
+   *
+   * Works by serialising the state to JSON, running a regex replacement,
+   * then parsing back — keeping the rest of the object intact.
+   */
+  private normalizeSrcUrls(state: unknown): unknown {
+    try {
+      let json = typeof state === 'string' ? state : JSON.stringify(state);
+
+      // Replace absolute URLs like http(s)://*/api/DesignStudio/graphic-asset-file/...
+      json = json.replace(
+        /https?:\/\/[^"]*\/api\/DesignStudio\/graphic-asset-file\//g,
+        '/api/DesignStudio/graphic-asset-file/',
+      );
+
+      // Replace absolute URLs like http(s)://*/GraphicAssets/...
+      json = json.replace(
+        /https?:\/\/[^"]*\/GraphicAssets\//g,
+        '/api/DesignStudio/graphic-asset-file/',
+      );
+
+      // Replace relative /GraphicAssets/ paths
+      json = json.replace(
+        /\/GraphicAssets\//g,
+        '/api/DesignStudio/graphic-asset-file/',
+      );
+
+      return JSON.parse(json);
+    } catch {
+      // If anything goes wrong, return state unchanged to avoid breaking the canvas
+      return state;
+    }
   }
 
   private syncToolbarState(): void {
