@@ -18,6 +18,10 @@ export interface ProfileDto {
   templatesCreatedCount: number;
   avgTemplateRating: number;
   isTopProfile: boolean;
+  totalRewardPoints?: number;
+  currentRank?: number;
+  followersCount?: number;
+  followingCount?: number;
 }
 
 @Injectable({

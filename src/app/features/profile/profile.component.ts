@@ -6,6 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { OnboardingApiService, UserPreferencesResponse } from '../../core/services/onboarding-api.service';
 import { ProfileDto, ProfileService } from '../../core/services/profile.service';
+import { Reward, RewardType, RewardsService } from '../../core/services/rewards.service';
 import { environment } from '../../../environments/environment';
 import { finalize, switchMap, throwError } from 'rxjs';
 
@@ -18,6 +19,10 @@ export interface UserProfileDto {
   dateJoined: string | null;
   templatesCreated: number | null;
   isTopProfile: boolean;
+  totalRewardPoints?: number;
+  currentRank?: number;
+  followersCount?: number;
+  followingCount?: number;
 }
 
 const COLOR_OPTIONS = [
@@ -61,11 +66,17 @@ export class ProfileComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly onboardingApi = inject(OnboardingApiService);
   private readonly profileService = inject(ProfileService); 
+  private readonly rewardsService = inject(RewardsService);
 
   readonly user = this.authService.user();
   readonly profileLoading = signal(true);
   readonly profileSaving = signal(false);
   readonly profileError = signal('');
+
+  readonly activeTab = signal<'settings' | 'rewards'>('settings');
+  readonly userRewards = signal<Reward[]>([]);
+  readonly rewardsLoading = signal(false);
+  readonly rewardsError = signal('');
 
   readonly askLogout = signal(false);
   readonly showLogoutModal = signal<boolean>(false);
@@ -96,6 +107,7 @@ export class ProfileComponent implements OnInit {
   ngOnInit(): void {
     this.loadPreferences();
     this.loadProfile();
+    this.loadRewards();
   }
 
   private loadProfile(): void {
@@ -132,6 +144,10 @@ export class ProfileComponent implements OnInit {
       dateJoined: this.isUsableDate(profile.dateJoined) ? profile.dateJoined : null,
       templatesCreated: profile.templatesCreatedCount ?? 0,
       isTopProfile: profile.isTopProfile ?? false,
+      totalRewardPoints: profile.totalRewardPoints ?? 0,
+      currentRank: profile.currentRank ?? 0,
+      followersCount: profile.followersCount ?? 0,
+      followingCount: profile.followingCount ?? 0,
     };
     this.selectedFile = null;
     this.syncEditForm();
@@ -337,5 +353,32 @@ export class ProfileComponent implements OnInit {
       alert('Signed out successfully');
       this.router.navigate(['/login']); 
     }, 1500);
+  }
+
+  loadRewards(): void {
+    const userId = this.authService.userId();
+    if (!userId) {
+      return;
+    }
+    this.rewardsLoading.set(true);
+    this.rewardsError.set('');
+    this.rewardsService.getUserRewards(userId).pipe(
+      finalize(() => this.rewardsLoading.set(false))
+    ).subscribe({
+      next: (rewards) => {
+        this.userRewards.set(rewards || []);
+      },
+      error: (error) => {
+        console.error('Failed to load rewards', error);
+        this.rewardsError.set('Could not load your rewards. Please try again later.');
+      }
+    });
+  }
+
+  setTab(tab: 'settings' | 'rewards'): void {
+    this.activeTab.set(tab);
+    if (tab === 'rewards') {
+      this.loadRewards();
+    }
   }
 }

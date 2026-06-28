@@ -53,18 +53,65 @@
           }
         </div>
 
-        @if (displayUser.templatesCreated !== null) {
-          <div class="header-stats">
+        <div class="header-stats">
+          @if (displayUser.templatesCreated !== null) {
             <div class="h-stat">
               <p class="h-stat-value">{{ displayUser.templatesCreated }}</p>
               <p class="h-stat-label">DESIGNS</p>
             </div>
-          </div>
-        }
+          }
+          @if (displayUser.totalRewardPoints !== undefined && displayUser.totalRewardPoints > 0) {
+            <div class="h-stat">
+              <p class="h-stat-value">{{ displayUser.totalRewardPoints }}</p>
+              <p class="h-stat-label">POINTS</p>
+            </div>
+          }
+          @if (displayUser.currentRank !== undefined && displayUser.currentRank > 0) {
+            <div class="h-stat">
+              <p class="h-stat-value">#{{ displayUser.currentRank }}</p>
+              <p class="h-stat-label">RANK</p>
+            </div>
+          }
+          @if (displayUser.followersCount !== undefined && displayUser.followersCount > 0) {
+            <div class="h-stat">
+              <p class="h-stat-value">{{ displayUser.followersCount }}</p>
+              <p class="h-stat-label">FOLLOWERS</p>
+            </div>
+          }
+        </div>
       </div>
     </div>
 
-    <h2 class="section-heading">Settings</h2>
+    <div class="profile-tabs">
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab() === 'settings'" 
+        (click)="setTab('settings')"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Account & Style Settings
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab() === 'rewards'" 
+        (click)="setTab('rewards')"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="7"/>
+          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
+        </svg>
+        Loyalty & Rewards
+        @if (userRewards().length > 0) {
+          <span class="tab-badge">{{ userRewards().length }}</span>
+        }
+      </button>
+    </div>
+
+    @if (activeTab() === 'settings') {
+      <h2 class="section-heading">Settings</h2>
 
       <div class="settings-grid">
         <div class="settings-side">
@@ -384,6 +431,124 @@
           }
         </div>
       </div>
+    } @else {
+      <!-- REWARDS TAB CONTENT -->
+      <h2 class="section-heading">Rewards & Achievements</h2>
+
+      <!-- Stats Summary -->
+      <div class="rewards-summary-cards">
+        <div class="summary-card points-card">
+          <div class="card-icon">✨</div>
+          <div class="card-info">
+            <span class="card-val">{{ displayUser.totalRewardPoints || 0 }}</span>
+            <span class="card-lbl">Total Points Earned</span>
+          </div>
+        </div>
+        <div class="summary-card rank-card">
+          <div class="card-icon">👑</div>
+          <div class="card-info">
+            <span class="card-val">{{ displayUser.currentRank ? '#' + displayUser.currentRank : 'Unranked' }}</span>
+            <span class="card-lbl">Platform Rank</span>
+          </div>
+        </div>
+        <div class="summary-card badges-card">
+          <div class="card-icon">🏆</div>
+          <div class="card-info">
+            <span class="card-val">{{ userRewards().length }}</span>
+            <span class="card-lbl">Unlocked Rewards</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading / Error states -->
+      @if (rewardsLoading()) {
+        <div class="rewards-loading-box">
+          <span class="prefs-spinner"></span>
+          <span>Loading your rewards...</span>
+        </div>
+      } @else if (rewardsError()) {
+        <div class="rewards-error-box">
+          <p>{{ rewardsError() }}</p>
+          <button class="retry-btn" (click)="loadRewards()">Retry</button>
+        </div>
+      } @else {
+        <!-- Rewards list -->
+        @if (userRewards().length === 0) {
+          <div class="empty-rewards">
+            <div class="empty-gfx">🎁</div>
+            <h3>No Rewards Yet</h3>
+            <p>Publish your templates, get likes from the community, and order prints to earn points and badges!</p>
+          </div>
+        } @else {
+          <div class="rewards-grid">
+            @for (reward of userRewards(); track reward.id) {
+              <div class="reward-item-card" [class.claimed]="reward.isClaimed">
+                <div class="reward-graphic">
+                  @if (reward.rewardType === 3) {
+                    <!-- Badge type -->
+                    <div class="badge-display">
+                      @if (reward.badgeImageUrl) {
+                        <img [src]="'/assets/images/badges/' + reward.badgeImageUrl" [alt]="'Badge'" class="badge-img" (error)="badgeImgFallback.style.display='flex'; $any($event.target).style.display='none'" />
+                      }
+                      <!-- Fallback Badge Icon if image doesn't load/exist -->
+                      <div #badgeImgFallback class="badge-fallback-icon">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="8" r="6"/>
+                          <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+                        </svg>
+                      </div>
+                    </div>
+                  } @else {
+                    <!-- Discount voucher / Coupon type -->
+                    <div class="voucher-display">
+                      <span class="voucher-symbol">%</span>
+                    </div>
+                  }
+                </div>
+
+                <div class="reward-details">
+                  <div class="reward-header-row">
+                    <span class="reward-type-tag" [class.badge-tag]="reward.rewardType === 3" [class.discount-tag]="reward.rewardType !== 3">
+                      {{ reward.rewardType === 3 ? 'Badge' : reward.rewardType === 1 ? 'Discount' : 'Free Item' }}
+                    </span>
+                    @if (reward.createdAt) {
+                      <span class="earned-date">{{ reward.createdAt | date:'mediumDate' }}</span>
+                    }
+                  </div>
+
+                  <h3 class="reward-title">
+                    @if (reward.rewardType === 3) {
+                      Top Designer Badge
+                    } @else {
+                      ${{ reward.rewardValue }} Off Coupon
+                    }
+                  </h3>
+                  <p class="reward-desc">
+                    Earned by accumulating design interactions and orders on Atelier.
+                  </p>
+
+                  <div class="reward-footer-row">
+                    @if (reward.rewardType !== 3) {
+                      <div class="code-area">
+                        <span class="code-lbl">Voucher:</span>
+                        <code class="code-val">ATELIER{{ reward.rewardValue }}</code>
+                      </div>
+                    } @else {
+                      <div class="badge-rank">
+                        Rank Reward
+                      </div>
+                    }
+                    <div class="reward-status-pill" [class.claimed]="reward.isClaimed">
+                      {{ reward.isClaimed ? 'Claimed' : 'Active' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    }
 
     <div class="signout-section">
       <button class="signout-btn" (click)="toggleLogoutModal(true)">
