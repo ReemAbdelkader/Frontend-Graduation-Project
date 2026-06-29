@@ -212,7 +212,9 @@ export class StudioComponent implements OnInit {
       (image) => image.viewAngle === this.activeViewAngle,
     );
     const imageUrl =
-      activeImage?.imageUrl || selectedProduct?.image || this.logo;
+      activeImage?.imageUrl ||
+      (this.activeViewAngle === ViewAngle.Front ? selectedProduct?.image : "") ||
+      this.logo;
 
     if (!imageUrl) {
       return this.logo;
@@ -357,6 +359,9 @@ export class StudioComponent implements OnInit {
       next: (result) => {
         const mapped = result.data.map((dto) => this.mapProduct(dto));
         this.allProducts.set(mapped);
+        if (mapped.length) {
+          this.selectProduct(mapped[0].id);
+        }
         this.productLoading.set(false);
 
         // Process query params now that all products are loaded

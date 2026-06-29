@@ -178,12 +178,107 @@ export interface UpdateModerationReportRequest {
   status?: ModerationStatus | null;
 }
 
-export interface ReportChatResponseDto {
-  sessionId: string;
-  userMessageId: string;
-  aiMessageId: string;
-  response: string;
-  responseTime: string;
+export type AiReportType = 'Revenue' | 'Orders' | 'Creators' | 'Products' | 'Templates' | 'Production' | 'Community';
+
+export interface AiReportFiltersDto {
+  fromDate?: string | null;
+  toDate?: string | null;
+}
+
+export interface NamedCountDto {
+  name: string;
+  count: number;
+}
+
+export interface OrdersMetricsDto {
+  metricType: 'orders';
+  totalOrders: number;
+  totalOrderValue: number;
+  averageOrderValue: number;
+  totalItems: number;
+  ordersByStatus: NamedCountDto[];
+}
+
+export interface RevenueMetricsDto {
+  metricType: 'revenue';
+  totalRevenue: number;
+  grossSubtotal: number;
+  totalDiscounts: number;
+  averageOrderValue: number;
+  revenueGeneratingOrders: number;
+}
+
+export interface TopCreatorMetricDto {
+  userId: string;
+  userName: string;
+  templateCount: number;
+  totalLikes: number;
+  totalRemixes: number;
+}
+
+export interface CreatorsMetricsDto {
+  metricType: 'creators';
+  activeCreators: number;
+  publicTemplates: number;
+  totalLikes: number;
+  totalRemixes: number;
+  topCreators: TopCreatorMetricDto[];
+}
+
+export interface ProductsMetricsDto {
+  metricType: 'products';
+  totalProducts: number;
+  availableProducts: number;
+  unavailableProducts: number;
+  averageBasePrice: number;
+  averageRating: number;
+}
+
+export interface TemplatesMetricsDto {
+  metricType: 'templates';
+  totalTemplates: number;
+  publicTemplates: number;
+  privateTemplates: number;
+  totalLikes: number;
+  totalRemixes: number;
+}
+
+export interface ProductionMetricsDto {
+  metricType: 'production';
+  totalOrderItems: number;
+  totalUnits: number;
+  assignedItems: number;
+  unassignedItems: number;
+  activePrinters: number;
+  itemsByStatus: NamedCountDto[];
+}
+
+export interface CommunityMetricsDto {
+  metricType: 'community';
+  totalInteractions: number;
+  likes: number;
+  saves: number;
+  remixes: number;
+  comments: number;
+}
+
+export type AiReportMetricsDto =
+  | OrdersMetricsDto
+  | RevenueMetricsDto
+  | CreatorsMetricsDto
+  | ProductsMetricsDto
+  | TemplatesMetricsDto
+  | ProductionMetricsDto
+  | CommunityMetricsDto;
+
+export interface AiReportDto {
+  reportType: AiReportType;
+  generatedAt: string;
+  filters?: AiReportFiltersDto | null;
+  metrics: AiReportMetricsDto;
+  summary: string;
+  highlights: string[];
+  recommendation?: string | null;
 }
 
 export function extractAdminApiError(error: unknown, fallback: string): string {
@@ -459,24 +554,12 @@ export class AdminApiService {
       .pipe(map((response) => this.unwrap(response)));
   }
 
-  assignPrinterToOrderItem(orderItemId: string, printerProfileId: string): Observable<string | null> {
+  generateAiReport(reportType: AiReportType, filters?: AiReportFiltersDto): Observable<AiReportDto> {
     return this.http
-      .patch<ApiEnvelope<string | null>>(
-        `${API_BASE_URL}/admin/order-items/${orderItemId}/assign-printer`,
-        { printerProfileId }
-      )
-      .pipe(map((response) => this.unwrap(response)));
-  }
-
-  createReportChatSession(): Observable<string> {
-    return this.http
-      .post<ApiEnvelope<string>>(`${API_BASE_URL}/ReportChat/session`, {})
-      .pipe(map((response) => this.unwrap(response)));
-  }
-
-  sendReportChatMessage(sessionId: string, message: string): Observable<ReportChatResponseDto> {
-    return this.http
-      .post<ApiEnvelope<ReportChatResponseDto>>(`${API_BASE_URL}/ReportChat/messages`, { sessionId, message })
+      .post<ApiEnvelope<AiReportDto>>(`${API_BASE_URL}/admin/ai-reports/generate`, {
+        reportType,
+        filters: filters && (filters.fromDate || filters.toDate) ? filters : null,
+      })
       .pipe(map((response) => this.unwrap(response)));
   }
 

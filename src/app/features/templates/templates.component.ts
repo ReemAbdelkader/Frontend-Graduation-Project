@@ -1,16 +1,9 @@
-import {
-  Component,
-  DestroyRef,
-  OnInit,
-  computed,
-  inject,
-  signal,
-} from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { ActivatedRoute, Router } from "@angular/router";
-import { forkJoin, map, of, catchError, switchMap } from "rxjs";
-import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { AppNavComponent } from "../../shared/components/app-nav/app-nav.component";
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin, map, of, catchError, switchMap, from, concatMap, delay, tap, toArray } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AppNavComponent } from '../../shared/components/app-nav/app-nav.component';
 import {
   TemplateDetailDto,
   TemplateDto,
@@ -187,7 +180,7 @@ export class TemplatesComponent implements OnInit {
       });
   }
 
-  /** Fetches user preferences then fires 6 generate-image calls in parallel. */
+  /** Fetches user preferences then generates images sequentially to respect AI provider limits. */
   private loadMyTemplateImages(): void {
     this.generatingMyImages.set(true);
     this.generationError.set(null);
@@ -200,15 +193,19 @@ export class TemplatesComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
         switchMap((prefs) => {
           const prompts = this.buildOnboardingPrompts(prefs);
-          // Fire all 6 requests simultaneously; individual failures return null
-          return forkJoin(
-            prompts.map((prompt) =>
-              this.aiImageService
-                .generateAiImage(prompt)
-                .pipe(
-                  catchError(() => of(null as GenerateAiImageResult | null)),
-                ),
+          return from(prompts).pipe(
+            concatMap((prompt) =>
+              this.aiImageService.generateAiImage(prompt).pipe(
+                catchError(() => of(null as GenerateAiImageResult | null)),
+                tap((result) => {
+                  if (result) {
+                    this.generationProgress.update((count) => count + 1);
+                  }
+                }),
+                delay(1500)
+              )
             ),
+            toArray()
           );
         }),
         catchError(() => of([] as (GenerateAiImageResult | null)[])),
@@ -517,3 +514,4 @@ export class TemplatesComponent implements OnInit {
       });
   }
 }
+

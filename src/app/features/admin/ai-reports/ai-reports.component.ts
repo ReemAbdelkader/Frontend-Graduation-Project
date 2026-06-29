@@ -1,17 +1,26 @@
-import { Component, signal, ElementRef, ViewChild, AfterViewChecked, inject, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import {
+  AdminApiService,
+  AiReportDto,
+  AiReportType,
+  extractAdminApiError,
+} from '../../../core/services/admin-api.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { AdminApiService } from '../../../core/services/admin-api.service';
-
-interface ChatMessage {
-  id: string;
-  role: 'admin' | 'ai';
-  text: string;
-}
 
 interface ReportCategory {
-  key: string;
+  key: AiReportType;
   icon: 'bar' | 'package' | 'users' | 'layers' | 'factory' | 'message';
+}
+
+interface MetricCard {
+  label: string;
+  value: string;
+}
+
+interface BreakdownRow {
+  label: string;
+  value: string;
 }
 
 @Component({
@@ -21,11 +30,15 @@ interface ReportCategory {
   templateUrl: './ai-reports.component.html',
   styleUrl: './ai-reports.component.scss',
 })
-export class AiReportsComponent implements OnInit, AfterViewChecked {
-  @ViewChild('scrollRef') scrollRef?: ElementRef<HTMLDivElement>;
-
-  private adminApi = inject(AdminApiService);
-  private toast = inject(ToastService);
+export class AiReportsComponent {
+  private readonly adminApi = inject(AdminApiService);
+  private readonly toast = inject(ToastService);
+  private readonly numberFormatter = new Intl.NumberFormat('en-US');
+  private readonly currencyFormatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  });
 
   readonly categories: ReportCategory[] = [
     { key: 'Revenue', icon: 'bar' },
@@ -37,99 +50,154 @@ export class AiReportsComponent implements OnInit, AfterViewChecked {
     { key: 'Community', icon: 'message' },
   ];
 
-  readonly suggestions = [
-    'Why did sales drop this month?',
-    'Who are the top creators this week?',
-    'What are the most returned products?',
-    'Overall report for Production',
-    'Overall report for Revenue',
-  ];
+  readonly selectedType = signal<AiReportType>('Revenue');
+  readonly fromDate = signal('');
+  readonly toDate = signal('');
+  readonly report = signal<AiReportDto | null>(null);
+  readonly generating = signal(false);
 
-  readonly messages = signal<ChatMessage[]>([
-    {
-      id: 'm0',
-      role: 'ai',
-      text: 'Hi Admin — ask me anything about your business. I can analyse sales, orders, creators, products, templates, production, and community. Try one of the prompts below.',
-    },
-  ]);
-
-  readonly input = signal('');
-  readonly thinking = signal(false);
-  readonly sessionId = signal<string | null>(null);
-  readonly sessionError = signal<string | null>(null);
-
-  ngOnInit(): void {
-    this.adminApi.createReportChatSession().subscribe({
-      next: (sessionId) => this.sessionId.set(sessionId),
-      error: (err) => {
-        this.sessionError.set(this.extractError(err, 'Unable to start report chat session.'));
-        this.toast.error(this.sessionError()!);
-      },
-    });
+  setFromDate(value: string): void {
+    this.fromDate.set(value);
   }
 
-  ngAfterViewChecked(): void {
-    this.scrollToBottom();
+  setToDate(value: string): void {
+    this.toDate.set(value);
   }
 
-  private scrollToBottom(): void {
-    const el = this.scrollRef?.nativeElement;
-    if (el) el.scrollTop = el.scrollHeight;
-  }
+  generate(reportType = this.selectedType()): void {
+    if (this.generating()) return;
 
-  setInput(v: string): void {
-    this.input.set(v);
-  }
-
-  sendCategoryReport(categoryKey: string): void {
-    this.send(`Overall report for ${categoryKey}`);
-  }
-
-  sendSuggestion(prompt: string): void {
-    this.send(prompt);
-  }
-
-  send(text?: string): void {
-    const value = (text ?? this.input()).trim();
-    if (!value || this.thinking()) return;
-
-    const sessionId = this.sessionId();
-    if (!sessionId) {
-      this.toast.error(this.sessionError() ?? 'Report chat session is not ready yet.');
+    if (this.fromDate() && this.toDate() && this.fromDate() > this.toDate()) {
+      this.toast.error('The start date must be on or before the end date.');
       return;
     }
 
-    const userMsg: ChatMessage = {
-      id: `u-${Date.now()}`,
-      role: 'admin',
-      text: value,
-    };
-    this.messages.update((m) => [...m, userMsg]);
-    this.input.set('');
-    this.thinking.set(true);
+    this.selectedType.set(reportType);
+    this.generating.set(true);
 
-    this.adminApi.sendReportChatMessage(sessionId, value).subscribe({
-      next: (response) => {
-        this.thinking.set(false);
-        this.messages.update((m) => [
-          ...m,
-          {
-            id: response.aiMessageId ?? `a-${Date.now()}`,
-            role: 'ai',
-            text: response.response,
-          },
-        ]);
+    this.adminApi.generateAiReport(reportType, {
+      fromDate: this.fromDate() || null,
+      toDate: this.toDate() || null,
+    }).subscribe({
+      next: (report) => {
+        this.report.set(report);
+        this.generating.set(false);
       },
-      error: (err) => {
-        this.thinking.set(false);
-        this.toast.error(this.extractError(err, 'Report generation failed.'));
+      error: (error) => {
+        this.generating.set(false);
+        this.toast.error(extractAdminApiError(error, 'Report generation failed.'));
       },
     });
   }
 
-  private extractError(error: unknown, fallback: string): string {
-    const err = error as { error?: { message?: string; errors?: string[] } | string; message?: string };
-    if (typeof err?.error === 'string') return err.error;
-    return err?.error?.message ?? err?.error?.errors?.join(', ') ?? err?.message ?? fallback;
+  metricCards(report: AiReportDto): MetricCard[] {
+    const metrics = report.metrics;
+    switch (metrics.metricType) {
+      case 'orders':
+        return [
+          this.numberCard('Total orders', metrics.totalOrders),
+          this.currencyCard('Order value', metrics.totalOrderValue),
+          this.currencyCard('Average order', metrics.averageOrderValue),
+          this.numberCard('Units ordered', metrics.totalItems),
+        ];
+      case 'revenue':
+        return [
+          this.currencyCard('Total revenue', metrics.totalRevenue),
+          this.currencyCard('Gross subtotal', metrics.grossSubtotal),
+          this.currencyCard('Discounts', metrics.totalDiscounts),
+          this.currencyCard('Average order', metrics.averageOrderValue),
+          this.numberCard('Revenue orders', metrics.revenueGeneratingOrders),
+        ];
+      case 'creators':
+        return [
+          this.numberCard('Active creators', metrics.activeCreators),
+          this.numberCard('Public templates', metrics.publicTemplates),
+          this.numberCard('Template likes', metrics.totalLikes),
+          this.numberCard('Template remixes', metrics.totalRemixes),
+        ];
+      case 'products':
+        return [
+          this.numberCard('Products', metrics.totalProducts),
+          this.numberCard('Available', metrics.availableProducts),
+          this.numberCard('Unavailable', metrics.unavailableProducts),
+          this.currencyCard('Average price', metrics.averageBasePrice),
+          { label: 'Average rating', value: metrics.averageRating.toFixed(1) },
+        ];
+      case 'templates':
+        return [
+          this.numberCard('Templates', metrics.totalTemplates),
+          this.numberCard('Public', metrics.publicTemplates),
+          this.numberCard('Private', metrics.privateTemplates),
+          this.numberCard('Likes', metrics.totalLikes),
+          this.numberCard('Remixes', metrics.totalRemixes),
+        ];
+      case 'production':
+        return [
+          this.numberCard('Order items', metrics.totalOrderItems),
+          this.numberCard('Units', metrics.totalUnits),
+          this.numberCard('Assigned', metrics.assignedItems),
+          this.numberCard('Unassigned', metrics.unassignedItems),
+          this.numberCard('Active printers', metrics.activePrinters),
+        ];
+      case 'community':
+        return [
+          this.numberCard('Interactions', metrics.totalInteractions),
+          this.numberCard('Likes', metrics.likes),
+          this.numberCard('Saves', metrics.saves),
+          this.numberCard('Remixes', metrics.remixes),
+          this.numberCard('Comments', metrics.comments),
+        ];
+    }
+  }
+
+  breakdownRows(report: AiReportDto): BreakdownRow[] {
+    const metrics = report.metrics;
+    if (metrics.metricType === 'orders') {
+      return metrics.ordersByStatus.map(item => ({
+        label: item.name,
+        value: this.numberFormatter.format(item.count),
+      }));
+    }
+
+    if (metrics.metricType === 'production') {
+      return metrics.itemsByStatus.map(item => ({
+        label: item.name,
+        value: this.numberFormatter.format(item.count),
+      }));
+    }
+
+    if (metrics.metricType === 'creators') {
+      return metrics.topCreators.map(creator => ({
+        label: creator.userName,
+        value: `${this.numberFormatter.format(creator.templateCount)} templates · ${this.numberFormatter.format(creator.totalLikes)} likes · ${this.numberFormatter.format(creator.totalRemixes)} remixes`,
+      }));
+    }
+
+    return [];
+  }
+
+  generatedLabel(value: string): string {
+    return new Date(value).toLocaleString();
+  }
+
+  dateRangeLabel(report: AiReportDto): string {
+    const from = report.filters?.fromDate;
+    const to = report.filters?.toDate;
+    if (!from && !to) return 'All-time data';
+    if (from && to) return `${this.shortDate(from)} – ${this.shortDate(to)}`;
+    if (from) return `From ${this.shortDate(from)}`;
+    return `Through ${this.shortDate(to!)}`;
+  }
+
+  private shortDate(value: string): string {
+    return new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString();
+  }
+
+  private numberCard(label: string, value: number): MetricCard {
+    return { label, value: this.numberFormatter.format(value) };
+  }
+
+  private currencyCard(label: string, value: number): MetricCard {
+    return { label, value: this.currencyFormatter.format(value) };
   }
 }

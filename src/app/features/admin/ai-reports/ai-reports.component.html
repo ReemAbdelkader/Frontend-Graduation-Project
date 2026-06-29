@@ -2,18 +2,23 @@
   <header class="page-head">
     <div>
       <p class="eyebrow">AI REPORTS · ADMIN → ATELIER AI</p>
-      <h1 class="title">Ask, and the data <span class="italic-light">answers back.</span></h1>
-      <p class="sub">Generate on-demand reports across sales, creators, production, and more.</p>
+      <h1 class="title">Verified data, <span class="italic-light">clearly narrated.</span></h1>
+      <p class="sub">Every number comes from the database. AI adds the summary—not the arithmetic.</p>
     </div>
   </header>
 
   <div class="grid-layout">
     <aside class="side-panel">
       <div class="side-section">
-        <p class="side-label">Overall reports</p>
+        <p class="side-label">Report type</p>
         <div class="cat-list">
           @for (c of categories; track c.key) {
-            <button class="cat-item" (click)="sendCategoryReport(c.key)" [disabled]="thinking()">
+            <button
+              class="cat-item"
+              [class.active]="selectedType() === c.key"
+              (click)="generate(c.key)"
+              [disabled]="generating()"
+            >
               <span class="cat-icon">
                 @switch (c.icon) {
                   @case ('bar') {
@@ -43,64 +48,104 @@
       </div>
 
       <div class="side-section">
-        <p class="side-label">Suggested prompts</p>
-        <div class="prompt-list">
-          @for (s of suggestions; track s) {
-            <button class="prompt-chip" (click)="sendSuggestion(s)" [disabled]="thinking()">{{ s }}</button>
-          }
-        </div>
+        <p class="side-label">Optional date range</p>
+        <label class="date-field">
+          <span>From</span>
+          <input type="date" [ngModel]="fromDate()" (ngModelChange)="setFromDate($event)" [disabled]="generating()" />
+        </label>
+        <label class="date-field">
+          <span>To</span>
+          <input type="date" [ngModel]="toDate()" (ngModelChange)="setToDate($event)" [disabled]="generating()" />
+        </label>
+        <button class="generate-btn" (click)="generate()" [disabled]="generating()">
+          @if (generating()) { Generating… } @else { Generate {{ selectedType() }} report }
+        </button>
       </div>
     </aside>
 
-    <section class="chat-card">
-      <div #scrollRef class="messages">
-        @for (m of messages(); track m.id) {
-          @if (m.role === 'admin') {
-            <div class="msg-row admin">
-              <div class="bubble admin-bubble">{{ m.text }}</div>
+    <section class="report-shell" aria-live="polite">
+      @if (generating()) {
+        <div class="empty-state">
+          <div class="ai-avatar">
+            <span class="dot-pulse"></span><span class="dot-pulse"></span><span class="dot-pulse"></span>
+          </div>
+          <h2>Building a verified report</h2>
+          <p>Querying the database first, then asking AI to narrate those exact results.</p>
+        </div>
+      } @else {
+        @if (report(); as currentReport) {
+          <article class="report-card">
+          <header class="report-head">
+            <div>
+              <p class="report-tag">{{ currentReport.reportType }} report</p>
+              <h2 class="report-title">{{ dateRangeLabel(currentReport) }}</h2>
             </div>
-          } @else {
-            <div class="msg-row ai">
-              <div class="ai-avatar">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
-              </div>
-              <div class="ai-content">
-                <div class="bubble ai-bubble">{{ m.text }}</div>
-              </div>
-            </div>
-          }
-        }
+            <p class="generated-at">Generated {{ generatedLabel(currentReport.generatedAt) }}</p>
+          </header>
 
-        @if (thinking()) {
-          <div class="msg-row ai">
-            <div class="ai-avatar">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+          <div class="report-metrics">
+            @for (metric of metricCards(currentReport); track metric.label) {
+              <div class="metric-cell">
+                <p class="metric-label">{{ metric.label }}</p>
+                <p class="metric-value">{{ metric.value }}</p>
+              </div>
+            }
+          </div>
+
+          @if (breakdownRows(currentReport).length) {
+            <section class="breakdown-section">
+              <p class="report-section-label">
+                {{ currentReport.metrics.metricType === 'creators' ? 'Top creators' : 'Status breakdown' }}
+              </p>
+              <div class="breakdown-table">
+                @for (row of breakdownRows(currentReport); track row.label) {
+                  <div class="breakdown-row">
+                    <span>{{ row.label }}</span>
+                    <strong>{{ row.value }}</strong>
+                  </div>
+                }
+              </div>
+            </section>
+          }
+
+          <section class="narrative-grid">
+            <div>
+              <p class="report-section-label">AI summary</p>
+              <p class="report-summary">{{ currentReport.summary }}</p>
             </div>
-            <div class="bubble ai-bubble thinking">
-              <span class="dot-pulse"></span>
-              <span class="dot-pulse"></span>
-              <span class="dot-pulse"></span>
+            <div>
+              <p class="report-section-label">Highlights</p>
+              <ul class="insight-list">
+                @for (highlight of currentReport.highlights; track highlight) {
+                  <li class="insight-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 4 4L19 6"/></svg>
+                    <span>{{ highlight }}</span>
+                  </li>
+                }
+              </ul>
             </div>
+          </section>
+
+          @if (currentReport.recommendation) {
+            <aside class="recommendation-callout">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.45.49-.85.86-1.17A6 6 0 1 0 8.05 12.83c.38.32.69.72.87 1.17Z"/></svg>
+              <div>
+                <p class="report-section-label">Recommendation</p>
+                <p>{{ currentReport.recommendation }}</p>
+              </div>
+            </aside>
+          }
+          </article>
+        } @else {
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            </div>
+            <h2>Choose a report to begin</h2>
+            <p>Select a report type or date range. The metrics will be calculated in code before AI writes a word.</p>
           </div>
         }
-      </div>
-
-      <form class="composer" (ngSubmit)="send(); $event.preventDefault()">
-        <input
-          type="text"
-          class="input"
-          placeholder="Ask the AI… e.g. 'Why did sales drop this month?'"
-          [ngModel]="input()"
-          (ngModelChange)="setInput($event)"
-          name="text"
-          [disabled]="thinking() || !sessionId()"
-          autocomplete="off"
-        />
-        <button type="submit" class="send-btn" [disabled]="thinking() || !input().trim() || !sessionId()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-          Send
-        </button>
-      </form>
+      }
     </section>
   </div>
 </div>
